@@ -1,0 +1,84 @@
+site_name: 招聘智能体
+site_description: AI-native 招聘智能体 - 16 个智能体协同,服务求职者+用人单位双向匹配
+site_author: waibao
+
+repo_name: silverenternal/waibao
+repo_url: https://github.com/silverenternal/waibao
+edit_uri: edit/master/
+
+docs_dir: docs
+
+theme:
+  name: material
+  language: zh
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - search.suggest
+    - content.code.copy
+    - content.tabs.link
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: 跟随系统
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: 浅色模式
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: 深色模式
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - meta
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+
+nav:
+  - 首页: README.md
+  - 架构: ARCHITECTURE.md
+  - 智能体: AGENTS.md
+  - API: API.md
+  - 部署: DEPLOYMENT.md
+  - 路线图: ROADMAP.md
+
+plugins:
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/silverenternal/waibao
+
+markdown_extensions_extra:
+  - pymdownx.tasklist:
+      custom_checkbox: true

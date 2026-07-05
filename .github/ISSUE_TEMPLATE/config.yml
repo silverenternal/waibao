@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 社区讨论
+    url: https://github.com/silverenternal/waibao/discussions
+    about: 有问题先在这里讨论
+  - name: 📖 文档
+    url: https://silverenternal.github.io/waibao/
+    about: 详细文档

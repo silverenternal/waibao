@@ -1,0 +1,19 @@
+name: Dependabot
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  dependabot:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r talent-tool-mvp/backend/requirements.txt
+      - working-directory: talent-tool-mvp/backend
+        run: pytest -v
