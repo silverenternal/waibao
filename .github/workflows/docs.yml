@@ -10,6 +10,7 @@ permissions:
   pages: write
   id-token: write
 
+# 不要取消正在运行的 Pages 部署
 concurrency:
   group: "pages"
   cancel-in-progress: false
@@ -21,6 +22,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -59,6 +62,61 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - name: Deploy to GitHub Pages
+      # 带重试: GitHub Pages 偶尔会返回 "Deployment failed, try again later"
+      # 这通常是后端瞬时问题,重试通常能成功
+      - name: Deploy to GitHub Pages (with retry)
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: nick-fields/retry@v3
+        with:
+          timeout_seconds: 600
+          max_attempts: 5
+          retry_wait_seconds: 30
+          command: |
+            echo "=== Attempt ${{ github.run_attempt }} ==="
+            response=$(/usr/bin/curl -sS -X POST \
+              -H "Authorization: Bearer $ACTIONS_DEPLOY_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              https://api.github.com/repos/${{ github.repository }}/pages/deployments \
+              -d "$(cat <<'EOF'
+            {
+              "artifact_id": ${{ needs.build.outputs.artifact_id }},
+              "pages_build_version": "${{ github.sha }}"
+            }
+            EOF
+            )")
+            echo "$response"
+            # 检查是否成功
+            status=$(echo "$response" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status', 'unknown'))")
+            if [ "$status" != "success" ] && [ "$status" != "queued" ] && [ "$status" != "building" ]; then
+              echo "Deployment status: $status"
+              exit 1
+            fi
+
+      - name: Get Pages URL
+        run: echo "page_url=https://silverenternal.github.io/waibao/" >> "$GITHUB_OUTPUT"
+        id: url
+
+  # 验证部署: 主动检查站点可访问性
+  verify:
+    name: Verify deployment
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Check site is accessible
+        run: |
+          echo "=== 检查 Pages 部署 ==="
+          sleep 30   # 给 GitHub 一些时间生效
+          for i in 1 2 3 4 5; do
+            http_code=$(/usr/bin/curl -sL -o /tmp/check.html -w "%{http_code}" "https://silverenternal.github.io/waibao/")
+            echo "Attempt $i: HTTP $http_code"
+            if [ "$http_code" = "200" ]; then
+              echo "✅ Site is live!"
+              echo "Page title: $(grep -oE '<title>[^<]+</title>' /tmp/check.html | head -1)"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "❌ Site not accessible after 5 attempts"
+          exit 1
