@@ -1,0 +1,70 @@
+{
+  "title": "RecruitTech AI Agent Dashboard",
+  "uid": "recruittech-main",
+  "schemaVersion": 30,
+  "panels": [
+    {
+      "title": "Agent 调用量 (按 Agent)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (agent_name) (rate(agent_calls_total[5m]))",
+          "legendFormat": "{{agent_name}}"
+        }
+      ]
+    },
+    {
+      "title": "LLM Token 消耗",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(rate(llm_tokens_total[5m]))",
+          "legendFormat": "tokens/s"
+        }
+      ]
+    },
+    {
+      "title": "情绪告警",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "sum(emotion_needs_attention_total)"
+        }
+      ]
+    },
+    {
+      "title": "双向匹配 P50/P95 延迟",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, two_way_match_duration_seconds)",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, two_way_match_duration_seconds)",
+          "legendFormat": "p95"
+        }
+      ]
+    },
+    {
+      "title": "求职者日报提交量",
+      "type": "barchart",
+      "targets": [
+        {
+          "expr": "sum by (rating) (rate(daily_journal_logged_total[1h]))",
+          "legendFormat": "{{rating}}"
+        }
+      ]
+    },
+    {
+      "title": "匹配转化漏斗",
+      "type": "barchart",
+      "targets": [
+        {
+          "expr": "sum by (status) (two_way_match_status_count)",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    }
+  ]
+}
