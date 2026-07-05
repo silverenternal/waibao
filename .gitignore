@@ -57,3 +57,6 @@ docker-compose.override.yml
 # Supabase local
 supabase/.branches
 supabase/.temp
+
+# Mkdocs build output (built by CI)
+site/

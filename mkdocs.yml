@@ -70,6 +70,7 @@ nav:
   - API: API.md
   - 部署: DEPLOYMENT.md
   - 路线图: ROADMAP.md
+  - 贡献指南: CONTRIBUTING.md
 
 plugins:
   - search
