@@ -72,11 +72,20 @@ class ProfileAgent(BaseAgent):
             return {"_error": str(e), "source_url": file_url}
 
     def _merge_resume_into_profile(self, profile: dict, parsed: dict) -> dict:
-        """把 LLM 抽取出的 resume 字段 merge 进 profile。"""
+        """把 LLM 抽取出的 resume 字段 merge 进 profile。
+
+        字段合并策略:
+        - basic.* (name/email/phone/location): 只在 profile 已有字段为空时填入
+        - education / experience / certifications / portfolio / interests: 同名 list 合并去重
+        - skills: 按 name 去重,合并 years / level (取最大值)
+        - highlights: 仅在 profile 无 highlights 时填入
+        - provenance: 始终记录 (source_url / raw_text_snippet / provider_chain / last_ocr_at)
+        """
         extracted = parsed.get("extracted") or {}
         basic = extracted.get("basic") if isinstance(extracted.get("basic"), dict) else {}
         merged = dict(profile)
 
+        # ---- 1. basic fields ----
         if basic:
             name = basic.get("name") if isinstance(basic.get("name"), str) else None
             if name and not merged.get("name"):
@@ -86,22 +95,90 @@ class ProfileAgent(BaseAgent):
                 if v and not merged.get(k):
                     merged[k] = v
 
+        # ---- 2. education (按 school+degree 去重) ----
         edu = extracted.get("education") or []
-        if edu and not merged.get("education"):
-            merged["education"] = edu
+        if edu:
+            existing_edu = merged.get("education") or []
+            seen = {
+                (e.get("school"), e.get("degree")) for e in existing_edu if isinstance(e, dict)
+            }
+            for e in edu:
+                if isinstance(e, dict) and (e.get("school"), e.get("degree")) not in seen:
+                    existing_edu.append(e)
+                    seen.add((e.get("school"), e.get("degree")))
+            merged["education"] = existing_edu
 
+        # ---- 3. experience (按 company+title 去重) ----
+        exp = extracted.get("experience") or []
+        if exp:
+            existing_exp = merged.get("experience") or []
+            seen = {
+                (e.get("company"), e.get("title")) for e in existing_exp if isinstance(e, dict)
+            }
+            for e in exp:
+                if isinstance(e, dict) and (e.get("company"), e.get("title")) not in seen:
+                    existing_exp.append(e)
+                    seen.add((e.get("company"), e.get("title")))
+            merged["experience"] = existing_exp
+
+        # ---- 4. skills (按 name 去重, level/years 取 max) ----
         skills = extracted.get("skills") or []
         if skills:
-            existing = {s.get("name"): s for s in (merged.get("skills") or []) if isinstance(s, dict)}
+            existing_skills = {
+                s.get("name"): dict(s) for s in (merged.get("skills") or []) if isinstance(s, dict)
+            }
             for s in skills:
-                if isinstance(s, dict) and s.get("name") and s["name"] not in existing:
-                    existing[s["name"]] = s
-            merged["skills"] = list(existing.values())
+                if not isinstance(s, dict) or not s.get("name"):
+                    continue
+                name = s["name"]
+                if name in existing_skills:
+                    # 取更长的 years / 更高的 level
+                    cur = existing_skills[name]
+                    try:
+                        if int(s.get("years", 0)) > int(cur.get("years", 0)):
+                            cur["years"] = s["years"]
+                    except (ValueError, TypeError):
+                        pass
+                    if s.get("level") and not cur.get("level"):
+                        cur["level"] = s["level"]
+                    existing_skills[name] = cur
+                else:
+                    existing_skills[name] = s
+            merged["skills"] = list(existing_skills.values())
 
-        # raw_text & provenance
-        merged.setdefault("_resume_source_url", parsed.get("source_url"))
+        # ---- 5. certifications / portfolio / interests / highlights (merge unique) ----
+        for list_key in ("certifications", "portfolio", "interests", "highlights"):
+            items = extracted.get(list_key) or []
+            if not items:
+                continue
+            existing_items = merged.get(list_key) or []
+            if not isinstance(existing_items, list):
+                existing_items = [existing_items]
+            seen_keys = set()
+            for it in existing_items:
+                if isinstance(it, dict):
+                    seen_keys.add(it.get("name") or it.get("title") or it.get("fact") or str(it))
+                else:
+                    seen_keys.add(str(it))
+            for it in items:
+                key = (it.get("name") or it.get("title") or it.get("fact") or str(it)) if isinstance(it, dict) else str(it)
+                if key not in seen_keys:
+                    existing_items.append(it)
+                    seen_keys.add(key)
+            merged[list_key] = existing_items
+
+        # ---- 6. overall_impression → summary ----
+        impression = extracted.get("overall_impression")
+        if impression and not merged.get("summary"):
+            merged["summary"] = impression
+
+        # ---- 7. provenance ----
+        import datetime as _dt
+        merged["_resume_source_url"] = parsed.get("source_url")
         merged["_resume_raw_text_snippet"] = (parsed.get("raw_text") or "")[:300]
         merged["_resume_provider_chain"] = parsed.get("provider_chain", [])
+        merged["_resume_ocr_provider"] = parsed.get("ocr_provider")
+        merged["_resume_last_parsed_at"] = _dt.datetime.utcnow().isoformat() + "Z"
         return merged
 
     async def _handle(self, agent_input: AgentInput) -> AgentOutput:

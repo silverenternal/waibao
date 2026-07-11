@@ -32,10 +32,32 @@ async def submit_vision(
         text=body.text,
         context={"organisation_id": str(user.id)},
     ))
-    return {
+    response = {
         "text": out.text,
         "artifacts": out.artifacts,
     }
+
+    # Webhook: VISION_UPDATED (T802 复用 policy.legal_risk)
+    try:
+        from services.webhook import fire_webhook, WebhookEvent
+        import asyncio as _asyncio
+        org_id = str(user.organisation_id or user.id)
+        _asyncio.create_task(
+            fire_webhook(
+                WebhookEvent.POLICY_LEGAL_RISK,
+                org_id,
+                {
+                    "kind": "vision.updated",
+                    "user_id": str(user.id),
+                    "artifacts_keys": list((response.get("artifacts") or {}).keys()),
+                    "text_preview": body.text[:500],
+                },
+            )
+        )
+    except Exception as _wh_exc:  # noqa: BLE001
+        logger.warning("vision webhook fire failed: %r", _wh_exc)
+
+    return response
 
 
 @router.get("/strategy-map")

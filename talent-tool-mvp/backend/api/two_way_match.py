@@ -54,6 +54,30 @@ async def compute_match(
     # 持久化
     record = await persist_two_way_match(candidate_id, role_id, score, supabase)
 
+    # Webhook: MATCH_PROPOSED
+    try:
+        from services.webhook import fire_webhook, WebhookEvent
+        cand_org = (
+            cand.data.get("organisation_id")
+            or role.data.get("organisation_id")
+            or str(user.organisation_id or "")
+        )
+        await fire_webhook(
+            WebhookEvent.MATCH_PROPOSED,
+            str(cand_org),
+            {
+                "candidate_id": str(candidate_id),
+                "role_id": str(role_id),
+                "harmonic_score": score.harmonic_score,
+                "candidate_to_role": score.candidate_to_role,
+                "role_to_candidate": score.role_to_candidate,
+                "match_record_id": record.get("id"),
+            },
+        )
+    except Exception as _wh_exc:  # noqa: BLE001
+        import logging as _l
+        _l.getLogger(__name__).warning("match.compute webhook fire failed: %r", _wh_exc)
+
     return {
         "candidate_to_role": round(score.candidate_to_role, 4),
         "role_to_candidate": round(score.role_to_candidate, 4),

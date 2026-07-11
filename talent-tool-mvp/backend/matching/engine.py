@@ -12,9 +12,16 @@ from contracts.shared import (
     SalaryRange,
     SeniorityLevel,
 )
-from matching.scorer import CompositeScorer
+from matching.scorer import AB_WEIGHT_VARIANTS, CompositeScorer, EXPERIMENT_MATCH_WEIGHTS
 from matching.semantic import SemanticSearch
 from matching.structured import StructuredFilter
+from services.ab_test import (
+    Experiment,
+    Variant,
+    assign_variant,
+    get_hash_salt,
+    record_metric,
+)
 
 
 class MatchingEngine:
@@ -31,16 +38,18 @@ class MatchingEngine:
         role_id: UUID,
         top_k: int = 50,
         min_confidence: ConfidenceLevel = ConfidenceLevel.possible,
+        user_id: str | None = None,
     ) -> list[Match]:
         """Run the full matching pipeline for a role.
 
         1. Load role with structured requirements + embedding
         2. Structured filter: narrow candidate pool by hard requirements
         3. Semantic search: pgvector cosine similarity on filtered pool
-        4. Composite scoring: 40% skill, 35% semantic, 25% experience
+        4. Composite scoring: weights 取决于 A/B 实验 (T805)
         5. Bucket into Strong/Good/Possible
-        6. Store match results in database
+        6. Store match results in database (含 ab_variant tag,供 dashboard 分析)
         7. Return ranked matches
+        user_id 缺省时按 role_id 分配,保持可重复.
         """
         # 1. Load role
         role_result = (
@@ -56,6 +65,29 @@ class MatchingEngine:
             raise ValueError(
                 f"Role {role_id} not found or missing embedding"
             )
+
+        # 1a. T805 A/B 决定该 role 的权重组;experiment 名 match_weights_v2.
+        bucket_user = user_id or f"role:{role_id}"
+        ab_variants = [
+            Variant(name="control", weight=50, config=AB_WEIGHT_VARIANTS["control"]),
+            Variant(name="semantic_heavy", weight=30, config=AB_WEIGHT_VARIANTS["semantic_heavy"]),
+            Variant(name="experience_focused", weight=20, config=AB_WEIGHT_VARIANTS["experience_focused"]),
+        ]
+        ab_experiment = Experiment(
+            id="match_weights_v2",
+            name=EXPERIMENT_MATCH_WEIGHTS,
+            description="Match composite weight A/B test",
+            variants=ab_variants,
+            status="running",
+            primary_metric="match.score",
+        )
+        ab_variant = assign_variant(ab_experiment, bucket_user)
+        record_metric(
+            experiment_id=EXPERIMENT_MATCH_WEIGHTS,
+            variant=ab_variant,
+            metric_name="match.run_count",
+            value=1.0,
+        )
 
         required_skills = [
             RequiredSkill(**s)
@@ -150,6 +182,7 @@ class MatchingEngine:
                 role_preferred_skills=preferred_skills,
                 role_seniority=role_seniority,
                 semantic_similarity=similarity,
+                ab_variant=ab_variant,
             )
 
             confidence = score_result["confidence"]
@@ -174,6 +207,16 @@ class MatchingEngine:
                     status=MatchStatus.generated,
                 )
                 matches.append(match)
+
+        # 5b. T805 指标 — 记录 mean(overall_score) per variant
+        if matches:
+            avg = sum(m.overall_score for m in matches) / len(matches)
+            record_metric(
+                experiment_id=EXPERIMENT_MATCH_WEIGHTS,
+                variant=ab_variant,
+                metric_name="match.score",
+                value=avg,
+            )
 
         # 6. Sort by overall score descending
         matches.sort(key=lambda m: m.overall_score, reverse=True)

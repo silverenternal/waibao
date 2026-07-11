@@ -19,6 +19,7 @@ _ocr: Any | None = None
 _stt: Any | None = None
 _notify: dict[str, Any] = {}
 _lookup: Any | None = None
+_job_market: Any | None = None  # T607 招聘市场供应商
 
 _lock = Lock()
 
@@ -53,6 +54,10 @@ def _mock_provider(contract: str) -> Any:
         from .lookup.mock_provider import MockLookupProvider
 
         return MockLookupProvider()
+    if contract == "job_market":  # T607
+        from .job_market.mock import MockJobMarketProvider
+
+        return MockJobMarketProvider()
     # 兜底:走旧的通用 mock (保底)
     from . import mock as _mock
 
@@ -313,11 +318,36 @@ def get_lookup_provider() -> Any:
 
 
 # ---------------------------------------------------------------------------
+# JobMarket (T607)
+# ---------------------------------------------------------------------------
+def get_job_market_provider() -> Any:
+    """根据 JOB_MARKET_PROVIDER env 返回对应 JobMarketProvider.
+
+    默认 mock. 真实供应商 (boss / lagou / linkedin / adzuna) 由后续任务实现.
+    """
+    global _job_market
+    if _job_market is not None:
+        return _job_market
+    with _lock:
+        if _job_market is not None:
+            return _job_market
+        name = (os.getenv("JOB_MARKET_PROVIDER") or "mock").lower()
+        if name == "mock":
+            _job_market = _mock_provider("job_market")
+            return _job_market
+        from .job_market.registry import get_job_market_provider as _real_router
+
+        # 真实供应商的注册在 job_market 子包内 (避免循环导入)
+        _job_market = _real_router()
+    return _job_market
+
+
+# ---------------------------------------------------------------------------
 # 重置 (测试用)
 # ---------------------------------------------------------------------------
 def reset_cache() -> None:
     """清空所有 provider 单例,主要用于单元测试."""
-    global _llm, _embedding, _vision, _ocr, _stt, _lookup
+    global _llm, _embedding, _vision, _ocr, _stt, _lookup, _job_market
     with _lock:
-        _llm = _embedding = _vision = _ocr = _stt = _lookup = None
+        _llm = _embedding = _vision = _ocr = _stt = _lookup = _job_market = None
         _notify.clear()

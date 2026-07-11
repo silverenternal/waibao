@@ -26,13 +26,37 @@ async def detect_emotion(
         persona=user.role.value,
         text=text,
     ))
-    return {
+    response = {
         "response": out.text,
         "emotion": out.artifacts.get("emotion"),
         "intensity": out.artifacts.get("intensity"),
         "sentiment": out.artifacts.get("sentiment"),
         "needs_attention": out.artifacts.get("needs_attention"),
     }
+
+    # Webhook: EMOTION_RISK_DETECTED (T802)
+    if response.get("needs_attention"):
+        try:
+            from services.webhook import fire_webhook, WebhookEvent
+            import asyncio as _asyncio
+            org_id = str(user.organisation_id or user.id)
+            _asyncio.create_task(
+                fire_webhook(
+                    WebhookEvent.EMOTION_RISK,
+                    org_id,
+                    {
+                        "user_id": str(user.id),
+                        "emotion": response.get("emotion"),
+                        "intensity": response.get("intensity"),
+                        "sentiment": response.get("sentiment"),
+                        "trigger_text": text[:500],
+                    },
+                )
+            )
+        except Exception as _wh_exc:  # noqa: BLE001
+            logger.warning("emotion webhook fire failed: %r", _wh_exc)
+
+    return response
 
 
 @router.get("/timeline")

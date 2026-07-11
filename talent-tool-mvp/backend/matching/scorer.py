@@ -11,6 +11,27 @@ WEIGHT_SKILL_OVERLAP = 0.40
 WEIGHT_SEMANTIC_SIMILARITY = 0.35
 WEIGHT_EXPERIENCE_FIT = 0.25
 
+# A/B 实验动态权重 (T805): variant -> {skill, semantic, experience}
+AB_WEIGHT_VARIANTS: dict[str, dict[str, float]] = {
+    "control": {
+        "skill": 0.40,
+        "semantic": 0.35,
+        "experience": 0.25,
+    },
+    "semantic_heavy": {
+        "skill": 0.30,
+        "semantic": 0.50,
+        "experience": 0.20,
+    },
+    "experience_focused": {
+        "skill": 0.35,
+        "semantic": 0.30,
+        "experience": 0.35,
+    },
+}
+
+EXPERIMENT_MATCH_WEIGHTS = "match_weights_v2"
+
 SENIORITY_ORDER = {
     SeniorityLevel.junior: 1,
     SeniorityLevel.mid: 2,
@@ -32,8 +53,14 @@ class CompositeScorer:
         role_preferred_skills: list[RequiredSkill],
         role_seniority: SeniorityLevel | None,
         semantic_similarity: float,
+        weights: dict[str, float] | None = None,
+        ab_variant: str | None = None,
     ) -> dict:
-        """Compute composite score and return full breakdown."""
+        """Compute composite score and return full breakdown.
+
+        weights: 显式权重覆盖;ab_variant: 从 A/B 实验拿 (会查 ab_test.AB_WEIGHT_VARIANTS).
+        两者都不传则用全局常量 (生产 control).
+        """
         # 1. Skill overlap scoring
         skill_overlap, skill_score = self._compute_skill_overlap(
             candidate_skills, role_required_skills, role_preferred_skills
@@ -47,15 +74,18 @@ class CompositeScorer:
             candidate_seniority, role_seniority, candidate_experience_months
         )
 
-        # 4. Composite
+        # 4. Choose weights (control / 显式 / A/B 决议)
+        resolved_weights = self._resolve_weights(weights=weights, ab_variant=ab_variant)
+
+        # 5. Composite
         overall = (
-            WEIGHT_SKILL_OVERLAP * skill_score
-            + WEIGHT_SEMANTIC_SIMILARITY * semantic_score
-            + WEIGHT_EXPERIENCE_FIT * experience_score
+            resolved_weights["skill"] * skill_score
+            + resolved_weights["semantic"] * semantic_score
+            + resolved_weights["experience"] * experience_score
         )
         overall = round(overall, 4)
 
-        # 5. Confidence bucket
+        # 6. Confidence bucket
         confidence = self._bucket_confidence(overall)
 
         return {
@@ -65,11 +95,12 @@ class CompositeScorer:
             "experience_score": round(experience_score, 4),
             "skill_overlap": skill_overlap,
             "confidence": confidence,
+            "ab_variant": ab_variant or "control",
             "scoring_breakdown": {
                 "weights": {
-                    "skill_overlap": WEIGHT_SKILL_OVERLAP,
-                    "semantic_similarity": WEIGHT_SEMANTIC_SIMILARITY,
-                    "experience_fit": WEIGHT_EXPERIENCE_FIT,
+                    "skill_overlap": resolved_weights["skill"],
+                    "semantic_similarity": resolved_weights["semantic"],
+                    "experience_fit": resolved_weights["experience"],
                 },
                 "components": {
                     "skill_overlap_raw": round(skill_score, 4),
@@ -78,17 +109,37 @@ class CompositeScorer:
                 },
                 "weighted_components": {
                     "skill_overlap_weighted": round(
-                        WEIGHT_SKILL_OVERLAP * skill_score, 4
+                        resolved_weights["skill"] * skill_score, 4
                     ),
                     "semantic_similarity_weighted": round(
-                        WEIGHT_SEMANTIC_SIMILARITY * semantic_score, 4
+                        resolved_weights["semantic"] * semantic_score, 4
                     ),
                     "experience_fit_weighted": round(
-                        WEIGHT_EXPERIENCE_FIT * experience_score, 4
+                        resolved_weights["experience"] * experience_score, 4
                     ),
                 },
                 "overall_score": overall,
             },
+        }
+
+    @staticmethod
+    def _resolve_weights(
+        weights: dict[str, float] | None,
+        ab_variant: str | None,
+    ) -> dict[str, float]:
+        """Pick the active weight set. 优先级: weights 参数 > ab_variant 查表 > control 常量."""
+        if weights is not None:
+            s = float(weights.get("skill", WEIGHT_SKILL_OVERLAP))
+            sem = float(weights.get("semantic", WEIGHT_SEMANTIC_SIMILARITY))
+            exp = float(weights.get("experience", WEIGHT_EXPERIENCE_FIT))
+            total = s + sem + exp or 1.0
+            return {"skill": s / total, "semantic": sem / total, "experience": exp / total}
+        if ab_variant and ab_variant in AB_WEIGHT_VARIANTS:
+            return AB_WEIGHT_VARIANTS[ab_variant]
+        return {
+            "skill": WEIGHT_SKILL_OVERLAP,
+            "semantic": WEIGHT_SEMANTIC_SIMILARITY,
+            "experience": WEIGHT_EXPERIENCE_FIT,
         }
 
     def _compute_skill_overlap(

@@ -9,8 +9,10 @@ import logging
 import os
 import time
 from collections.abc import Awaitable, Callable
+from contextlib import nullcontext
 from dataclasses import dataclass, field
-from typing import Any, TypeVar
+from datetime import datetime, timezone
+from typing import Any, Optional, TypeVar
 
 from .exceptions import (
     AuthError,
@@ -24,6 +26,41 @@ from .exceptions import (
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
+
+
+def _otel_span(name: str, attributes: dict | None = None):
+    """T1001: 返回 OTel span context manager; 依赖缺失时返回 nullcontext."""
+    try:
+        from services.telemetry import span as _span
+
+        return _span(name, **(attributes or {}))
+    except Exception:  # noqa: BLE001
+        return nullcontext()
+
+
+# ---------------------------------------------------------------------------
+# Cache step config (T806) — 供 with_resilience 用
+# ---------------------------------------------------------------------------
+@dataclass
+class CacheConfig:
+    """启用 LLM cache 时的 key 构造与开关."""
+
+    enabled: bool = False
+    key_builder: Optional[Callable[[str, str, tuple, dict], str]] = None
+    ttl_seconds: Optional[int] = None  # None 用 cache 默认
+
+    @classmethod
+    def default_llm(cls) -> "CacheConfig":
+        """默认 LLM cache 配置: 复用 services.llm_cache.LLMCache.make_key 风格."""
+        from services.llm_cache import LLMCache as _LLMCache
+
+        def _key(provider: str, method: str, args: tuple, kwargs: dict) -> str:
+            messages = kwargs.get("messages") or (args[0] if args else [])
+            model = kwargs.get("model") or "unknown"
+            temperature = kwargs.get("temperature")
+            return _LLMCache.make_key(provider, model, messages, temperature)
+
+        return cls(enabled=True, key_builder=_key)
 
 
 # ---------------------------------------------------------------------------
@@ -121,17 +158,25 @@ class TokenBucket:
 
 
 # ---------------------------------------------------------------------------
-# Cost Tracker (per tenant per day)
+# Cost Tracker (per tenant per day) — T806 升级: tenant + provider + model 维度聚合
 # ---------------------------------------------------------------------------
 class CostTracker:
-    """内存级单租户日成本累计,超限抛 BudgetExceeded.
+    """内存级多维度成本累计 + 异步持久化到 Supabase.
 
-    生产环境应替换为 Redis/PostgreSQL 实现。
+    生产环境推荐使用 services.cost_tracker.py 的 CostTrackerService;
+    本类作为 with_resilience 内 fast path 的最小可用实现。
     """
 
     def __init__(self) -> None:
-        self._spent: dict[str, float] = {}
+        self._spent: dict[str, float] = {}  # tenant:date -> amount
+        self._by_provider_model: dict[str, float] = {}  # tenant:date:provider:model -> amount
         self._limits: dict[str, float] = self._load_limits()
+        # Async persistence hook (setter 由 main.py 启动时注入,默认 no-op)
+        self._persist_cb: Optional[Callable[[dict], None]] = None
+
+    def set_persistence(self, cb: Optional[Callable[[dict], None]]) -> None:
+        """注入持久化 callback (例如写 Supabase). 失败必须由 callback 内部捕获,不抛出."""
+        self._persist_cb = cb
 
     def _load_limits(self) -> dict[str, float]:
         """从环境变量加载租户预算,格式: TENANT_DAILY_BUDGET_USD_<tenant>=<float>."""
@@ -151,20 +196,53 @@ class CostTracker:
     def _key(self, tenant: str) -> str:
         return f"{tenant}:{self._today()}"
 
-    def record(self, tenant: str, cost_usd: float) -> None:
+    def _pm_key(self, tenant: str, provider: str, model: str) -> str:
+        return f"{tenant}:{self._today()}:{provider}:{model}"
+
+    def record(
+        self,
+        tenant: str,
+        cost_usd: float,
+        provider: str = "unknown",
+        model: str = "unknown",
+    ) -> None:
+        """记录一次外部调用成本.
+
+        provider/model 供 dashboard by-provider 聚合用;不传则用 unknown.
+        """
         if cost_usd <= 0:
             return
         key = self._key(tenant)
         self._spent[key] = self._spent.get(key, 0.0) + cost_usd
+        pm_key = self._pm_key(tenant, provider, model)
+        self._by_provider_model[pm_key] = self._by_provider_model.get(pm_key, 0.0) + cost_usd
         limit = self._limits.get(tenant.lower(), self._limits["_default"])
         if self._spent[key] > limit:
             raise BudgetExceeded(
                 f"tenant={tenant} daily cost {self._spent[key]:.4f} > limit {limit:.2f} USD",
                 details={"tenant": tenant, "spent": self._spent[key], "limit": limit},
             )
+        # 异步持久化 (non-blocking,失败不影响业务)
+        if self._persist_cb is not None:
+            try:
+                self._persist_cb(
+                    {
+                        "tenant": tenant,
+                        "provider": provider,
+                        "model": model,
+                        "cost_usd": float(cost_usd),
+                        "occurred_at": datetime.now(timezone.utc).isoformat(),
+                    }
+                )
+            except Exception:  # noqa: BLE001
+                logger.exception("cost_tracker.persist_failed")
 
     def spent(self, tenant: str) -> float:
         return self._spent.get(self._key(tenant), 0.0)
+
+    def by_provider_model(self, since_days: int = 30) -> dict[str, float]:
+        """聚合内存内 by-provider-model (最近 N 天)."""
+        return dict(self._by_provider_model)
 
 
 # ---------------------------------------------------------------------------
@@ -242,92 +320,146 @@ def with_resilience(
     burst: int = 20,
     cost_calculator: Callable[[Any], float] | None = None,
     tenant_arg: str | None = None,
+    cache_config: "CacheConfig | None" = None,
 ) -> Callable[[Callable[..., Awaitable[T]]], Callable[..., Awaitable[T]]]:
-    """统一为外部调用加上: rate limit -> circuit breaker -> retry -> cost -> metrics."""
+    """统一为外部调用加上: cache -> rate limit -> circuit breaker -> retry -> cost -> metrics."""
     policy = retry or RetryPolicy()
     circuit = get_circuit(provider)
     bucket = get_bucket(provider, rate_per_sec, burst)
     cost_tracker = get_cost_tracker()
     metrics = get_metrics()
 
+    # Lazy import 避免循环依赖
+    if cache_config is not None:
+        from services.llm_cache import get_cache as _get_cache
+        cache = _get_cache()
+    else:
+        cache = None
+
     def decorator(fn: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         async def wrapper(*args: Any, **kwargs: Any) -> T:
-            if not circuit.allow():
-                raise CircuitOpenError(
-                    f"provider={provider} circuit is open",
-                    provider=provider,
-                )
-
-            wait = bucket.acquire()
-            if wait > 0:
-                await asyncio.sleep(wait)
-
-            last_exc: Exception | None = None
-            for attempt in range(1, policy.max_retries + 2):  # 1 + max_retries
-                start = time.monotonic()
-                status = "ok"
-                try:
-                    result = await fn(*args, **kwargs)
-                    circuit.record_success()
-                    metrics.observe(
-                        provider,
-                        method,
-                        "ok",
-                        time.monotonic() - start,
-                    )
-                    if cost_calculator is not None:
-                        try:
-                            cost = cost_calculator(result)
-                            tenant = (
-                                kwargs.get(tenant_arg) if tenant_arg else "default"
-                            ) or "default"
-                            cost_tracker.record(tenant, cost)
-                        except ProviderError:
-                            raise
-                        except Exception:
-                            logger.exception("cost_tracker.error provider=%s", provider)
-                    return result
-                except ProviderError as exc:
-                    last_exc = exc
-                    status = "error"
-                    metrics.observe(
-                        provider,
-                        method,
-                        "error",
-                        time.monotonic() - start,
-                    )
-                    if not exc.retryable or attempt > policy.max_retries:
-                        circuit.record_failure()
-                        raise
-                    delay = policy.delay_for(attempt)
-                    logger.warning(
-                        "retry provider=%s attempt=%s delay=%.2fs exc=%s",
-                        provider,
-                        attempt,
-                        delay,
-                        exc,
-                    )
-                    await asyncio.sleep(delay)
-                except Exception as exc:  # 非 ProviderError 视为可重试
-                    last_exc = exc
-                    status = "error"
-                    metrics.observe(
-                        provider,
-                        method,
-                        "error",
-                        time.monotonic() - start,
-                    )
-                    if attempt > policy.max_retries:
-                        circuit.record_failure()
-                        raise UpstreamUnavailableError(str(exc), provider=provider) from exc
-                    delay = policy.delay_for(attempt)
-                    await asyncio.sleep(delay)
-
-            # 理论不会到这里
-            if last_exc is not None:
-                raise last_exc
-            raise UpstreamUnavailableError("exhausted retries", provider=provider)
+            # T1001: OpenTelemetry span,记录 provider / method / model.
+            model_name = kwargs.get("model") or provider
+            with _otel_span(
+                "llm_call",
+                {
+                    "provider": provider,
+                    "method": method,
+                    "model": str(model_name),
+                },
+            ):
+                return await _run(args, kwargs, fn)
 
         return wrapper
+
+    async def _run(args: tuple, kwargs: dict, fn: Callable[..., Awaitable[T]]) -> T:
+        # cache step: 只对 cache_config.enabled 的调用起作用
+        cache_key: str | None = None
+        if cache is not None and cache_config is not None and cache_config.enabled:
+            try:
+                cache_key = cache_config.key_builder(provider, method, args, kwargs)
+                hit = cache.get(cache_key)
+                if hit is not None:
+                    metrics.observe(
+                        provider,
+                        method,
+                        "cache_hit",
+                        0.0,
+                    )
+                    return hit
+            except Exception:  # noqa: BLE001 - cache 不能阻塞业务
+                logger.warning("cache.read_failed provider=%s method=%s", provider, method)
+                cache_key = None
+
+        if not circuit.allow():
+            raise CircuitOpenError(
+                f"provider={provider} circuit is open",
+                provider=provider,
+            )
+
+        wait = bucket.acquire()
+        if wait > 0:
+            await asyncio.sleep(wait)
+
+        last_exc: Exception | None = None
+        for attempt in range(1, policy.max_retries + 2):  # 1 + max_retries
+            start = time.monotonic()
+            status = "ok"
+            try:
+                result = await fn(*args, **kwargs)
+                circuit.record_success()
+                metrics.observe(
+                    provider,
+                    method,
+                    "ok",
+                    time.monotonic() - start,
+                )
+                # cache store step — 失败只 warn 不抛
+                if cache is not None and cache_key is not None:
+                    try:
+                        cache.set(cache_key, result)
+                    except Exception:  # noqa: BLE001
+                        logger.warning(
+                            "cache.write_failed provider=%s method=%s",
+                            provider,
+                            method,
+                        )
+                if cost_calculator is not None:
+                    try:
+                        cost = cost_calculator(result)
+                        tenant = (
+                            kwargs.get(tenant_arg) if tenant_arg else "default"
+                        ) or "default"
+                        model_name = kwargs.get("model") or provider
+                        cost_tracker.record(
+                            tenant, cost, provider=provider, model=model_name
+                        )
+                    except ProviderError:
+                        raise
+                    except Exception:
+                        logger.exception("cost_tracker.error provider=%s", provider)
+                return result
+            except ProviderError as exc:
+                last_exc = exc
+                status = "error"
+                metrics.observe(
+                    provider,
+                    method,
+                    "error",
+                    time.monotonic() - start,
+                )
+                if not exc.retryable or attempt > policy.max_retries:
+                    circuit.record_failure()
+                    raise
+                delay = policy.delay_for(attempt)
+                logger.warning(
+                    "retry provider=%s attempt=%s delay=%.2fs exc=%s",
+                    provider,
+                    attempt,
+                    delay,
+                    exc,
+                )
+                await asyncio.sleep(delay)
+            except Exception as exc:  # 非 ProviderError 视为可重试
+                last_exc = exc
+                status = "error"
+                metrics.observe(
+                    provider,
+                    method,
+                    "error",
+                    time.monotonic() - start,
+                )
+                if attempt > policy.max_retries:
+                    circuit.record_failure()
+                    raise UpstreamUnavailableError(
+                        str(exc), provider=provider
+                    ) from exc
+                delay = policy.delay_for(attempt)
+                await asyncio.sleep(delay)
+
+        # 理论不会到这里
+        if last_exc is not None:
+            raise last_exc
+        raise UpstreamUnavailableError("exhausted retries", provider=provider)
 
     return decorator

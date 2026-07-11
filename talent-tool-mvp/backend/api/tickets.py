@@ -123,6 +123,25 @@ async def create_ticket_endpoint(
     except TicketError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
+    # Webhook: TICKET_CREATED
+    try:
+        from services.webhook import fire_webhook, WebhookEvent
+        await fire_webhook(
+            WebhookEvent.TICKET_CREATED,
+            str(user.organisation_id or ticket.get("organisation_id") or ""),
+            {
+                "ticket_id": ticket.id,
+                "title": ticket.title,
+                "priority": ticket.priority,
+                "category": ticket.category,
+                "user_id": str(user.id),
+                "created_at": ticket.created_at,
+            },
+        )
+    except Exception as _wh_exc:  # noqa: BLE001
+        import logging as _l
+        _l.getLogger(__name__).warning("ticket.create webhook fire failed: %r", _wh_exc)
+
     return {"ticket": ticket.to_dict(), "success": True}
 
 
@@ -263,6 +282,28 @@ async def update_status_endpoint(
         )
     except TicketError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+    # Webhook: TICKET_STATUS_CHANGED
+    try:
+        from services.webhook import fire_webhook, WebhookEvent
+        await fire_webhook(
+            WebhookEvent.TICKET_ASSIGNED
+            if body.status == "in_progress" and body.assignee_id
+            else WebhookEvent.TICKET_RESOLVED
+            if body.status in ("resolved", "closed")
+            else WebhookEvent.TICKET_ESCALATED,
+            str(user.organisation_id or ticket.get("organisation_id") or ""),
+            {
+                "ticket_id": ticket.id,
+                "from_status": current.status if isinstance(current, dict) else getattr(current, "status", None),
+                "to_status": body.status,
+                "changed_by": str(user.id),
+                "reason": body.reason,
+            },
+        )
+    except Exception as _wh_exc:  # noqa: BLE001
+        import logging as _l
+        _l.getLogger(__name__).warning("ticket.status webhook fire failed: %r", _wh_exc)
 
     return {"ticket": ticket.to_dict(), "success": True}
 
