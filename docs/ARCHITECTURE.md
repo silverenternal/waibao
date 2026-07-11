@@ -223,6 +223,55 @@ Employer Clarifier → employer_clarifications
 - [API.md](./API.md) — API 端点清单
 - [DEPLOYMENT.md](./DEPLOYMENT.md) — 部署与运维
 - [ROADMAP.md](./ROADMAP.md) — 未来路线图
+- [PROVIDERS.md](./PROVIDERS.md) — v3.0 供应商 + i18n + Webhook + Rule DSL
+- [I18N_GUIDE.md](./I18N_GUIDE.md) — i18n 三语翻译指南
+
+---
+
+## 🆕 v3.0 横切能力
+
+### 🌍 i18n 三语 (zh-CN / en-US / ja-JP)
+- **前端**:`next-intl` 全栈支持,`frontend/messages/{locale}.json` 维护译文
+- **后端**:Agent prompt 模板接受 `locale` 参数,生成对应语言的解释/反馈
+- **语言切换**:`middleware/proxy.ts` 根据 `Accept-Language` + cookie 自动分流
+- **CI 守门**:`npm run i18n:check` 强制三语键一致(缺失立即失败)
+- **AI 翻译**:用 LLM 自动生成新 key 的初版译文,人工 review
+
+### 📡 Webhook 出口 (T804 衍生)
+- **签名**:HMAC-SHA256,header `X-Waibao-Signature`
+- **重试**:指数退避,最多 5 次,失败入 `webhook_dead_letter`
+- **事件类型**:`match.created` / `ticket.escalated` / `rule.triggered` / `bias.detected` / `audit.recorded`
+- **订阅管理**:HR 在 admin UI 配置 endpoint URL + 事件过滤
+- **路由**:`/api/webhooks/subscriptions`、`/api/webhooks/deliveries`
+
+### 🔑 公开 API Key (T902)
+- **scope**:`read:roles` / `read:candidates` / `read:matches` / `write:notes`
+- **rate limit**:per-key, sliding window (默认 60 req/min)
+- **管理**:Admin 在 `admin_api_keys.py` 创建/吊销;Key 一次性展示后仅存哈希
+- **路由**:`/api/public/*`(无需 Supabase JWT, 用 API Key header 鉴权)
+
+### ⚙️ 规则引擎 (T804)
+- **DSL**:JSON 形式 `{when: {field, op, value}, then: [{action, args}]}`
+- **内置触发器**:12+ 种(简历到达、SLA 逾期、偏见告警、关键词命中…)
+- **Action 类型**:建工单 / 通知 / Webhook / 自动调整权重
+- **调度**:`rule_scheduler.py` 每分钟扫描待评估事件
+- **路由**:`/api/rules/*`、`admin/rules/*`
+
+### 🧪 A/B 实验 (T901)
+- **分桶**:基于用户 ID + experiment salt 的稳定哈希
+- **指标**:`record_metric(experiment, variant, metric, value)`
+- **显著性**:内置 Welch's t-test,给出 p-value
+- **UI**:`/admin/ab` 看分布 + 显著性,自动停掉明显劣势变体
+- **路由**:`/api/admin/ab/*`
+
+### 📊 可观测性 (T1001/T1003)
+- **OpenTelemetry**:初始化在 `services.telemetry.init_telemetry()`,挂载 FastAPI/HTTPX/Redis
+- **Span 助手**:`with span("llm_call", provider=..., model=...)` 自动埋点
+- **采样率**:默认 10%(可经 `OTEL_SAMPLER_ARG` 调整)
+- **OTLP 导出**:可选 endpoint(生产环境走 OTel Collector)
+- **Prometheus**:`/metrics` 暴露,`services.metrics` 封装
+- **Sentry**:仅生产 + 配置 DSN 时启用,`beforeSend` 过滤 PII
+- **审计**:`@audit` 装饰器记录所有写入操作,落 `audit_log` 表(append-only)
 
 ---
 

@@ -5,9 +5,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org)
-[![Tests](https://img.shields.io/badge/tests-542%20passed-green.svg)](./talent-tool-mvp/backend/tests)
+[![Tests](https://img.shields.io/badge/tests-704%20passed-green.svg)](./talent-tool-mvp/backend/tests)
 [![Providers](https://img.shields.io/badge/providers-7%20capabilities%20×%20N%20vendors-blue.svg)](./talent-tool-mvp/backend/providers/README.md)
-[![v2.0](https://img.shields.io/badge/version-2.0--rc-orange.svg)](./todo.json)
+[![v3.0](https://img.shields.io/badge/version-3.0--rc-blueviolet.svg)](./todo.json)
 
 ---
 
@@ -244,6 +244,40 @@ waibao/                                  # 项目根
 欢迎 PR!详见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 开发前请阅读 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) 理解整体设计。
+
+---
+
+## 🆕 v3.0 新增能力 (相对于 v2.0)
+
+### 横切能力
+- 🌍 **i18n 三语** (zh-CN / en-US / ja-JP) — `next-intl` 全栈支持
+- 📡 **Webhook 出口** — HMAC 签名 + 投递重试 (`/api/webhooks/*`)
+- 🔑 **公开 API Key** — scope + rate limit (`/api/public/*`)
+- ⚙️ **规则引擎** — DSL + 内置触发器 + 自动建工单
+- 🧪 **A/B 实验 UI** — 哈希分桶 + 显著性检验
+- 📊 **OpenTelemetry** — 链路追踪 + Prometheus 指标
+
+### 业务补齐
+- 📜 **政策浏览** — 列表 + 详情 + RAG 检索 + 法律风险可视化
+- 👥 **用人方画像** — StakeholderMatrix + 多方共识度
+- ⚖️ **偏见可视化** — BiasAlert + BiasExplanation + 替代话术
+- 📋 **JD 模板 + Over-spec** — 10+ 行业模板 + 版本 diff
+- 💬 **协同房间** — WebSocket 实时 + @mention + 线程
+- 📞 **语音日记** — Whisper 转写 + 触发 journal
+- 📈 **情绪/日报趋势** — 折线图 + 触发事件关联
+
+### 双向匹配 2.0
+- 🎯 **匹配解释器 UI** — 维度拆解 + 反事实
+- 🔄 **互评对照视图** — 双方视角并列
+- ⚖️ **自动权重校准** — 反馈回路每日调度
+- 📊 **匹配质量 dashboard** — Precision/Recall + Bucket 分布
+
+### 测试覆盖
+- ✅ **704 tests pass** (v2.0: 542)
+- ✅ 17 项关键路径 smoke test 全通
+- ✅ i18n key + Webhook + Rule DSL + API scope 全覆盖
+
+详见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)、[docs/API.md](docs/API.md)、[docs/AGENTS.md](docs/AGENTS.md)。
 
 ---
 

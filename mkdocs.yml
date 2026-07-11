@@ -68,7 +68,9 @@ nav:
   - 架构: ARCHITECTURE.md
   - 智能体: AGENTS.md
   - API: API.md
-  - Providers: talent-tool-mvp/backend/providers/README.md
+  - Providers & 横切能力: PROVIDERS.md
+  - i18n 指南: I18N_GUIDE.md
+  - 覆盖审计 v3: COVERAGE-AUDIT-v3.md
   - 部署: DEPLOYMENT.md
   - 路线图: ROADMAP.md
   - 贡献指南: CONTRIBUTING.md

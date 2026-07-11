@@ -455,3 +455,79 @@ wscat -c "ws://localhost:8000/api/realtime/ws/invoke?token=$JWT"
 | `/api/gdpr/privacy` | GET | ❌ | 隐私政策 |
 
 (原有 endpoints: candidates/roles/matches/collections/handoffs/quotes/copilot/signals/admin 保留)
+
+---
+
+## 🆕 v3.0 新增 API (30+ 端点)
+
+### 政策 / 用人方画像 (P0)
+| Endpoint | Method | Auth | 用途 |
+|---|---|---|---|
+| `/api/policy/list` | GET | ✅ | 政策列表 (按类别) |
+| `/api/policy/{id}` | GET | ✅ | 政策详情 |
+| `/api/policy/search` | POST | ✅ | RAG 全文检索 |
+| `/api/policy/{id}/legal-risk` | GET | ✅ | 法律风险评估 |
+| `/api/role/{id}/talent-image` | GET | ✅ | 岗位人才画像 |
+| `/api/role/{id}/stakeholders` | GET | ✅ | StakeholderMatrix |
+| `/api/role/{id}/consensus` | GET | ✅ | 多方共识度 |
+
+### 偏见 / JD 模板 (P0)
+| `/api/talent-brief/{id}/bias` | GET | ✅ | 偏见检测结果 |
+| `/api/talent-brief/{id}/alternative-wording` | GET | ✅ | 替代话术 |
+| `/api/jd-templates` | GET | ✅ | JD 模板列表 (10+ 行业) |
+| `/api/jd-templates/{id}` | GET | ✅ | 模板详情 |
+| `/api/role/{id}/jd-versions` | GET | ✅ | JD 版本历史 |
+| `/api/role/{id}/jd-diff` | GET | ✅ | 版本 diff |
+| `/api/role/{id}/over-spec-check` | POST | ✅ | Over-spec 检测 |
+
+### 协同房间 / 语音 (P0)
+| `/api/rooms` | GET | ✅ | 我的房间列表 |
+| `/api/rooms` | POST | ✅ | 创建房间 |
+| `/api/rooms/{id}` | GET | ✅ | 房间详情 + 成员 |
+| `/api/rooms/{id}/messages` | GET | ✅ | 消息列表 |
+| `/api/rooms/{id}/messages` | POST | ✅ | 发消息(@mention 自动触发通知) |
+| `/api/rooms/{id}/ws` | WS | ✅ | 实时 WebSocket |
+| `/api/rooms/{id}/reactions` | POST | ✅ | Emoji 反应 |
+| `/api/voice/transcribe` | POST | ✅ | 语音转写 (Whisper) |
+| `/api/voice/journal` | POST | ✅ | 转写后自动建 journal |
+
+### 双向匹配 2.0 (P3)
+| `/api/matches/{id}/explain` | GET | ✅ | 匹配解释器 (维度拆解) |
+| `/api/matches/{id}/counterfactual` | POST | ✅ | 反事实分析 (如"差 1 项技能 = ?") |
+| `/api/matches/{id}/mutual-view` | GET | ✅ | 双方对照视图 |
+| `/api/evaluation/{id}/compare` | GET | ✅ | 双方评分对比 |
+| `/api/admin/matching-quality` | GET | ✅(admin) | 匹配质量 dashboard |
+| `/api/admin/matching-quality/weights` | POST | ✅(admin) | 手动调权重 |
+| `/api/admin/weights` | GET/POST | ✅(admin) | 权重配置 + 自动校准 |
+| `/api/admin/calibration/dry-run` | POST | ✅(admin) | 校准试运行 |
+
+### Webhook / 公开 API (P2)
+| `/api/webhooks/subscriptions` | GET/POST | ✅(admin) | 订阅管理 |
+| `/api/webhooks/subscriptions/{id}` | DELETE | ✅(admin) | 取消订阅 |
+| `/api/webhooks/deliveries` | GET | ✅(admin) | 投递历史 |
+| `/api/webhooks/test/{id}` | POST | ✅(admin) | 测试投递 |
+| `/api/public/roles` | GET | API Key | 公开岗位列表 |
+| `/api/public/roles/{id}` | GET | API Key | 公开岗位详情 |
+| `/api/public/matches` | GET | API Key | 公开匹配结果 |
+| `/api/admin/api-keys` | GET/POST | ✅(admin) | API Key 管理 |
+| `/api/admin/api-keys/{id}/revoke` | POST | ✅(admin) | 吊销 Key |
+
+### 规则引擎 / A/B 实验 (P2)
+| `/api/rules` | GET/POST | ✅(admin) | 规则 CRUD |
+| `/api/rules/{id}/test` | POST | ✅(admin) | 试运行 |
+| `/api/rules/{id}/enable` | POST | ✅(admin) | 启用 |
+| `/api/admin/ab/experiments` | GET/POST | ✅(admin) | 实验 CRUD |
+| `/api/admin/ab/{key}/results` | GET | ✅(admin) | 显著性分析 |
+| `/api/admin/ab/{key}/stop` | POST | ✅(admin) | 停掉实验 |
+
+### 审计 / 成本 (P4)
+| `/api/admin/audit` | GET | ✅(admin) | 审计日志查询 |
+| `/api/admin/audit/export` | GET | ✅(admin) | 审计导出 |
+| `/api/admin/cost/summary` | GET | ✅(admin) | 成本汇总 |
+| `/api/admin/cost/by-agent` | GET | ✅(admin) | 按 Agent 拆分 |
+| `/api/admin/cost/by-tenant` | GET | ✅(admin) | 按租户拆分 |
+
+### Action Items / Escalation
+| `/api/action-items` | GET/POST | ✅ | 行动项 |
+| `/api/action-items/{id}` | PATCH | ✅ | 标记完成/关闭 |
+| `/api/escalation` | POST | ✅ | 升级到人工 |

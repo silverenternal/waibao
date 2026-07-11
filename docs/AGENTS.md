@@ -482,4 +482,53 @@ NOTIFY_FEISHU_ENABLED=true
 FEISHU_WEBHOOK=https://open.feishu.cn/open-apis/bot/v2/hook/xxx
 ```
 
+---
+
+## 🆕 v3.0 新增智能体能力
+
+### 👤 Persona Memory (用人方画像记忆)
+
+`PersonaAgent` 在 v3.0 增加**长期偏好记忆**,每次老板/HR 与 Agent 互动时:
+- 记录 "老板不喜欢的关键词"(如 "加班文化"、"出差 50%")
+- 记录 "老板特别看重的特质"(如 "985 毕业"、"5 年以上管理经验")
+- 自动在后续 JD 生成、TalentBrief、面试问题中过滤 / 加权
+- "升级人工" 按钮让老板一键把当前对话转给 HRBP,自动建工单
+
+存储:`persona_memory` 表(user_id PK, organization_id, preferences JSONB, last_updated)
+
+### 💬 协同房间 (Multi-Party + 实时协作)
+
+`MultiPartyAgent` v3.0 引入**多人实时协同房间**:
+- 老板 + HR + 部门负责人 + 外部猎头可在同一个 room 讨论一个候选人
+- WebSocket 实时消息 + 线程回复 + emoji 反应
+- `@mention` 触发通知(走 `NotifyDispatcher` 的钉钉/飞书/邮件通道)
+- 关键决策(如"约面试")自动生成 Ticket 并关联回房间
+- API:`/api/rooms`、`/api/rooms/{id}/messages`(REST + WS 双通道)
+
+实现:`services/collaboration_room.py`(纯函数式 + supabase client)
+
+### ⚖️ 自动权重校准 (Feedback Loop → 权重)
+
+`MutualEvaluator` v3.0 增加**自动权重学习回路**:
+
+1. **每日调度**:`services/feedback_loop.py::daily_scheduler()`
+   - 拉过去 7 天所有 `placement_made` / `match_dismissed` 信号
+   - 按角色、行业、级别分组,统计每维度的"实际有用度"
+2. **权重调整**:对每个分组的 `CompositeScorer` 权重做小幅 +/- 调整
+   - 用法:weights × adjustment_factor (clamp 0.5 ~ 2.0)
+   - 写回 `weight_settings` 表,带审计 trail
+3. **A/B 验证**:调整后的权重先以 10% 流量灰度
+4. **人工监督**:Admin 在 `/admin/matching-quality` 看 Precision/Recall 曲线,可一键回滚
+
+风险:每天最多 ±5% 调整,带 cooldown 防抖动。
+
+### 📊 匹配质量 Dashboard (admin/matching-quality)
+
+- Precision / Recall / F1 按周/月趋势
+- Bucket 分布(分数段 vs 真实命中率)
+- 与人工评分的偏差(BiasMonitor)
+- 自动生成 "建议调整维度" 报告
+
+路由:`/api/admin/matching-quality/*`
+
 更多示例见 [`backend/providers/README.md`](../talent-tool-mvp/backend/providers/README.md) 与 [`docs/ARCHITECTURE.md`](./ARCHITECTURE.md) 的 Providers 抽象层章节。
