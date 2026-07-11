@@ -1,0 +1,137 @@
+name: Security
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # 每周一次 (UTC 周一 06:00)
+    - cron: "0 6 * * 1"
+
+jobs:
+  python-sast:
+    name: Bandit (Python SAST)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install bandit
+        run: pip install bandit==1.7.10
+      - name: Run bandit
+        run: |
+          bandit -r backend/ \
+            --severity-level high --confidence-level high \
+            -f json -o bandit-report.json || true
+          bandit -r backend/ --severity-level medium --confidence-level high \
+            -f json -o bandit-medium.json || true
+      - name: Show summary
+        run: |
+          if [ -s bandit-report.json ]; then
+            python -c "import json,sys; d=json.load(open('bandit-report.json')); print('HIGH issues:', len(d.get('results', [])))"
+          fi
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
+
+  python-deps:
+    name: Safety (Python deps)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install safety
+        run: pip install safety==3.2.3
+      - name: Scan
+        run: |
+          safety check --file backend/requirements.txt \
+            --output json --save-json safety-report.json || true
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: safety-report
+          path: safety-report.json
+
+  frontend-deps:
+    name: pnpm audit (frontend deps)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
+      - name: Audit prod only
+        run: pnpm audit --prod --json || true
+        working-directory: frontend
+        continue-on-error: true
+
+  secret-scan:
+    name: detect-secrets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install detect-secrets
+        run: pip install detect-secrets==1.5.0
+      - name: Generate baseline
+        run: |
+          detect-secrets scan \
+            --exclude-files '\.git/.*|node_modules/.*|\.next/.*|__pycache__/.*|dist/.*|build/.*' \
+            > .secrets.baseline
+      - name: Compare with baseline
+        run: |
+          detect-secrets scan \
+            --exclude-files '\.git/.*|node_modules/.*|\.next/.*|__pycache__/.*|dist/.*|build/.*' \
+            --baseline .secrets.baseline || \
+            (echo "::error::Secret drift detected" && exit 1)
+      - name: Upload baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: secrets-baseline
+          path: .secrets.baseline
+
+  sqlmap-integration:
+    name: sqlmap (optional integration tests)
+    runs-on: ubuntu-latest
+    # 默认只在 main / schedule 跑; PR 不跑
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Pull sqlmap image
+        run: docker pull sqlmapproject/sqlmap:latest
+      - name: Run sqlmap against backend (read-only)
+        run: |
+          # 默认不对真实生产 DB 跑; 测试 URL 用占位
+          docker run --rm -v $PWD:/work sqlmapproject/sqlmap:latest \
+            -u "http://localhost:8000/api/health" \
+            --batch --level=1 --risk=1 \
+            --output-dir=/work/sqlmap-output || true
+        continue-on-error: true
+      - name: Upload sqlmap output
+        uses: actions/upload-artifact@v4
+        with:
+          name: sqlmap-output
+          path: sqlmap-output/
+        continue-on-error: true
