@@ -20,7 +20,7 @@
     ],
     "paths": {
       "@/*": ["./*"],
-      "@/contracts/*": ["../contracts/*"]
+      "@/contracts/*": ["./contracts/*"]
     }
   },
   "include": [
@@ -30,7 +30,7 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts",
-    "../contracts/**/*.ts"
+    "./contracts/**/*.ts"
   ],
   "exclude": ["node_modules"]
 }

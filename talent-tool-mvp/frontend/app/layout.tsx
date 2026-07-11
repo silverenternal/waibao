@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { DM_Sans, Geist_Mono } from "next/font/google";
 import { Providers } from "./providers";
 import { Toaster } from "@/components/ui/sonner";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -17,27 +19,35 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "RecruitTech | AI-Powered Talent Platform",
-  description: "Intelligent candidate matching, copilot dashboards, and multi-persona workflows for modern recruitment",
+  description:
+    "Intelligent candidate matching, copilot dashboards, and multi-persona workflows for modern recruitment",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const messages = await getMessages();
   return (
     <html
-      lang="en"
+      lang={locale}
       suppressHydrationWarning
       className={`${dmSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md focus:shadow-lg focus:outline-none">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md focus:shadow-lg focus:outline-none"
+        >
           Skip to content
         </a>
         <Providers>
-          <div id="main-content">{children}</div>
-          <Toaster />
+          <NextIntlClientProvider locale={locale} messages={messages}>
+            <div id="main-content">{children}</div>
+            <Toaster />
+          </NextIntlClientProvider>
         </Providers>
       </body>
     </html>

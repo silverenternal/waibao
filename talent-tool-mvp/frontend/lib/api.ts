@@ -41,7 +41,7 @@ async function getAuthToken(): Promise<string | null> {
   return session?.access_token ?? null;
 }
 
-async function fetchAPI<T>(
+export async function fetchAPI<T>(
   path: string,
   options?: RequestInit & { retries?: number }
 ): Promise<T> {

@@ -1,6 +1,6 @@
 {
   "common": {
-    "app_name": "招聘智能体",
+    "appName": "招聘智能体",
     "loading": "加载中...",
     "save": "保存",
     "cancel": "取消",
@@ -18,44 +18,69 @@
     "no": "否",
     "more": "更多",
     "less": "收起",
-    "error_generic": "出错了,请稍后再试",
+    "errorGeneric": "出错了,请稍后再试",
     "success": "操作成功",
-    "no_data": "暂无数据",
-    "invite_agent": "召唤智能体",
-    "thinking": "思考中..."
+    "noData": "暂无数据",
+    "inviteAgent": "召唤智能体",
+    "thinking": "思考中...",
+    "retry": "重试",
+    "copy": "复制",
+    "copied": "已复制",
+    "open": "打开",
+    "close": "关闭",
+    "viewAll": "查看全部",
+    "language": "切换语言",
+    "languageChanged": "语言已切换",
+    "loadingMore": "加载更多",
+    "backToTop": "回到顶部",
+    "connected": "已连接",
+    "disconnected": "未连接",
+    "me": "我",
+    "agent": "智能体",
+    "agentLive": "智能体 · 实时",
+    "send": "发送",
+    "languageZh": "简体中文",
+    "languageEn": "English",
+    "languageJa": "日本語",
+    "languageChanged": "语言已切换",
+    "loadingMore": "加载更多",
+    "backToTop": "回到顶部"
   },
   "nav": {
-    "jobseeker_home": "我的空间",
+    "jobseekerHome": "我的空间",
     "profile": "我的画像",
     "journal": "工作日记",
     "plan": "职业规划",
-    "policy_browse": "查看公司制度",
+    "policyBrowse": "查看公司制度",
     "matches": "为我推荐",
     "messages": "消息",
-    "employer_home": "HR 工作台",
+    "employerHome": "HR 工作台",
     "vision": "愿景战略",
     "compliance": "资质管理",
-    "talent_brief": "人才需求",
-    "job_specs": "岗位详情",
+    "talentBrief": "人才需求",
+    "jobSpecs": "岗位详情",
     "policies": "规章制度",
     "multilogue": "多方对话",
-    "candidate_pool": "候选人库",
-    "settings": "设置"
+    "candidatePool": "候选人库",
+    "rooms": "协同房间",
+    "settings": "设置",
+    "adminHome": "管理员后台",
+    "logout": "退出登录"
   },
   "jobseeker": {
     "welcome": "我是你的知心朋友,有职业困惑、心情起伏都可以跟我说。",
-    "upload_resume": "上传简历",
-    "upload_resume_hint": "支持 PDF / Word / 图片,我会自动提取关键信息",
-    "add_experience": "补充一段经历",
-    "mood_question": "今天感觉怎么样?",
-    "journal_prompt": "今天做了什么?有什么收获或困惑?",
-    "ai_advice_title": "智能体给你的建议",
-    "ai_warning_title": "注意事项",
-    "ai_action_title": "明天可以做的事",
-    "view_full_profile": "查看完整画像",
-    "view_real_needs": "查看真实需求",
-    "regenerate_plan": "重新生成规划",
-    "emotion_label": {
+    "uploadResume": "上传简历",
+    "uploadResumeHint": "支持 PDF / Word / 图片,我会自动提取关键信息",
+    "addExperience": "补充一段经历",
+    "moodQuestion": "今天感觉怎么样?",
+    "journalPrompt": "今天做了什么?有什么收获或困惑?",
+    "aiAdviceTitle": "智能体给你的建议",
+    "aiWarningTitle": "注意事项",
+    "aiActionTitle": "明天可以做的事",
+    "viewFullProfile": "查看完整画像",
+    "viewRealNeeds": "查看真实需求",
+    "regeneratePlan": "重新生成规划",
+    "emotionLabel": {
       "joy": "开心",
       "sadness": "难过",
       "anger": "愤怒",
@@ -63,27 +88,63 @@
       "surprise": "惊讶",
       "disgust": "厌恶",
       "neutral": "平静"
+    },
+    "journal": {
+      "title": "我的工作日记",
+      "newEntry": "新建日记",
+      "voiceTab": "语音日记",
+      "textTab": "文字日记",
+      "rating": "AI 评分",
+      "history": "历史评分趋势",
+      "weekSummary": "本周摘要",
+      "actionItems": "行动项",
+      "noActionItems": "暂无行动项",
+      "voiceRecorderHint": "点击麦克风开始录音,最长 5 分钟"
+    },
+    "emotion": {
+      "title": "我的情绪趋势",
+      "monthLabel": "近 30 天",
+      "weekLabel": "本周",
+      "triggerCorrelation": "触发事件关联",
+      "eventDetail": "情绪事件详情"
+    },
+    "plan": {
+      "title": "我的职业规划",
+      "marketInsights": "市场行情",
+      "learningResources": "学习资源",
+      "progress": "执行进度",
+      "adjust": "调整计划",
+      "salaryChart": "市场薪资中位数"
+    },
+    "greetingTitle": "你好,我是你的智能体助手",
+    "greetingBody": "可以跟我说工作内容、心情、困惑,我会倾听并给出建议。",
+    "inputPlaceholder": "跟智能体说点什么...",
+    "suggestions": {
+      "writeJournal": { "label": "写日记", "text": "今天做了一个 AI 项目,挺有收获" },
+      "viewMatches": { "label": "查看匹配", "text": "看看有哪些工作适合我" },
+      "careerPlan": { "label": "职业规划", "text": "我想做 AI 产品经理,该怎么规划" },
+      "chatMood": { "label": "聊聊心情", "text": "今天有点焦虑" }
     }
   },
   "employer": {
     "welcome": "我是你的真诚 HR 助手,可以帮你处理招聘、政策、员工服务等。",
-    "upload_credential": "上传资质",
-    "credential_types": {
-      "business_license": "营业执照",
-      "legal_id": "法人身份证",
-      "industry_cert": "行业资质",
-      "tax_cert": "税务证明",
-      "bank_account": "对公账户",
+    "uploadCredential": "上传资质",
+    "credentialTypes": {
+      "businessLicense": "营业执照",
+      "legalId": "法人身份证",
+      "industryCert": "行业资质",
+      "taxCert": "税务证明",
+      "bankAccount": "对公账户",
       "other": "其他"
     },
-    "trust_score": "可信度评分",
-    "vision_input_hint": "请用一段话描述公司的愿景(3-5年想成为什么)",
-    "planning_input_hint": "请描述 1 年内的核心规划",
-    "strategy_input_hint": "请描述年度战略重点",
-    "tactic_input_hint": "请描述本季度的战术动作",
-    "draft_jd": "JD 草稿",
-    "upload_policy": "上传制度文档",
-    "policy_categories": {
+    "trustScore": "可信度评分",
+    "visionInputHint": "请用一段话描述公司的愿景(3-5年想成为什么)",
+    "planningInputHint": "请描述 1 年内的核心规划",
+    "strategyInputHint": "请描述年度战略重点",
+    "tacticInputHint": "请描述本季度的战术动作",
+    "draftJd": "JD 草稿",
+    "uploadPolicy": "上传制度文档",
+    "policyCategories": {
       "attendance": "考勤",
       "leave": "请假",
       "expense": "报销",
@@ -92,30 +153,157 @@
       "benefits": "福利",
       "conduct": "行为规范",
       "safety": "安全",
-      "remote_work": "远程办公",
+      "remoteWork": "远程办公",
       "other": "其他"
     },
-    "ask_policy": "向智能体询问制度",
-    "match_candidate": "匹配候选人",
-    "two_way_score": "双向契合度"
+    "askPolicy": "向智能体询问制度",
+    "matchCandidate": "匹配候选人",
+    "twoWayScore": "双向契合度",
+    "policy": {
+      "listTitle": "规章制度",
+      "searchPlaceholder": "搜索制度关键字",
+      "riskBadge": "法律风险",
+      "categoryFilter": "按类别筛选",
+      "noResult": "未找到相关制度"
+    },
+    "jd": {
+      "templatePicker": "选择 JD 模板",
+      "overSpecWarning": "过度要求警告",
+      "versionHistory": "版本历史",
+      "versionDiff": "版本对比"
+    },
+    "bias": {
+      "alertTitle": "潜在偏见提示",
+      "explanation": "依据说明",
+      "legalHint": "法律提示",
+      "alternativeWording": "替代话术"
+    },
+    "role": {
+      "talentImage": "人才画像",
+      "consensusScore": "多方共识度",
+      "stakeholderMatrix": "干系人矩阵",
+      "contradictions": "需求冲突"
+    }
   },
-  "matching": {
-    "candidate_to_role": "求职者→岗位契合度",
-    "role_to_candidate": "岗位→求职者契合度",
-    "harmonic_score": "调和值",
-    "candidate_view": "求职者视角",
-    "employer_view": "用人单位视角",
-    "mutual_evaluation": "双方互评",
-    "feedback_loop": "反馈闭环",
-    "no_match": "暂无匹配结果"
+  "match": {
+    "candidateToRole": "求职者→岗位契合度",
+    "roleToCandidate": "岗位→求职者契合度",
+    "harmonicScore": "调和值",
+    "candidateView": "求职者视角",
+    "employerView": "用人单位视角",
+    "mutualEvaluation": "双方互评",
+    "feedbackLoop": "反馈闭环",
+    "noMatch": "暂无匹配结果",
+    "reasonTitle": "为什么推荐",
+    "weakPoints": "弱项",
+    "counterfactual": "如果...会更匹配",
+    "explainPage": "匹配解释",
+    "compareTitle": "双方对照"
   },
-  "errors": {
+  "policy": {
+    "title": "公司制度",
+    "search": "搜索制度",
+    "riskHigh": "高风险",
+    "riskMedium": "中风险",
+    "riskLow": "低风险",
+    "categoryLabel": "类别"
+  },
+  "rooms": {
+    "title": "协同房间",
+    "members": "成员",
+    "thread": "线程",
+    "mention": "@ 提及",
+    "unread": "未读"
+  },
+  "admin": {
+    "webhooks": {
+      "title": "Webhook 管理",
+      "create": "新建 Webhook",
+      "urlLabel": "回调 URL",
+      "eventLabel": "订阅事件",
+      "secretLabel": "签名密钥",
+      "statusActive": "启用",
+      "statusPaused": "暂停"
+    },
+    "apiKeys": {
+      "title": "API Key 管理",
+      "create": "新建 Key",
+      "scopeLabel": "权限范围",
+      "rateLimitLabel": "限流",
+      "revoke": "吊销"
+    },
+    "rules": {
+      "title": "规则引擎",
+      "create": "新建规则",
+      "trigger": "触发条件",
+      "action": "执行动作",
+      "tester": "规则测试",
+      "enabled": "启用"
+    },
+    "experiments": {
+      "title": "A/B 实验",
+      "create": "新建实验",
+      "results": "效果对比",
+      "trafficSplit": "流量分配"
+    },
+    "cost": {
+      "title": "成本面板",
+      "byTenant": "按租户",
+      "byProvider": "按供应商",
+      "cacheHit": "缓存命中率"
+    },
+    "weights": {
+      "title": "匹配权重",
+      "auto": "自动校准"
+    },
+    "quality": {
+      "title": "匹配质量",
+      "precision": "精准率",
+      "recall": "召回率",
+      "f1": "F1"
+    },
+    "audit": {
+      "title": "审计日志",
+      "export": "导出"
+    }
+  },
+  "error": {
     "network": "网络异常,请检查连接",
     "unauthorized": "登录已过期,请重新登录",
     "forbidden": "无权访问",
-    "not_found": "资源不存在",
+    "notFound": "资源不存在",
     "validation": "输入有误,请检查",
     "server": "服务器繁忙,请稍后再试",
-    "agent_not_found": "智能体未找到"
+    "agentNotFound": "智能体未找到",
+    "timeout": "请求超时",
+    "rateLimited": "操作太频繁,请稍后再试"
+  },
+  "agent": {
+    "biasAlert": {
+      "severityHigh": "高风险",
+      "severityMedium": "中风险",
+      "severityLow": "低风险"
+    },
+    "explainer": {
+      "reasonLabel": "推荐理由",
+      "weakLabel": "弱项说明",
+      "counterfactualLabel": "反事实建议"
+    },
+    "persona": {
+      "remembered": "我记得你上次提到过",
+      "preferenceApplied": "已按你的偏好调整"
+    }
+  },
+  "voice": {
+    "record": "点击录音",
+    "stop": "停止",
+    "uploading": "上传中...",
+    "transcribing": "转写中...",
+    "maxDuration": "已达最大时长 5 分钟"
+  },
+  "escalate": {
+    "button": "升级人工",
+    "ticketCreated": "工单已创建",
+    "selectDepartment": "请选择部门"
   }
 }

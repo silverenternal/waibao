@@ -1,17 +1,30 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { intlMiddleware } from "./i18n";
 
+// 让 next-intl 先跑(同步 locale cookie),然后复用返回的 response headers 做 Supabase 鉴权.
 export async function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // Public routes — no auth required
-  if (pathname === "/" || pathname === "/login") {
-    return NextResponse.next();
+  // Step 1: 让 next-intl 设置 locale cookie
+  const intlResponse = intlMiddleware(request);
+  // 如果中间件返回了重定向,直接返回
+  if (intlResponse.headers.get("location")) {
+    return intlResponse;
   }
 
+  const { pathname } = request.nextUrl;
+
+  // Step 2: 复用 intl 响应作为基础,保留其 set-cookie
   const response = NextResponse.next({
     request: { headers: request.headers },
   });
+  intlResponse.headers.forEach((value: string, key: string) => {
+    response.headers.set(key, value);
+  });
+
+  // Step 3: 公共路由
+  if (pathname === "/" || pathname === "/login") {
+    return response;
+  }
 
   // Check for demo mode user (stored in cookie by client)
   const demoUser = request.cookies.get("recruittech_demo_role")?.value;

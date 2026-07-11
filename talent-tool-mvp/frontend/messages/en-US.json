@@ -1,6 +1,6 @@
 {
   "common": {
-    "app_name": "Recruitment Agent",
+    "appName": "Recruitment Agent",
     "loading": "Loading...",
     "save": "Save",
     "cancel": "Cancel",
@@ -18,44 +18,69 @@
     "no": "No",
     "more": "More",
     "less": "Less",
-    "error_generic": "Something went wrong",
+    "errorGeneric": "Something went wrong",
     "success": "Success",
-    "no_data": "No data",
-    "invite_agent": "Invoke Agent",
-    "thinking": "Thinking..."
+    "noData": "No data",
+    "inviteAgent": "Invoke Agent",
+    "thinking": "Thinking...",
+    "retry": "Retry",
+    "copy": "Copy",
+    "copied": "Copied",
+    "open": "Open",
+    "close": "Close",
+    "viewAll": "View all",
+    "language": "Language",
+    "languageChanged": "Language switched",
+    "loadingMore": "Load more",
+    "backToTop": "Back to top",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "me": "Me",
+    "agent": "Agent",
+    "agentLive": "Agent · Live",
+    "send": "Send",
+    "languageZh": "Simplified Chinese",
+    "languageEn": "English",
+    "languageJa": "Japanese",
+    "languageChanged": "Language switched",
+    "loadingMore": "Load more",
+    "backToTop": "Back to top"
   },
   "nav": {
-    "jobseeker_home": "My Space",
+    "jobseekerHome": "My Space",
     "profile": "My Profile",
     "journal": "Daily Journal",
     "plan": "Career Plan",
-    "policy_browse": "Company Policies",
+    "policyBrowse": "Company Policies",
     "matches": "Recommendations",
     "messages": "Messages",
-    "employer_home": "HR Console",
-    "vision": "Vision & Strategy",
+    "employerHome": "HR Console",
+    "vision": "Vision and Strategy",
     "compliance": "Compliance",
-    "talent_brief": "Talent Brief",
-    "job_specs": "Job Specs",
+    "talentBrief": "Talent Brief",
+    "jobSpecs": "Job Specs",
     "policies": "Policies",
     "multilogue": "Multi-party Chat",
-    "candidate_pool": "Candidate Pool",
-    "settings": "Settings"
+    "candidatePool": "Candidate Pool",
+    "rooms": "Rooms",
+    "settings": "Settings",
+    "adminHome": "Admin",
+    "logout": "Log out"
   },
   "jobseeker": {
-    "welcome": "I'm your thoughtful companion for career and emotions.",
-    "upload_resume": "Upload Resume",
-    "upload_resume_hint": "Supports PDF / Word / Image. I'll extract key info automatically.",
-    "add_experience": "Add Experience",
-    "mood_question": "How do you feel today?",
-    "journal_prompt": "What did you do today? Any takeaways or concerns?",
-    "ai_advice_title": "Agent's Advice",
-    "ai_warning_title": "Cautions",
-    "ai_action_title": "Things to do tomorrow",
-    "view_full_profile": "View Full Profile",
-    "view_real_needs": "View Real Needs",
-    "regenerate_plan": "Regenerate Plan",
-    "emotion_label": {
+    "welcome": "I am your thoughtful companion for career and emotions.",
+    "uploadResume": "Upload Resume",
+    "uploadResumeHint": "Supports PDF / Word / Image. I will extract key info automatically.",
+    "addExperience": "Add Experience",
+    "moodQuestion": "How do you feel today?",
+    "journalPrompt": "What did you do today? Any insights or doubts?",
+    "aiAdviceTitle": "Agent Advice",
+    "aiWarningTitle": "Heads up",
+    "aiActionTitle": "Try Tomorrow",
+    "viewFullProfile": "View Full Profile",
+    "viewRealNeeds": "View Real Needs",
+    "regeneratePlan": "Regenerate Plan",
+    "emotionLabel": {
       "joy": "Joy",
       "sadness": "Sadness",
       "anger": "Anger",
@@ -63,27 +88,63 @@
       "surprise": "Surprise",
       "disgust": "Disgust",
       "neutral": "Neutral"
+    },
+    "journal": {
+      "title": "My Daily Journal",
+      "newEntry": "New Entry",
+      "voiceTab": "Voice",
+      "textTab": "Text",
+      "rating": "AI Rating",
+      "history": "Rating Trend",
+      "weekSummary": "Week Summary",
+      "actionItems": "Action Items",
+      "noActionItems": "No action items",
+      "voiceRecorderHint": "Tap mic to record, max 5 minutes"
+    },
+    "emotion": {
+      "title": "Emotion Trend",
+      "monthLabel": "Last 30 days",
+      "weekLabel": "This week",
+      "triggerCorrelation": "Trigger Correlation",
+      "eventDetail": "Event Detail"
+    },
+    "plan": {
+      "title": "我的职业规划",
+      "marketInsights": "Market Insights",
+      "learningResources": "Learning Resources",
+      "progress": "Progress",
+      "adjust": "Adjust Plan",
+      "salaryChart": "Market Salary Median"
+    },
+    "greetingTitle": "Hi, I am your agent assistant",
+    "greetingBody": "Tell me about your work, mood, and worries — I will listen and offer advice.",
+    "inputPlaceholder": "Say something to the agent...",
+    "suggestions": {
+      "writeJournal": { "label": "Write journal", "text": "I worked on an AI project today, found it rewarding" },
+      "viewMatches": { "label": "View matches", "text": "Show me jobs that fit me" },
+      "careerPlan": { "label": "Career plan", "text": "I want to become an AI product manager — how do I plan this?" },
+      "chatMood": { "label": "Talk mood", "text": "I feel a bit anxious today" }
     }
   },
   "employer": {
-    "welcome": "I'm your sincere HR assistant for hiring, policies, and employee service.",
-    "upload_credential": "Upload Credential",
-    "credential_types": {
-      "business_license": "Business License",
-      "legal_id": "Legal ID",
-      "industry_cert": "Industry Cert",
-      "tax_cert": "Tax Cert",
-      "bank_account": "Bank Account",
+    "welcome": "I am your sincere HR assistant for hiring, policy and employee service.",
+    "uploadCredential": "Upload Credential",
+    "credentialTypes": {
+      "businessLicense": "Business License",
+      "legalId": "Legal ID",
+      "industryCert": "Industry Cert",
+      "taxCert": "Tax Cert",
+      "bankAccount": "Bank Account",
       "other": "Other"
     },
-    "trust_score": "Trust Score",
-    "vision_input_hint": "Describe your company's vision (3-5 years).",
-    "planning_input_hint": "Describe 1-year planning.",
-    "strategy_input_hint": "Describe annual strategy priorities.",
-    "tactic_input_hint": "Describe quarterly tactics.",
-    "draft_jd": "JD Draft",
-    "upload_policy": "Upload Policy Document",
-    "policy_categories": {
+    "trustScore": "Trust Score",
+    "visionInputHint": "Describe the company vision in a paragraph (3-5 year goal)",
+    "planningInputHint": "Describe 1-year core planning",
+    "strategyInputHint": "Describe annual strategy focus",
+    "tacticInputHint": "Describe quarterly tactics",
+    "draftJd": "JD Draft",
+    "uploadPolicy": "Upload Policy",
+    "policyCategories": {
       "attendance": "Attendance",
       "leave": "Leave",
       "expense": "Expense",
@@ -92,30 +153,157 @@
       "benefits": "Benefits",
       "conduct": "Conduct",
       "safety": "Safety",
-      "remote_work": "Remote Work",
+      "remoteWork": "Remote Work",
       "other": "Other"
     },
-    "ask_policy": "Ask Agent about Policy",
-    "match_candidate": "Match Candidates",
-    "two_way_score": "Two-way Score"
+    "askPolicy": "Ask Agent about Policy",
+    "matchCandidate": "Match Candidate",
+    "twoWayScore": "Two-way Score",
+    "policy": {
+      "listTitle": "Policies",
+      "searchPlaceholder": "Search policies",
+      "riskBadge": "Legal Risk",
+      "categoryFilter": "Filter by category",
+      "noResult": "No matching policy"
+    },
+    "jd": {
+      "templatePicker": "JD Template",
+      "overSpecWarning": "Over-spec Warning",
+      "versionHistory": "Version History",
+      "versionDiff": "Version Diff"
+    },
+    "bias": {
+      "alertTitle": "Potential Bias Alert",
+      "explanation": "Rationale",
+      "legalHint": "Legal Hint",
+      "alternativeWording": "Alternative Wording"
+    },
+    "role": {
+      "talentImage": "Talent Image",
+      "consensusScore": "Consensus Score",
+      "stakeholderMatrix": "Stakeholder Matrix",
+      "contradictions": "Contradictions"
+    }
   },
-  "matching": {
-    "candidate_to_role": "Candidate → Role Fit",
-    "role_to_candidate": "Role → Candidate Fit",
-    "harmonic_score": "Harmonic Score",
-    "candidate_view": "Candidate View",
-    "employer_view": "Employer View",
-    "mutual_evaluation": "Mutual Evaluation",
-    "feedback_loop": "Feedback Loop",
-    "no_match": "No matches yet"
+  "match": {
+    "candidateToRole": "Candidate to Role",
+    "roleToCandidate": "Role to Candidate",
+    "harmonicScore": "Harmonic Score",
+    "candidateView": "Candidate View",
+    "employerView": "Employer View",
+    "mutualEvaluation": "Mutual Evaluation",
+    "feedbackLoop": "Feedback Loop",
+    "noMatch": "No match yet",
+    "reasonTitle": "Why this match",
+    "weakPoints": "Weak Points",
+    "counterfactual": "If... would match better",
+    "explainPage": "Match Explanation",
+    "compareTitle": "Side-by-side Comparison"
   },
-  "errors": {
-    "network": "Network error",
-    "unauthorized": "Please log in again",
-    "forbidden": "Access denied",
-    "not_found": "Resource not found",
-    "validation": "Invalid input",
-    "server": "Server busy, try later",
-    "agent_not_found": "Agent not found"
+  "policy": {
+    "title": "Company Policies",
+    "search": "Search policies",
+    "riskHigh": "High",
+    "riskMedium": "Medium",
+    "riskLow": "Low",
+    "categoryLabel": "Category"
+  },
+  "rooms": {
+    "title": "Rooms",
+    "members": "Members",
+    "thread": "Thread",
+    "mention": "@ Mention",
+    "unread": "Unread"
+  },
+  "admin": {
+    "webhooks": {
+      "title": "Webhooks",
+      "create": "New Webhook",
+      "urlLabel": "Callback URL",
+      "eventLabel": "Subscribed Events",
+      "secretLabel": "Signing Secret",
+      "statusActive": "Active",
+      "statusPaused": "Paused"
+    },
+    "apiKeys": {
+      "title": "API Keys",
+      "create": "New Key",
+      "scopeLabel": "Scope",
+      "rateLimitLabel": "Rate Limit",
+      "revoke": "Revoke"
+    },
+    "rules": {
+      "title": "Rule Engine",
+      "create": "New Rule",
+      "trigger": "Trigger",
+      "action": "Action",
+      "tester": "Rule Tester",
+      "enabled": "Active"
+    },
+    "experiments": {
+      "title": "A/B Experiments",
+      "create": "New Experiment",
+      "results": "Results",
+      "trafficSplit": "Traffic Split"
+    },
+    "cost": {
+      "title": "Cost Dashboard",
+      "byTenant": "By Tenant",
+      "byProvider": "By Provider",
+      "cacheHit": "Cache Hit Rate"
+    },
+    "weights": {
+      "title": "Match Weights",
+      "auto": "Auto Calibrate"
+    },
+    "quality": {
+      "title": "Match Quality",
+      "precision": "Precision",
+      "recall": "Recall",
+      "f1": "F1"
+    },
+    "audit": {
+      "title": "Audit Log",
+      "export": "Export"
+    }
+  },
+  "error": {
+    "network": "Network error, please check connection",
+    "unauthorized": "Session expired, please log in again",
+    "forbidden": "Forbidden",
+    "notFound": "Resource not found",
+    "validation": "Validation failed",
+    "server": "Server busy, please retry",
+    "agentNotFound": "Agent not found",
+    "timeout": "Request timeout",
+    "rateLimited": "Too many requests, please retry"
+  },
+  "agent": {
+    "biasAlert": {
+      "severityHigh": "High",
+      "severityMedium": "Medium",
+      "severityLow": "Low"
+    },
+    "explainer": {
+      "reasonLabel": "Reason",
+      "weakLabel": "Weakness",
+      "counterfactualLabel": "Counterfactual"
+    },
+    "persona": {
+      "remembered": "I recall you mentioned",
+      "preferenceApplied": "Adjusted to your preference"
+    }
+  },
+  "voice": {
+    "record": "Tap to Record",
+    "stop": "Stop",
+    "uploading": "Uploading...",
+    "transcribing": "Transcribing...",
+    "maxDuration": "Max duration 5 min reached"
+  },
+  "escalate": {
+    "button": "Escalate to Human",
+    "ticketCreated": "Ticket created",
+    "selectDepartment": "Select department"
   }
 }

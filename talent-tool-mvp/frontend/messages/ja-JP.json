@@ -1,0 +1,309 @@
+{
+  "common": {
+    "appName": "Recruitment Agent",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "submit": "Submit",
+    "delete": "Delete",
+    "edit": "Edit",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search",
+    "filter": "Filter",
+    "all": "All",
+    "yes": "Yes",
+    "no": "No",
+    "more": "More",
+    "less": "Less",
+    "errorGeneric": "Something went wrong",
+    "success": "Success",
+    "noData": "No data",
+    "inviteAgent": "Invoke Agent",
+    "thinking": "Thinking...",
+    "retry": "Retry",
+    "copy": "Copy",
+    "copied": "Copied",
+    "open": "Open",
+    "close": "Close",
+    "viewAll": "View all",
+    "language": "言語",
+    "languageChanged": "言語が切り替わりました",
+    "loadingMore": "もっと読み込む",
+    "backToTop": "トップへ戻る",
+    "connected": "接続済み",
+    "disconnected": "未接続",
+    "me": "私",
+    "agent": "エージェント",
+    "agentLive": "エージェント · リアルタイム",
+    "send": "送信",
+    "languageZh": "Simplified Chinese",
+    "languageEn": "English",
+    "languageJa": "Japanese",
+    "languageChanged": "言語が切り替わりました",
+    "loadingMore": "もっと読み込む",
+    "backToTop": "トップへ戻る"
+  },
+  "nav": {
+    "jobseekerHome": "My Space",
+    "profile": "My Profile",
+    "journal": "Daily Journal",
+    "plan": "Career Plan",
+    "policyBrowse": "Company Policies",
+    "matches": "Recommendations",
+    "messages": "Messages",
+    "employerHome": "HR Console",
+    "vision": "Vision and Strategy",
+    "compliance": "Compliance",
+    "talentBrief": "Talent Brief",
+    "jobSpecs": "Job Specs",
+    "policies": "Policies",
+    "multilogue": "Multi-party Chat",
+    "candidatePool": "Candidate Pool",
+    "rooms": "Rooms",
+    "settings": "Settings",
+    "adminHome": "Admin",
+    "logout": "Log out"
+  },
+  "jobseeker": {
+    "welcome": "I am your thoughtful companion for career and emotions.",
+    "uploadResume": "Upload Resume",
+    "uploadResumeHint": "Supports PDF / Word / Image. I will extract key info automatically.",
+    "addExperience": "Add Experience",
+    "moodQuestion": "How do you feel today?",
+    "journalPrompt": "What did you do today? Any insights or doubts?",
+    "aiAdviceTitle": "Agent Advice",
+    "aiWarningTitle": "Heads up",
+    "aiActionTitle": "Try Tomorrow",
+    "viewFullProfile": "View Full Profile",
+    "viewRealNeeds": "View Real Needs",
+    "regeneratePlan": "Regenerate Plan",
+    "emotionLabel": {
+      "joy": "Joy",
+      "sadness": "Sadness",
+      "anger": "Anger",
+      "fear": "Fear",
+      "surprise": "Surprise",
+      "disgust": "Disgust",
+      "neutral": "Neutral"
+    },
+    "journal": {
+      "title": "My Daily Journal",
+      "newEntry": "New Entry",
+      "voiceTab": "Voice",
+      "textTab": "Text",
+      "rating": "AI Rating",
+      "history": "Rating Trend",
+      "weekSummary": "Week Summary",
+      "actionItems": "Action Items",
+      "noActionItems": "No action items",
+      "voiceRecorderHint": "Tap mic to record, max 5 minutes"
+    },
+    "emotion": {
+      "title": "Emotion Trend",
+      "monthLabel": "Last 30 days",
+      "weekLabel": "This week",
+      "triggerCorrelation": "Trigger Correlation",
+      "eventDetail": "Event Detail"
+    },
+    "plan": {
+      "title": "私のキャリアプラン",
+      "marketInsights": "市場インサイト",
+      "learningResources": "学習リソース",
+      "progress": "進捗",
+      "adjust": "プラン調整",
+      "salaryChart": "市場給与中央値"
+    },
+    "greetingTitle": "こんにちは、私はあなたのエージェントアシスタントです",
+    "greetingBody": "仕事、気分、心配事を聞かせてください — 聞いてアドバイスします。",
+    "inputPlaceholder": "エージェントに何か言ってみてください...",
+    "suggestions": {
+      "writeJournal": { "label": "日記を書く", "text": "今日 AI プロジェクトをやった、収穫があった" },
+      "viewMatches": { "label": "マッチを見る", "text": "自分に合った仕事を見せて" },
+      "careerPlan": { "label": "キャリアプラン", "text": "AI プロダクトマネージャーになりたい — どう計画する？" },
+      "chatMood": { "label": "気分を話す", "text": "今日ちょっと不安" }
+    }
+  },
+  "employer": {
+    "welcome": "I am your sincere HR assistant for hiring, policy and employee service.",
+    "uploadCredential": "Upload Credential",
+    "credentialTypes": {
+      "businessLicense": "Business License",
+      "legalId": "Legal ID",
+      "industryCert": "Industry Cert",
+      "taxCert": "Tax Cert",
+      "bankAccount": "Bank Account",
+      "other": "Other"
+    },
+    "trustScore": "Trust Score",
+    "visionInputHint": "Describe the company vision in a paragraph (3-5 year goal)",
+    "planningInputHint": "Describe 1-year core planning",
+    "strategyInputHint": "Describe annual strategy focus",
+    "tacticInputHint": "Describe quarterly tactics",
+    "draftJd": "JD Draft",
+    "uploadPolicy": "Upload Policy",
+    "policyCategories": {
+      "attendance": "Attendance",
+      "leave": "Leave",
+      "expense": "Expense",
+      "promotion": "Promotion",
+      "salary": "Salary",
+      "benefits": "Benefits",
+      "conduct": "Conduct",
+      "safety": "Safety",
+      "remoteWork": "Remote Work",
+      "other": "Other"
+    },
+    "askPolicy": "Ask Agent about Policy",
+    "matchCandidate": "Match Candidate",
+    "twoWayScore": "Two-way Score",
+    "policy": {
+      "listTitle": "Policies",
+      "searchPlaceholder": "Search policies",
+      "riskBadge": "Legal Risk",
+      "categoryFilter": "Filter by category",
+      "noResult": "No matching policy"
+    },
+    "jd": {
+      "templatePicker": "JD Template",
+      "overSpecWarning": "Over-spec Warning",
+      "versionHistory": "Version History",
+      "versionDiff": "Version Diff"
+    },
+    "bias": {
+      "alertTitle": "Potential Bias Alert",
+      "explanation": "Rationale",
+      "legalHint": "Legal Hint",
+      "alternativeWording": "Alternative Wording"
+    },
+    "role": {
+      "talentImage": "Talent Image",
+      "consensusScore": "Consensus Score",
+      "stakeholderMatrix": "Stakeholder Matrix",
+      "contradictions": "Contradictions"
+    }
+  },
+  "match": {
+    "candidateToRole": "Candidate to Role",
+    "roleToCandidate": "Role to Candidate",
+    "harmonicScore": "Harmonic Score",
+    "candidateView": "Candidate View",
+    "employerView": "Employer View",
+    "mutualEvaluation": "Mutual Evaluation",
+    "feedbackLoop": "Feedback Loop",
+    "noMatch": "No match yet",
+    "reasonTitle": "Why this match",
+    "weakPoints": "Weak Points",
+    "counterfactual": "If... would match better",
+    "explainPage": "Match Explanation",
+    "compareTitle": "Side-by-side Comparison"
+  },
+  "policy": {
+    "title": "Company Policies",
+    "search": "Search policies",
+    "riskHigh": "High",
+    "riskMedium": "Medium",
+    "riskLow": "Low",
+    "categoryLabel": "Category"
+  },
+  "rooms": {
+    "title": "Rooms",
+    "members": "Members",
+    "thread": "Thread",
+    "mention": "@ Mention",
+    "unread": "Unread"
+  },
+  "admin": {
+    "webhooks": {
+      "title": "Webhooks",
+      "create": "New Webhook",
+      "urlLabel": "Callback URL",
+      "eventLabel": "Subscribed Events",
+      "secretLabel": "Signing Secret",
+      "statusActive": "Active",
+      "statusPaused": "Paused"
+    },
+    "apiKeys": {
+      "title": "API Keys",
+      "create": "New Key",
+      "scopeLabel": "Scope",
+      "rateLimitLabel": "Rate Limit",
+      "revoke": "Revoke"
+    },
+    "rules": {
+      "title": "Rule Engine",
+      "create": "New Rule",
+      "trigger": "Trigger",
+      "action": "Action",
+      "tester": "Rule Tester",
+      "enabled": "Active"
+    },
+    "experiments": {
+      "title": "A/B Experiments",
+      "create": "New Experiment",
+      "results": "Results",
+      "trafficSplit": "Traffic Split"
+    },
+    "cost": {
+      "title": "Cost Dashboard",
+      "byTenant": "By Tenant",
+      "byProvider": "By Provider",
+      "cacheHit": "Cache Hit Rate"
+    },
+    "weights": {
+      "title": "Match Weights",
+      "auto": "Auto Calibrate"
+    },
+    "quality": {
+      "title": "Match Quality",
+      "precision": "Precision",
+      "recall": "Recall",
+      "f1": "F1"
+    },
+    "audit": {
+      "title": "Audit Log",
+      "export": "Export"
+    }
+  },
+  "error": {
+    "network": "Network error, please check connection",
+    "unauthorized": "Session expired, please log in again",
+    "forbidden": "Forbidden",
+    "notFound": "Resource not found",
+    "validation": "Validation failed",
+    "server": "Server busy, please retry",
+    "agentNotFound": "Agent not found",
+    "timeout": "Request timeout",
+    "rateLimited": "Too many requests, please retry"
+  },
+  "agent": {
+    "biasAlert": {
+      "severityHigh": "High",
+      "severityMedium": "Medium",
+      "severityLow": "Low"
+    },
+    "explainer": {
+      "reasonLabel": "Reason",
+      "weakLabel": "Weakness",
+      "counterfactualLabel": "Counterfactual"
+    },
+    "persona": {
+      "remembered": "I recall you mentioned",
+      "preferenceApplied": "Adjusted to your preference"
+    }
+  },
+  "voice": {
+    "record": "Tap to Record",
+    "stop": "Stop",
+    "uploading": "Uploading...",
+    "transcribing": "Transcribing...",
+    "maxDuration": "Max duration 5 min reached"
+  },
+  "escalate": {
+    "button": "Escalate to Human",
+    "ticketCreated": "Ticket created",
+    "selectDepartment": "Select department"
+  }
+}
