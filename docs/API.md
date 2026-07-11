@@ -276,6 +276,100 @@ GET  /api/gdpr/privacy       → 隐私政策摘要
 
 ---
 
+## 🆕 v2.0 新增 API
+
+### 资质审核增强 (T103) — `/api/compliance`
+```
+POST /api/compliance/upload
+Body: {
+  "file_url": "https://...",
+  "credential_type": "business_license",
+  "hint_company_name": "...",
+  "hint_credit_code": "..."
+}
+→ OCR + 工商查询 + trust_score (走 providers.registry)
+
+GET  /api/compliance/status?organisation_id=...
+→ 资质状态汇总
+
+GET  /api/compliance/expiry-alerts?organisation_id=...&days_ahead=30
+→ 即将过期的资质告警
+```
+
+### HR 工单 (T207) — `/api/tickets`
+```
+POST   /api/tickets
+Body: {
+  "title": "...",
+  "description": "...",
+  "priority": "normal|high|urgent",
+  "category": "hr|onboarding|policy|...",
+  "assignee_id": "可选",
+  "tags": [],
+  "metadata": {}
+}
+→ 创建工单
+
+GET    /api/tickets                       → HR 看所有
+GET    /api/tickets/me                    → 员工看自己的
+GET    /api/tickets/overdue               → HR 看逾期
+GET    /api/tickets/{ticket_id}           → 单条详情
+GET    /api/tickets/{ticket_id}/timeline  → 时间线
+
+PATCH  /api/tickets/{ticket_id}/status
+Body:  {"status": "in_progress|resolved|...", "reason": "...", "assignee_id": "可选"}
+
+PATCH  /api/tickets/{ticket_id}
+Body:  {"title": "...", "priority": "...", "tags": [...]}
+
+POST   /api/tickets/{ticket_id}/comments
+Body:  {"body": "...", "is_internal": false, "attachments": []}
+```
+
+### Admin 通知通道管理 (T104) — `/api/admin/notify`
+```
+GET   /api/admin/notify/channels
+→ 列出 5 个通道 (smtp/dingtalk/feishu/wecom/webhook) 及其启用状态 + ENV 配置键
+
+POST  /api/admin/notify/channels
+Body: {"channel": "dingtalk", "enabled": true, "config": {...}}
+→ 启用 / 禁用 / 改某个通道 (admin only)
+
+GET   /api/admin/notify/channels/prefs?user_id=可选
+→ 查询用户通知偏好
+
+POST  /api/admin/notify/channels/prefs
+Body: {"user_id": "...", "channel": "dingtalk", "enabled": true, "quiet_hours": {...}}
+→ 写用户偏好
+
+GET   /api/admin/notify/templates
+→ 列出可用通知模板 (key / subject / body schema)
+```
+
+### 文件上传 (T201) — `/api/uploads`
+```
+POST   /api/uploads   (multipart/form-data)
+       file=<binary>
+       bucket=可选,默认 env STORAGE_DEFAULT_BUCKET
+       folder=默认 "files"
+→ 返回 {file_url, path, bucket, mime, size, filename}
+
+GET    /api/uploads/signed-url?path=...&ttl=3600
+→ 生成 signed URL
+
+DELETE /api/uploads?path=...
+→ 删除文件
+```
+
+### Provider 抽象层 (内部/Admin)
+
+```bash
+# 直接查 OpenAPI 的 /docs 即可看 provider 状态/统计
+# 也可以在业务侧通过 services/file_storage 等接口隐式触发
+```
+
+---
+
 ## 🧪 调用示例 (cURL)
 
 ```bash
@@ -331,6 +425,26 @@ wscat -c "ws://localhost:8000/api/realtime/ws/invoke?token=$JWT"
 | `/api/policy/query` | GET | ✅ | 查询制度 |
 | `/api/policy/list` | GET | ✅ | 制度列表 |
 | `/api/multiparty/submit` | POST | ✅(多角色) | 多方汇总 |
+| `/api/compliance/upload` | POST | ✅(hr) | 上传资质 (v2.0) |
+| `/api/compliance/status` | GET | ✅ | 资质状态 (v2.0) |
+| `/api/compliance/expiry-alerts` | GET | ✅(hr/admin) | 即将过期告警 (v2.0) |
+| `/api/tickets` | POST | ✅ | 创建工单 (v2.0) |
+| `/api/tickets` | GET | ✅(hr/admin) | 所有工单 (v2.0) |
+| `/api/tickets/me` | GET | ✅ | 我的工单 (v2.0) |
+| `/api/tickets/overdue` | GET | ✅(hr/admin) | 逾期工单 (v2.0) |
+| `/api/tickets/{id}` | GET | ✅ | 工单详情 (v2.0) |
+| `/api/tickets/{id}/status` | PATCH | ✅ | 推进状态 (v2.0) |
+| `/api/tickets/{id}` | PATCH | ✅ | 编辑元信息 (v2.0) |
+| `/api/tickets/{id}/comments` | POST | ✅ | 添加评论 (v2.0) |
+| `/api/tickets/{id}/timeline` | GET | ✅ | 时间线 (v2.0) |
+| `/api/admin/notify/channels` | GET | ✅(admin) | 通道列表 (v2.0) |
+| `/api/admin/notify/channels` | POST | ✅(admin) | 通道开关 (v2.0) |
+| `/api/admin/notify/channels/prefs` | GET | ✅(admin) | 用户偏好 (v2.0) |
+| `/api/admin/notify/channels/prefs` | POST | ✅(admin) | 写用户偏好 (v2.0) |
+| `/api/admin/notify/templates` | GET | ✅(admin) | 通知模板 (v2.0) |
+| `/api/uploads` | POST | ✅ | 文件上传 (v2.0) |
+| `/api/uploads/signed-url` | GET | ✅ | signed URL (v2.0) |
+| `/api/uploads` | DELETE | ✅ | 删除文件 (v2.0) |
 | `/api/two-way-match/compute` | POST | ✅ | 单次匹配 |
 | `/api/two-way-match/for-candidate/{id}` | GET | ✅ | 候选人 Top |
 | `/api/two-way-match/for-role/{id}` | GET | ✅ | 岗位 Top |

@@ -168,8 +168,11 @@ from api.job_spec import router as job_spec_router
 from api.policy_api import router as policy_api_router
 from api.multiparty import router as multiparty_router
 from api.compliance_api import router as compliance_api_router
+from api.compliance import router as compliance_router
 from api.career_plan import router as career_plan_router
 from api.clarification import router as clarification_router
+from api.uploads import get_current_user as uploads_get_current_user  # noqa: F401
+from api.uploads import router as uploads_router  # noqa: F401  (OCR 文件上传)
 
 app.include_router(candidates_router, prefix="/api/candidates", tags=["candidates"])
 app.include_router(roles_router, prefix="/api/roles", tags=["roles"])
@@ -191,8 +194,24 @@ app.include_router(job_spec_router, prefix="/api/job-spec", tags=["agents-spec"]
 app.include_router(policy_api_router, prefix="/api/policy", tags=["agents-policy"])
 app.include_router(multiparty_router, prefix="/api/multiparty", tags=["agents-multi"])
 app.include_router(compliance_api_router, prefix="/api/compliance", tags=["agents-compliance"])
+# T103: compliance enhancement (expiry alerts + quick assess)
+app.include_router(compliance_router, prefix="/api/compliance", tags=["agents-compliance"])
 app.include_router(career_plan_router, prefix="/api/career-plan", tags=["agents-plan"])
 app.include_router(clarification_router, prefix="/api/clarification", tags=["agents-clarify"])
+app.include_router(uploads_router, prefix="/api/uploads", tags=["uploads"])
+
+# Production wiring: replace uploads' placeholder auth dep with the real one
+from api.auth import get_current_user as _auth_get_current_user
+
+app.dependency_overrides[uploads_get_current_user] = _auth_get_current_user
 app.include_router(two_way_match_router, prefix="/api/two-way-match", tags=["matching"])
 app.include_router(evaluation_router, prefix="/api/evaluation", tags=["matching"])
 app.include_router(gdpr_router, prefix="/api/gdpr", tags=["compliance"])
+
+# T104: admin notify (channel configuration + user prefs)
+from api.admin_notify import router as admin_notify_router
+app.include_router(admin_notify_router, prefix="/api/admin/notify", tags=["admin-notify"])
+
+# T207: HR ticket system
+from api.tickets import router as tickets_router
+app.include_router(tickets_router, prefix="/api/tickets", tags=["tickets"])

@@ -1,7 +1,9 @@
 """求职者侧 - Profile Agent.
 
 需求 1.1: 智能/知心朋友,接收求职者学历等信息.
-通过对话式交互收集/校验/补全资料.
+通过对话式交互收集/校验/补全资料。
+
+支持 ctx.file_url — 简历图片/PDF 上传后自动走 OCR 抽取并合并进画像。
 """
 from __future__ import annotations
 
@@ -46,6 +48,62 @@ class ProfileAgent(BaseAgent):
     description = "求职者的知心朋友 + 画像采集助手(需求 1.1)"
     required_personas = ("jobseeker", "talent_partner", "admin")
 
+    async def _maybe_ocr_resume(self, ctx: dict[str, Any]) -> dict[str, Any] | None:
+        """如果 ctx 带 file_url,就走 OCR + LLM 抽取简历结构,返回 extracted dict."""
+        file_url = ctx.get("file_url")
+        if not file_url:
+            return None
+        try:
+            # Late module import — 让 monkeypatch.setattr 可以生效
+            from services import resume_parser as _rp
+
+            parser = getattr(_rp, "parse_resume_from_url", None)
+            if parser is None:  # pragma: no cover - defensive
+                from services.resume_parser import parse_resume_from_url as parser
+
+            parsed = await parser(
+                file_url,
+                llm=self.llm if isinstance(self.llm, LLMClient) else LLMClient(),
+                hint=ctx.get("resume_hint"),
+            )
+            return parsed
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"profile_agent OCR/resume parse failed: {e}")
+            return {"_error": str(e), "source_url": file_url}
+
+    def _merge_resume_into_profile(self, profile: dict, parsed: dict) -> dict:
+        """把 LLM 抽取出的 resume 字段 merge 进 profile。"""
+        extracted = parsed.get("extracted") or {}
+        basic = extracted.get("basic") if isinstance(extracted.get("basic"), dict) else {}
+        merged = dict(profile)
+
+        if basic:
+            name = basic.get("name") if isinstance(basic.get("name"), str) else None
+            if name and not merged.get("name"):
+                merged["name"] = name
+            for k in ("email", "phone", "location"):
+                v = basic.get(k)
+                if v and not merged.get(k):
+                    merged[k] = v
+
+        edu = extracted.get("education") or []
+        if edu and not merged.get("education"):
+            merged["education"] = edu
+
+        skills = extracted.get("skills") or []
+        if skills:
+            existing = {s.get("name"): s for s in (merged.get("skills") or []) if isinstance(s, dict)}
+            for s in skills:
+                if isinstance(s, dict) and s.get("name") and s["name"] not in existing:
+                    existing[s["name"]] = s
+            merged["skills"] = list(existing.values())
+
+        # raw_text & provenance
+        merged.setdefault("_resume_source_url", parsed.get("source_url"))
+        merged["_resume_raw_text_snippet"] = (parsed.get("raw_text") or "")[:300]
+        merged["_resume_provider_chain"] = parsed.get("provider_chain", [])
+        return merged
+
     async def _handle(self, agent_input: AgentInput) -> AgentOutput:
         text = agent_input.text
         ctx = agent_input.context or {}
@@ -58,8 +116,16 @@ class ProfileAgent(BaseAgent):
             default={},
         )
 
+        # ---- 自动 OCR (new in T102) ----
+        resume_parsed = await self._maybe_ocr_resume(ctx)
+        if resume_parsed and "_error" not in resume_parsed:
+            existing = self._merge_resume_into_profile(existing, resume_parsed)
+        ocr_notice = ""
+        if resume_parsed and "_error" in resume_parsed:
+            ocr_notice = f"\n(注:简历解析失败 — {resume_parsed.get('_error', '未知错误')})"
+
         system = PROFILE_INTAKE_PROMPT
-        user_msg = f"已有画像: {json.dumps(existing, ensure_ascii=False)}\n用户新输入: {text}"
+        user_msg = f"已有画像: {json.dumps(existing, ensure_ascii=False)}\n用户新输入: {text}{ocr_notice}"
 
         raw = await llm_call(self.llm or LLMClient(), user_msg, system=system, json_mode=True)
 
@@ -77,13 +143,20 @@ class ProfileAgent(BaseAgent):
             user_id=agent_input.user_id,
         )
 
+        warm = result.get("warm_response", "好的,我记下了。")
+        if resume_parsed and "_error" not in resume_parsed:
+            warm = f"我从你上传的文件里抽取了关键信息。{warm}"
+
         return AgentOutput(
             agent_name=self.name,
-            text=result.get("warm_response", "好的,我记下了。"),
+            text=warm,
             artifacts={
                 "updated_profile": updated,
                 "next_questions": result.get("next_questions", []),
                 "completion": result.get("completion", 0.5),
+                "ocr_triggered": bool(resume_parsed),
+                "ocr_provider": (resume_parsed or {}).get("ocr_provider"),
+                "resume_extracted": (resume_parsed or {}).get("extracted"),
             },
             memory_writes=[{
                 "scope": "long_term",

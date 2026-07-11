@@ -6,20 +6,103 @@
 - Memory 读写 (短期/工作/长期)
 - Cost 控制 / Retry / Backoff
 - Tracing (OpenTelemetry)
+
+LLMClient 通过 backend.providers 抽象层调用 LLM:
+    - chat()       内部委托给 self.provider.chat()
+    - stream_chat() 内部委托给 self.provider.stream_chat()
+    - cost/retry/cost 控制由 provider.base.with_resilience 中间件保证
+    - 默认从 env LLM_PROVIDER (mock/openai/anthropic/deepseek/zhipu/tongyi/moonshot) 选 provider
 """
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
+import os
 import time
 import uuid
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Awaitable, Callable, Optional
+from typing import Any, Awaitable, Callable, Optional, Union
 
 logger = logging.getLogger("recruittech.agents")
+
+
+# ---------------------------------------------------------------------------
+# Agent 内部统一的 LLMResponse dataclass (从 provider.LLMResponse 转)
+# ---------------------------------------------------------------------------
+@dataclass(slots=True)
+class LLMResponse:
+    """Agent 层 LLM 响应 — 与 providers.llm.base.LLMResponse 解耦的轻量 dataclass.
+
+    由 LLMClient 在 provider 返回后转换而成,Agent 业务代码应使用本 dataclass
+    而不是直接依赖 providers.LLMResponse。
+    """
+
+    text: str
+    model: str
+    input_tokens: int = 0
+    output_tokens: int = 0
+    finish_reason: str = "stop"
+    raw: Any = None
+
+    @property
+    def total_tokens(self) -> int:
+        return self.input_tokens + self.output_tokens
+
+
+def _dict_messages_to_provider(messages: list[dict]) -> list[Any]:
+    """把 runtime 历史约定的 dict messages 转成 provider 层的 Message dataclass."""
+    from providers.llm.base import Message, ToolCall
+
+    out: list[Message] = []
+    for m in messages:
+        tool_calls = None
+        if m.get("tool_calls"):
+            tool_calls = []
+            for tc in m["tool_calls"]:
+                func = tc.get("function") if isinstance(tc.get("function"), dict) else None
+                if func is not None:
+                    name = func.get("name", "")
+                    args_raw = func.get("arguments", {})
+                    if isinstance(args_raw, str):
+                        try:
+                            import json as _json
+
+                            args = _json.loads(args_raw)
+                        except Exception:
+                            args = {"_raw": args_raw}
+                    else:
+                        args = args_raw or {}
+                else:
+                    name = tc.get("name", "")
+                    args = tc.get("arguments", {}) or {}
+                tool_calls.append(
+                    ToolCall(id=tc.get("id", ""), name=name, arguments=args)
+                )
+        out.append(
+            Message(
+                role=m["role"],
+                content=m.get("content", "") or "",
+                name=m.get("name"),
+                tool_call_id=m.get("tool_call_id"),
+                tool_calls=tool_calls,
+            )
+        )
+    return out
+
+
+def _provider_response_to_agent(resp: Any) -> LLMResponse:
+    """providers.llm.base.LLMResponse -> agents.runtime.LLMResponse."""
+    return LLMResponse(
+        text=resp.content,
+        model=resp.model,
+        input_tokens=resp.usage.prompt_tokens,
+        output_tokens=resp.usage.completion_tokens,
+        finish_reason=resp.finish_reason,
+        raw=resp,
+    )
 
 
 class MemoryScope(str, Enum):
@@ -180,15 +263,176 @@ class BaseAgent(ABC):
         ...
 
 
-# ---- LLM 调用辅助(带 cost/retry) ----
+# ---- LLM 调用辅助(走 providers 抽象层) ----
+
+# Provider 来源类型:LLMProvider 实例 / 字符串名(openai/anthropic/.../mock) / None
+ProviderArg = Union[Any, str, None]
+
+
+def _is_mock_provider(provider: Any) -> bool:
+    return getattr(provider, "provider_name", "") == "mock"
+
+
+def _resolve_provider_by_name(name: str) -> Any:
+    """把字符串名解析成 LLMProvider 实例.优先用 registry,失败则 fallback 到 mock."""
+    name = (name or "mock").lower()
+    if name == "mock":
+        from providers.llm.mock_provider import MockLLMProvider
+
+        return MockLLMProvider()
+    try:
+        from providers.registry import get_llm_provider
+
+        return get_llm_provider()
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"[LLM] registry resolve failed for {name!r}: {e}; falling back to mock")
+        from providers.llm.mock_provider import MockLLMProvider
+
+        return MockLLMProvider()
+
+
+def _wrap_legacy_openai_client(openai_client: Any, model: str) -> Any:
+    """向后兼容:把老 LLMClient(openai_client=openai_async) 包成 OpenAIProvider.
+
+    业务代码可能直接传了一个 AsyncOpenAI 实例,我们把它注入 OpenAIProvider,
+    这样 provider.chat() 仍走标准 OpenAI SDK 路径,行为与旧代码一致。
+    """
+    from providers.llm.openai_provider import OpenAIProvider
+
+    p = OpenAIProvider.__new__(OpenAIProvider)
+    # 手工跳过 OpenAIProvider.__init__ 的 api_key 检查,直接挂 SDK client
+    p.provider_name = "openai"
+    p.api_key = getattr(openai_client, "api_key", "") or "legacy"
+    p.base_url = None
+    p.client = openai_client
+    p.default_model = model
+    p._rate_per_sec = 10.0
+    p._burst = 20
+    p._extra = {}
+
+    # 把 chat / stream_chat 重新绑成装饰过的版本 — 这里用未装饰版本即可,
+    # 因为客户端已经在外层 LLMClient 处被调用,我们不再额外加熔断/retry.
+    async def _chat(messages, *, model=None, temperature=0.7, max_tokens=1024, **kwargs):
+        from providers.llm.base import LLMResponse, Usage
+
+        params = {
+            "model": model or p.default_model,
+            "messages": OpenAIProvider._serialize_messages(messages),
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+        params.update(kwargs)
+        if "response_format" in kwargs:
+            params["response_format"] = kwargs["response_format"]
+        resp = await p.client.chat.completions.create(**params)
+        return OpenAIProvider._parse_completion(p, resp)
+
+    async def _stream(messages, *, model=None, temperature=0.7, max_tokens=1024, **kwargs):
+        params = {
+            "model": model or p.default_model,
+            "messages": OpenAIProvider._serialize_messages(messages),
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "stream": True,
+        }
+        params.update(kwargs)
+        stream = await p.client.chat.completions.create(**params)
+        async for chunk in stream:
+            if not chunk.choices:
+                continue
+            delta = chunk.choices[0].delta
+            if delta and delta.content:
+                yield delta.content
+
+    async def _tool_call(messages, tools, *, model=None, temperature=0.0, max_tokens=1024, **kwargs):
+        resp = await _chat(messages, model=model, temperature=temperature,
+                           max_tokens=max_tokens, tools=tools, **kwargs)
+        from providers.llm.base import ToolCallResult
+
+        return ToolCallResult(content=resp.content, tool_calls=resp.tool_calls, finish_reason=resp.finish_reason)
+
+    p.chat = _chat  # type: ignore[assignment]
+    p.stream_chat = _stream  # type: ignore[assignment]
+    p.tool_call = _tool_call  # type: ignore[assignment]
+    return p
+
+
+class _DummyProvider:
+    """仅供 MockLLMProvider 内部 LLMClient helper 使用 — 不会触发网络.
+
+    MockLLMProvider.__init__ 需要创建一个 LLMClient(openai_client=None) 来复用
+    _mock_response 路由逻辑。如果让 LLMClient 再走 provider 解析,会无限递归
+    创建 MockLLMProvider -> LLMClient -> MockLLMProvider -> ...
+    所以这里用一个 stub 对象占位 self.provider。
+    """
+
+    provider_name = "dummy"
+    default_model = "mock-model"
+    supported_models = ["mock-model"]
+    pricing: dict = {}
+    client = None
+
+    def calculate_cost(self, model: str, usage: Any) -> float:  # noqa: ARG002
+        return 0.0
+
 
 class LLMClient:
-    """统一 LLM 调用封装,带 cost 控制和重试."""
+    """统一 LLM 调用封装 — 内部委托给 backend.providers 抽象层.
 
-    def __init__(self, openai_client=None, model: str = "gpt-4o", price_per_1k_cents: float = 0.5):
-        self.client = openai_client
-        self.model = model
+    设计要点:
+    - 默认从 env LLM_PROVIDER 选 provider;默认 "mock"
+    - self.provider.chat() / self.provider.stream_chat() 是真正的 LLM 调用入口
+    - cost/retry/circuit breaker 全部由 providers.base.with_resilience 中间件承担
+    - 调用接口向后兼容:llm.call(messages, ...) 仍返回 (text, in_tok, out_tok)
+    - 老的 LLMClient(openai_client=...) 写法被适配为 OpenAIProvider 包装
+    """
+
+    def __init__(
+        self,
+        provider: ProviderArg = None,
+        *,
+        # 向后兼容: 老 LLMClient(openai_client=..., model=..., price=...) 写法
+        openai_client: Any = None,
+        model: Optional[str] = None,
+        price_per_1k_cents: float = 0.5,
+        max_retries: int = 3,
+        # 内部标志:MockLLMProvider 用 True 来避免递归(provider 自己持有 LLMClient 当 helper)
+        _skip_provider_resolve: bool = False,
+    ):
+        # ---- 1. 决定 provider ----
+        # 优先级: provider kw > openai_client 兼容路径 > env LLM_PROVIDER > mock
+        if _skip_provider_resolve:
+            # 内部 helper,无需真 provider — 设个哑对象即可(仅用于 _mock_response)
+            self.provider = _DummyProvider()
+        elif provider is None:
+            if openai_client is not None:
+                # 旧调用方式: LLMClient(openai_client=openai_instance) — 走 OpenAIProvider
+                provider = _wrap_legacy_openai_client(openai_client, model or "gpt-4o")
+            else:
+                env_name = (os.getenv("LLM_PROVIDER") or "mock").lower()
+                provider = env_name
+
+        # provider 是字符串名 → 解析
+        if isinstance(provider, str):
+            self.provider = _resolve_provider_by_name(provider)
+        elif not _skip_provider_resolve:
+            # provider 已经是 LLMProvider 实例
+            self.provider = provider
+
+        # ---- 2. 兼容字段 (旧代码可能还会读 self.client / self.model / self.price) ----
+        self.client = getattr(self.provider, "client", None) or openai_client
+        self.model = model or getattr(self.provider, "default_model", None) or "gpt-4o"
         self.price = price_per_1k_cents
+        self.max_retries = max_retries
+
+    # ---- 工厂 ----
+
+    @classmethod
+    def from_env(cls) -> "LLMClient":
+        """自动从 env (LLM_PROVIDER 等) 构造."""
+        return cls()
+
+    # ---- 主入口 ----
 
     async def call(
         self,
@@ -198,42 +442,110 @@ class LLMClient:
         max_retries: int = 3,
         response_format: Optional[dict] = None,
     ) -> tuple[str, int, int]:
-        """调用 LLM, 返回 (text, input_tokens, output_tokens)."""
-        if self.client is None:
-            # 离线/未配置时使用 mock 响应(开发模式)
-            return self._mock_response(messages), 100, 50
+        """调用 LLM, 返回 (text, input_tokens, output_tokens).
 
-        backoff = 1.0
-        last_err = None
-        for attempt in range(max_retries):
+        向后兼容: 旧业务代码 (toolkit.llm_call, react agent 等) 直接解构三元素。
+        新代码优先用 chat() / stream_chat() 拿到完整的 LLMResponse。
+        """
+        provider_messages = _dict_messages_to_provider(messages)
+
+        # 调 provider;retry/cost/circuit breaker 都在 provider 的 @with_resilience 中
+        try:
+            resp = await self.provider.chat(
+                provider_messages,
+                model=self.model,
+                temperature=temperature,
+                max_tokens=1024,
+                response_format=response_format,
+            )
+        except Exception as e:
+            # provider 失败 — 仅 mock 兜底
+            if _is_mock_provider(self.provider):
+                text = self._mock_response(messages)
+                logger.warning(f"[LLM] mock fallback after provider error: {e}")
+                return text, 100, 50
+            raise
+
+        # cost 估算 (仅 warning,不阻断 — cost 控制交由中间件)
+        in_tok = resp.usage.prompt_tokens
+        out_tok = resp.usage.completion_tokens
+        cost = self.estimate_cost_cents(in_tok, out_tok)
+        if cost > max_cost_cents:
+            logger.warning(
+                f"[LLM] cost {cost:.1f}¢ exceeds budget {max_cost_cents}¢ "
+                f"(provider={self.provider.provider_name}, model={resp.model})"
+            )
+
+        return resp.content, in_tok, out_tok
+
+    async def chat(
+        self,
+        messages: list[dict],
+        *,
+        model: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: int = 1024,
+        response_format: Optional[dict] = None,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        """新风格 API: 内部调 self.provider.chat() 并返回 Agent LLMResponse dataclass."""
+        provider_messages = _dict_messages_to_provider(messages)
+        resp = await self.provider.chat(
+            provider_messages,
+            model=model or self.model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            response_format=response_format,
+            **kwargs,
+        )
+        return _provider_response_to_agent(resp)
+
+    async def stream_chat(
+        self,
+        messages: list[dict],
+        *,
+        model: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: int = 1024,
+        **kwargs: Any,
+    ) -> AsyncIterator[str]:
+        """流式对话: 内部调 self.provider.stream_chat()."""
+        provider_messages = _dict_messages_to_provider(messages)
+        async for chunk in self.provider.stream_chat(
+            provider_messages,
+            model=model or self.model,
+            temperature=temperature,            max_tokens=max_tokens,
+            **kwargs,
+        ):
+            yield chunk
+
+    # ---- 工具 ----
+
+    def estimate_cost_cents(self, in_tok: int, out_tok: int) -> int:
+        """按 self.price (cents/1k tokens) 估算成本."""
+        return int((in_tok + out_tok) / 1000 * self.price)
+
+    def cost_usd(self, model: str, in_tok: int, out_tok: int) -> float:
+        """按 provider.pricing 表算 USD — 用于委托给 cost 中间件."""
+        if hasattr(self.provider, "calculate_cost"):
+            from providers.llm.base import Usage
+
             try:
-                kwargs = {
-                    "model": self.model,
-                    "messages": messages,
-                    "temperature": temperature,
-                }
-                if response_format:
-                    kwargs["response_format"] = response_format
-                resp = await self.client.chat.completions.create(**kwargs)
-                text = resp.choices[0].message.content or ""
-                in_tok = resp.usage.prompt_tokens if resp.usage else 0
-                out_tok = resp.usage.completion_tokens if resp.usage else 0
-                cost = (in_tok + out_tok) / 1000 * self.price
-                if cost > max_cost_cents:
-                    logger.warning(f"[LLM] cost {cost:.1f}¢ exceeds budget {max_cost_cents}¢")
-                return text, in_tok, out_tok
-            except Exception as e:
-                last_err = e
-                logger.warning(f"[LLM] attempt {attempt+1} failed: {e}")
-                await asyncio.sleep(backoff)
-                backoff *= 2
-        raise RuntimeError(f"LLM call failed after {max_retries} retries: {last_err}")
+                return self.provider.calculate_cost(
+                    model,
+                    Usage(prompt_tokens=in_tok, completion_tokens=out_tok),
+                )
+            except Exception:
+                return 0.0
+        return 0.0
+
+    # ---- 兼容: 老的 mock 路由逻辑 (供 MockLLMProvider 复用) ----
 
     def _mock_response(self, messages: list[dict]) -> str:
-        """智能 mock — 不再用 if/elif 判断 agent 类型,而是模拟"真 LLM"的行为.
+        """智能 mock — 模拟"真 LLM"按 system prompt 的指令生成对应格式输出.
 
-        原理: LLM 在没接 API 时,应该按 system prompt 的指令生成对应格式的输出.
-        我们这里用启发式生成合理的响应,让 mock 看起来像 LLM.
+        保留在这里是为了向后兼容 + 让 MockLLMProvider 直接复用,无需重复实现.
+        业务代码不应该再直接调这个方法 — 改用 chat() / call().
         """
         system = ""
         for m in messages:
@@ -241,12 +553,9 @@ class LLMClient:
                 system = m.get("content", "")
         last = messages[-1].get("content", "") if messages else ""
 
-        # 抽取用户真实输入
         user_text = self._extract_user_text(last)
         full = system + "\n" + last
 
-        # 按意图关键词路由(优先级最高,不依赖 system 是否含 JSON)
-        # 用更具体的关键词,避免子串误匹配
         if "情感分析专家" in full or "情感智能助手" in full or "emotion" in full.lower() and "分析" in full:
             return self._mock_emotion_response(user_text)
         if "职业规划顾问" in full or "career_planner" in full.lower():
@@ -273,21 +582,16 @@ class LLMClient:
             return '{"rating": "good", "advice": "继续保持,明天继续努力", "warnings": [], "action_items": ["复盘今天的工作"], "mood_score": 0.5, "topics": []}'
         if "真诚HR" in full:
             return "我是真诚 HR 助手,有具体问题请告诉我。"
-        # 兜底:画像/profile(最后,避免与上面的子串冲突)
         if "profile_agent" in full.lower() or "画像采集" in full or "建档引导" in full:
             return self._mock_profile_response(user_text)
 
-        # ReAct 模式
         if "Thought:" in last or "Action:" in last or "Final Answer" in system:
             return "Thought: 我已收集足够信息,可以给出回答。\nFinal Answer: " + self._mock_general_response(user_text)
 
-        # 默认:通用友好回复
         return self._mock_general_response(user_text)
 
     @staticmethod
     def _mock_emotion_response(text: str) -> str:
-        """模拟 LLM 情绪识别 — 用语义的轻量启发式,不用硬编码词典统计."""
-        # 注意:这里只用于 mock,真实场景 LLM 会真正理解语义
         positive_signals = ["开心", "高兴", "happy", "太好了", "拿到", "成功", "通过", "😊"]
         negative_signals = ["崩溃", "绝望", "难过", "焦虑", "压力", "失败", "挂", "延期"]
         risk_signals = ["不想活", "没意思", "自杀", "崩溃", "废"]
@@ -405,7 +709,6 @@ class LLMClient:
 
     @staticmethod
     def _mock_talent_brief_response(text: str) -> str:
-        # 注意:这里只 mock 简单版本,bias 检测调用的是 detect_biases
         return json.dumps({
             "hard_constraints": [],
             "soft_preferences": [],
@@ -459,6 +762,3 @@ class LLMClient:
         if lines:
             return min(lines, key=len)
         return prompt[:200]
-
-    def estimate_cost_cents(self, in_tok: int, out_tok: int) -> int:
-        return int((in_tok + out_tok) / 1000 * self.price)

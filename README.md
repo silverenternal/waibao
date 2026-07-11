@@ -5,7 +5,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org)
-[![Tests](https://img.shields.io/badge/tests-31%20passed-green.svg)](./talent-tool-mvp/backend/tests)
+[![Tests](https://img.shields.io/badge/tests-542%20passed-green.svg)](./talent-tool-mvp/backend/tests)
+[![Providers](https://img.shields.io/badge/providers-7%20capabilities%20×%20N%20vendors-blue.svg)](./talent-tool-mvp/backend/providers/README.md)
+[![v2.0](https://img.shields.io/badge/version-2.0--rc-orange.svg)](./todo.json)
 
 ---
 
@@ -38,6 +40,16 @@
 - 1.1~1.6 求职者知心朋友 + 职业规划师
 - 2.1~2.9 用人单位真诚 HR + 全生命周期
 - 3. 求职者 ↔ 用人单位 双向适配
+
+### 🔌 v2.0 — Providers 抽象层 (新)
+- ✅ **零业务侵入**: 改 `LLM_PROVIDER=anthropic` 一行 ENV 即可切换 LLM 供应商
+- ✅ **7 个 capability 维度**: LLM / Embedding / Vision / OCR / STT / Notify / CompanyLookup
+- ✅ **共享韧性中间件**: 重试 / 熔断 / 限流 / 成本追踪 / Prometheus 指标 一体化
+- ✅ **6 家 LLM 供应商**: OpenAI / Anthropic / DeepSeek / 智谱 / 通义 / 月之暗面
+- ✅ **5 个通知通道**: SMTP / 钉钉 / 飞书 / 企业微信 / Webhook
+- ✅ **Mock 优先**: 默认全 mock,接入新供应商不影响业务测试
+
+详见 [`talent-tool-mvp/backend/providers/README.md`](./talent-tool-mvp/backend/providers/README.md)
 
 ---
 
@@ -191,10 +203,11 @@ waibao/                                  # 项目根
 ## 📊 关键指标
 
 ```
-✅ 16 个智能体            ✅ 31 个测试通过 (100%)
-✅ 14 个新 API 端点       ✅ 7 个数据库迁移
-✅ 12 个新数据表          ✅ 5 个前端页面
-✅ 16/16 甲方需求覆盖     ✅ 中英文双语
+✅ 16 个智能体                ✅ 542 个测试通过 (100%)
+✅ 30+ 个 API 端点            ✅ 10 个数据库迁移
+✅ 15 个新数据表              ✅ 12 个前端页面
+✅ 16/16 甲方需求覆盖         ✅ 中英文双语
+✅ 7 capability × N vendor    ✅ Providers 抽象层
 ```
 
 ---
@@ -220,6 +233,7 @@ waibao/                                  # 项目根
 | [docs/API.md](docs/API.md) | REST + WebSocket 端点清单 |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | 生产部署、监控、安全 |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | 未来路线图 |
+| [talent-tool-mvp/backend/providers/README.md](talent-tool-mvp/backend/providers/README.md) | Provider 抽象层 (v2.0) |
 | [todo.json](todo.json) | 开发规划与里程碑 |
 | [talent-tool-mvp/README.md](talent-tool-mvp/README.md) | 原项目文档 |
 

@@ -57,6 +57,22 @@
 │   OpenAI GPT-4o  ·  text-embedding-3-small                              │
 │   工商信息查询  ·  OCR 服务  · 邮件 / 钉钉 / 飞书 / 企业微信             │
 └─────────────────────────────────────────────────────────────────────┘
+                                   │
+                                (via Providers 抽象层)
+                                   │
+┌──────────────────────────────────▼──────────────────────────────────┐
+│            providers/  —  7 capability × N vendor                       │
+│                                                                          │
+│   LLM        : openai | anthropic | deepseek | zhipu | tongyi | moonshot │
+│   Embedding  : openai | zhipu | tongyi                                   │
+│   Vision     : gpt4v | qwen_vl                                           │
+│   OCR        : tencent | baidu | aliyun | gpt4v (fallback)               │
+│   STT        : whisper | aliyun                                         │
+│   Notify     : smtp | dingtalk | feishu | wecom | webhook                │
+│   Lookup     : tianyancha | qichacha                                     │
+│                                                                          │
+│   @with_resilience: retry | circuit-breaker | rate-limit | cost | metric │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -207,3 +223,104 @@ Employer Clarifier → employer_clarifications
 - [API.md](./API.md) — API 端点清单
 - [DEPLOYMENT.md](./DEPLOYMENT.md) — 部署与运维
 - [ROADMAP.md](./ROADMAP.md) — 未来路线图
+
+---
+
+## 🔌 Providers 抽象层
+
+v2.0 引入统一的外部供应商抽象层,把"调用哪家 LLM/OCR/通知"从业务代码里彻底剥离。
+
+### 设计原则
+
+1. **零业务侵入**: 切换供应商只改 `LLM_PROVIDER=anthropic`,不动任何 `.py`
+2. **能力维度隔离**: 7 个 capability 维度各自独立(LLM / Embedding / Vision / OCR / STT / Notify / CompanyLookup)
+3. **共享韧性中间件**: 所有 provider 统一接入重试 / 熔断 / 限流 / 成本追踪 / Prometheus 指标
+4. **Mock 优先**: 默认全 mock,接入新供应商时不影响测试
+5. **可观测**: 每次调用都打 metric,失败自动降级到下一个 provider
+
+### 架构
+
+```
+business (agents/services/pipelines)
+        │ 调用 registry.get_xxx_provider()
+        ▼
+providers/registry.py  (单例 + 懒加载 + 按 ENV 路由)
+        │ name = os.getenv("LLM_PROVIDER")  →  class lookup
+        ▼
+providers/<capability>/<vendor>_provider.py  (每个 vendor 一个类)
+        │ 每个对外方法都用 @with_resilience(...) 装饰
+        ▼
+providers/base.py  (RetryPolicy / CircuitBreaker / TokenBucket / CostTracker / Metrics)
+        │
+        ▼
+外部 API (OpenAI / Anthropic / DeepSeek / 钉钉 / ...)
+```
+
+### 7 个 Capability 维度
+
+| 维度 | 支持的供应商 | 默认 |
+|---|---|---|
+| LLM | OpenAI / Anthropic / DeepSeek / Zhipu / Tongyi / Moonshot | mock |
+| Embedding | OpenAI / Zhipu / Tongyi | mock |
+| Vision (多模态) | GPT-4V / Qwen-VL | mock |
+| OCR | 腾讯云 / 百度 / 阿里云读光 / GPT-4V | mock |
+| STT | Whisper / 阿里云 ASR | mock |
+| Notify | SMTP / 钉钉 / 飞书 / 企业微信 / Webhook | mock |
+| CompanyLookup | 天眼查 / 启信宝 | mock |
+
+### 切换示例
+
+```bash
+# 默认 (开发)
+LLM_PROVIDER=mock
+EMBEDDING_PROVIDER=mock
+
+# 生产 (用 GPT-4o + 智谱 embedding)
+LLM_PROVIDER=openai
+OPENAI_API_KEY=sk-xxx
+EMBEDDING_PROVIDER=zhipu
+ZHIPU_API_KEY=xxx
+
+# 国内合规 (全栈国产)
+LLM_PROVIDER=tongyi
+EMBEDDING_PROVIDER=tongyi
+VISION_PROVIDER=qwen_vl
+OCR_PROVIDER=tencent
+TENCENT_SECRET_ID=xxx
+TENCENT_SECRET_KEY=xxx
+NOTIFY_DINGTALK_ENABLED=true
+```
+
+### 共享中间件 (`base.py::with_resilience`)
+
+每个 provider 方法被装饰器统一加上:
+
+1. **熔断器** (CircuitBreaker): 连续 5 次失败 → 熔断 60s → 探测一个请求
+2. **重试** (RetryPolicy): 指数退避 (1s → 2s → 4s),最大 3 次,带 20% jitter
+3. **限流** (TokenBucket): 每 provider 独立桶,可配 rate_per_sec / burst
+4. **成本** (CostTracker): per-tenant 日预算,超限抛 `BudgetExceeded`
+5. **指标** (ProviderMetrics): Prometheus `provider_calls_total` + `provider_latency_seconds`
+
+### Mock & 测试
+
+```python
+# 业务测试不需要任何外部 key
+os.environ["LLM_PROVIDER"] = "mock"
+os.environ["EMBEDDING_PROVIDER"] = "mock"
+os.environ["NOTIFY_DINGTALK_ENABLED"] = "false"  # 走 mock 通道
+
+# 单测覆盖
+pytest providers/tests/test_registry.py -v
+pytest providers/tests/test_base.py -v
+pytest tests/test_llm_providers.py -v
+```
+
+### 新增供应商流程
+
+详见 [`backend/providers/README.md`](../talent-tool-mvp/backend/providers/README.md),5 步上手:
+
+1. 创建 `providers/<capability>/<vendor>_provider.py`
+2. 继承对应基类 (`LLMProvider` / `EmbeddingProvider` / ...)
+3. 在 `registry.py` mapping 中加入
+4. 写至少 3 个单元测试
+5. 更新 `config.example.env` + 本文档

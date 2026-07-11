@@ -68,6 +68,7 @@ nav:
   - 架构: ARCHITECTURE.md
   - 智能体: AGENTS.md
   - API: API.md
+  - Providers: talent-tool-mvp/backend/providers/README.md
   - 部署: DEPLOYMENT.md
   - 路线图: ROADMAP.md
   - 贡献指南: CONTRIBUTING.md

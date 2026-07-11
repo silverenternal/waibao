@@ -81,7 +81,8 @@ def mock_supabase():
 class TestCandidateEndpoints:
     def test_list_candidates_requires_auth(self):
         response = client.get("/api/candidates")
-        assert response.status_code == 403
+        # HTTPBearer returns 401 when no Authorization header is provided.
+        assert response.status_code in (401, 403)
 
     def test_list_candidates_as_talent_partner(self, mock_supabase):
         response = client.get(

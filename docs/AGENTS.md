@@ -406,3 +406,80 @@ LLM tokens/天/用户 (估算) : 5k-20k
 5. 在 `semantic_router.py::AGENT_INTENT_DESCRIPTIONS` 添加意图描述
 
 详细示例见 `backend/agents/jobseeker/emotion_agent.py`。
+
+---
+
+## 🔌 每个 Agent 现在走哪个 Provider
+
+v2.0 引入统一 Provider 抽象层后,所有 Agent 都通过 `agents.runtime.LLMClient` 调用 LLM,
+LLMClient 内部再走 `providers.registry.get_llm_provider()`,由 ENV 决定具体供应商。
+
+| Agent | LLM 调用 | Embedding | OCR / Vision | Notify |
+|---|---|---|---|---|
+| **Profile** (jobseeker) | `LLMClient` → `LLM_PROVIDER` | — | — | — |
+| **Intake** (jobseeker) | `LLMClient` → `LLM_PROVIDER` | — | — | — |
+| **DailyJournal** (jobseeker) | `LLMClient` → `LLM_PROVIDER` | — | — | — |
+| **Emotion** (jobseeker) | `LLMClient` → `LLM_PROVIDER` | — | — | severe 时通过 `notify_dispatcher` 走 `NOTIFY_*` |
+| **Clarifier** (jobseeker) | `LLMClient` → `LLM_PROVIDER` | — | — | — |
+| **CareerPlanner** (jobseeker) | `LLMClient` → `LLM_PROVIDER` | — | — | — |
+| **Persona** (employer) | `LLMClient` → `LLM_PROVIDER` | — | — | — |
+| **Compliance** (employer) | `LLMClient` → `LLM_PROVIDER` | — | `OCR_PROVIDER` (主) + `VISION_PROVIDER` (兜底) | — |
+| **Vision** (employer) | `LLMClient` → `LLM_PROVIDER` | — | `VISION_PROVIDER` (gpt4v / qwen_vl) | — |
+| **TalentBrief** (employer) | `LLMClient` → `LLM_PROVIDER` | — | — | — |
+| **JobSpec** (employer) | `LLMClient` → `LLM_PROVIDER` | — | — | — |
+| **Policy** (employer) | `LLMClient` → `LLM_PROVIDER` | — | — | — |
+| **MultiParty** (employer) | `LLMClient` → `LLM_PROVIDER` | — | — | — |
+| **EmployerClarifier** (employer) | `LLMClient` → `LLM_PROVIDER` | — | — | — |
+| **HRService** (employer) | `LLMClient` → `LLM_PROVIDER` | — | — | 关键事件走 `notify_dispatcher` |
+| **MutualEvaluator** (evaluator) | `LLMClient` → `LLM_PROVIDER` | — | — | — |
+
+### 共享 service 层 Provider 路由
+
+| Service / Pipeline | 调用的 Provider | ENV 标识 |
+|---|---|---|
+| `services/notify/dispatcher.py` | `get_notify_provider(channel)` | `NOTIFY_<CHANNEL>_ENABLED` |
+| `services/resume_parser.py` | `get_ocr_provider()` + `get_vision_provider()` (兜底) | `OCR_PROVIDER` / `VISION_PROVIDER` |
+| `services/compliance_service.py` | `get_lookup_provider()` | `LOOKUP_PROVIDER` |
+| `services/credit_code_validator.py` | (纯 Python,无外部依赖) | — |
+| `services/file_storage.py` | (Supabase Storage,不走 provider 层) | — |
+| `services/ticket_service.py` | (数据库 CRUD,无外部依赖) | — |
+| `agents/semantic_router.py` | `get_embedding_provider()` | `EMBEDDING_PROVIDER` |
+| `agents/llm_extractor.py` | `LLMClient` → `get_llm_provider()` | `LLM_PROVIDER` |
+| `agents/runtime.py::LLMClient` | `get_llm_provider()` | `LLM_PROVIDER` |
+
+### ENV 切换示例
+
+```bash
+# 默认 (开发 / 单测)
+LLM_PROVIDER=mock
+EMBEDDING_PROVIDER=mock
+OCR_PROVIDER=mock
+VISION_PROVIDER=mock
+LOOKUP_PROVIDER=mock
+NOTIFY_SMTP_ENABLED=false
+NOTIFY_DINGTALK_ENABLED=false
+NOTIFY_FEISHU_ENABLED=false
+NOTIFY_WECOM_ENABLED=false
+NOTIFY_WEBHOOK_ENABLED=false
+
+# 生产 (OpenAI + 钉钉)
+LLM_PROVIDER=openai
+OPENAI_API_KEY=sk-xxx
+EMBEDDING_PROVIDER=openai
+NOTIFY_DINGTALK_ENABLED=true
+DINGTALK_WEBHOOK=https://oapi.dingtalk.com/robot/send?access_token=xxx
+
+# 国内合规 (通义 + 腾讯云 OCR + 飞书)
+LLM_PROVIDER=tongyi
+DASHSCOPE_API_KEY=sk-xxx
+EMBEDDING_PROVIDER=tongyi
+OCR_PROVIDER=tencent
+TENCENT_SECRET_ID=xxx
+TENCENT_SECRET_KEY=xxx
+LOOKUP_PROVIDER=tianyancha
+TIANYANCHA_API_KEY=xxx
+NOTIFY_FEISHU_ENABLED=true
+FEISHU_WEBHOOK=https://open.feishu.cn/open-apis/bot/v2/hook/xxx
+```
+
+更多示例见 [`backend/providers/README.md`](../talent-tool-mvp/backend/providers/README.md) 与 [`docs/ARCHITECTURE.md`](./ARCHITECTURE.md) 的 Providers 抽象层章节。
