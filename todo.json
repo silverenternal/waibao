@@ -1,536 +1,607 @@
 {
   "meta": {
     "project": "招聘智能体 (Recruitment Agent)",
-    "subtitle": "求职者 + 用人单位双向适配 AI 智能体",
-    "based_on": "talent-tool-mvp (mike0990922)",
-    "version": "1.0.0",
-    "created": "2026-07-05",
+    "subtitle": "v2.0 — 把 15 项「部分覆盖」的能力推到生产级",
+    "based_on": "v1.0.0 (silverenternal/waibao)",
+    "version": "2.0.0",
+    "created": "2026-07-11",
+    "supersedes": "v1.0 todo.json (26 tasks)",
     "owner": "waibao",
     "language": ["zh-CN", "en-US"],
     "stack": {
       "backend": "FastAPI + Python 3.12",
       "frontend": "Next.js 16 + TypeScript + Tailwind",
       "database": "Supabase (PostgreSQL + pgvector)",
-      "ai": "OpenAI GPT-4o + text-embedding-3-small",
-      "infra": "Docker Compose + Supabase Realtime"
-    }
+      "ai": "OpenAI GPT-4o + text-embedding-3-small + Whisper + GPT-4V",
+      "infra": "Docker Compose + Supabase Realtime + Redis (新)"
+    },
+    "audit": "docs/COVERAGE-AUDIT-v2.md"
   },
 
-  "goal": "在 talent-tool-mvp 基础上扩展 16 个智能体模块,补全甲方需求 1.x(求职者侧)、2.x(用人单位侧)、3(双向适配)的全部功能点,实现'求职者知心朋友 + 企业 HR + 双向精准匹配'的招聘智能体",
+  "goal": "在 v1.0 (16 Agent + 30 API + 30 Test) 基础上,把 15 项 🟡 部分覆盖的能力推进到生产级,补齐关键 UI、真实数据接入、工单系统、双向匹配深度、可观测性,使招聘智能体真正可用、好用、可规模化",
+
+  "background": {
+    "v1_achievements": [
+      "16 个 Agent 全部上线 (Profile/Intake/Journal/Emotion/Clarifier/CareerPlanner/Persona/Compliance/Vision/TalentBrief/JobSpec/Policy/MultiParty/EmployerClarifier/HRService/MutualEvaluator)",
+      "AI-Native 重构: SemanticRouter + ReAct + LLM Extractor (删除所有正则/词典)",
+      "30+ API 端点 + 30+ 测试全过 + GitHub Pages 7 页全 200",
+      "v1.0.0 Release 已发布"
+    ],
+    "v1_gaps": [
+      "15 项需求仅 '🟡 部分覆盖' — 缺 UI、缺集成、缺深度",
+      "0 项需求达到生产级 (除 1.3)",
+      "前端缺失关键页面: 简历上传、画像可视化、战略地图、政策浏览、工单",
+      "真实数据接入全 mock: 工商查询、招聘市场、OCR、通知",
+      "工单系统、反馈闭环、A/B 实验、审计日志全无",
+      "双向匹配 explainer 浅薄、推荐理由缺"
+    ],
+    "north_star": "在 2026 Q4 之前,让一个中型企业 (HR + 求职者) 真实试用 1 个月,NPS ≥ 40"
+  },
 
   "phases": [
     {
       "id": "P0",
-      "title": "基础设施与多 Agent 底座",
-      "goal": "为所有智能体提供统一运行底座(记忆/路由/通知/i18n)",
-      "duration_weeks": 2
+      "title": "生产基线 — 真实接入 + 可观测性",
+      "goal": "把现有 16 Agent 接到真实 LLM/OCR/工商查询,补齐监控和审计",
+      "duration_weeks": 3,
+      "priority": "P0"
     },
     {
       "id": "P1",
-      "title": "求职者侧 6 大智能体 (对应甲方需求 1.x)",
-      "goal": "实现求职者的知心朋友+职业顾问全栈能力",
-      "duration_weeks": 4
+      "title": "关键 UI 补全 — 让用户看得到",
+      "goal": "把已有 Agent 的可视化页全部补齐(简历/画像/战略地图/政策/工单)",
+      "duration_weeks": 4,
+      "priority": "P0"
     },
     {
       "id": "P2",
-      "title": "用人单位侧 9 大智能体 (对应甲方需求 2.x)",
-      "goal": "实现企业 HR 全栈能力,从资质验证到岗位画像",
-      "duration_weeks": 5
+      "title": "深度能力 — 工单 + 反馈闭环 + 多模态",
+      "goal": "工单系统 + 互评解释器 + 简历图片 OCR + 语音日记",
+      "duration_weeks": 4,
+      "priority": "P1"
     },
     {
       "id": "P3",
-      "title": "双向精准适配 (对应甲方需求 3)",
-      "goal": "实现求职者↔用人单位双向匹配 + 互评 + 反馈闭环",
-      "duration_weeks": 3
+      "title": "双向匹配 2.0",
+      "goal": "可解释匹配、推荐理由、自动权重校准、A/B 实验",
+      "duration_weeks": 3,
+      "priority": "P1"
     },
     {
       "id": "P4",
-      "title": "测试、上线、运维",
-      "goal": "压测、安全审计、生产部署",
-      "duration_weeks": 2
+      "title": "规模化与生态",
+      "goal": "i18n + Webhook + 集成市场 + 公开 API",
+      "duration_weeks": 3,
+      "priority": "P2"
     }
   ],
 
-  "requirements_map": {
-    "1.1": "智能/知心朋友 + 学历信息上传 → Profile Agent + Intake Agent",
-    "1.2": "工作状态即时更新 + 评价建议 → Daily Journal Agent + Advisor Agent",
-    "1.3": "频繁互动,即时响应 → Realtime Orchestrator + Notifier Agent",
-    "1.4": "喜怒哀乐全接收 → Emotion Agent (sentiment + empathy)",
-    "1.5": "海量信息澄清 → Clarifier Agent → 1.5.1 画像 + 1.5.2 真实需求",
-    "1.6": "职业规划师/顾问 → Career Planner Agent",
-    "2.1": "真诚HR,老板助手 → Persona Agent (HR persona)",
-    "2.2": "资质上传 + 智能验证 → Compliance Agent",
-    "2.3": "愿景/规划/战略传达 → Vision Agent (strategy capture)",
-    "2.4": "老板描述人才框架 → Talent Brief Agent (high-level)",
-    "2.5": "部门负责人描述细节 → Job Spec Agent (detailed)",
-    "2.6": "规章制度上传 → Policy Agent",
-    "2.7": "与相关人员频繁互动 → Multi-party Interaction Agent",
-    "2.8": "海量信息澄清 → Clarifier Agent → 2.8.1 人才画像 + 2.8.2 真实需求",
-    "2.9": "成为用人方HR → HR Service Agent (employee lifecycle)",
-    "3":   "双向适配 → Two-way Matcher + Mutual Evaluator + Feedback Loop"
+  "requirements_map_v2": {
+    "1.1": "Profile Agent + Intake Agent + 简历上传 UI + OCR + 完整度可视化",
+    "1.2": "DailyJournal Agent + AI 评价时间线 + 趋势图 + 行动项追踪",
+    "1.3": "WebSocket + SSE + Redis 队列(已 ✅)",
+    "1.4": "Emotion Agent + 折线图 + 高风险即时通知 HR",
+    "1.5": "Clarifier Agent + 画像可视化页 + 追问引导 + 冲突标注",
+    "1.6": "CareerPlanner + 真实招聘市场 API + 学习资源库 + 计划调整",
+    "2.1": "Persona Agent + 人格记忆 + 升级人工按钮 + 老板偏好",
+    "2.2": "Compliance Agent + 真实 OCR + 真实工商查询 + 过期提醒",
+    "2.3": "Vision Agent + 4 层战略地图可视化 + 时间线 diff",
+    "2.4": "TalentBrief Agent + 偏见可视化 + 依据解释",
+    "2.5": "JobSpec Agent + JD 模板 + over-spec 提示 UI + 版本历史",
+    "2.6": "Policy Agent + RAG 检索 + 法律风险 + 多类别浏览 + chat 集成",
+    "2.7": "MultiParty Agent + 多人协同 UI + 工单触发 + 通知机制",
+    "2.8": "EmployerClarifier + 人才画像可视化 + 多方冲突标注 + 共识度",
+    "2.9": "HRService Agent + 工单系统 + FAQ RAG + 状态追踪 + 升级人工",
+    "3":   "TwoWay + Mutual + Explainable AI + 反馈闭环 + 自动权重校准 + A/B"
   },
 
   "tasks": [
     {
-      "id": "T001",
-      "phase": "P0",
-      "priority": "P0",
-      "title": "搭建多智能体统一底座 (Agent Runtime)",
-      "requirement": ["1.3", "2.7"],
-      "description": "在 backend/agents/ 下新增 Agent Runtime 框架,统一所有智能体的:输入/输出协议、Tool 注册、Memory 读写、Cost 控制、Retry/Backoff 策略",
-      "deliverables": [
-        "backend/agents/runtime.py (BaseAgent 抽象类)",
-        "backend/agents/registry.py (智能体注册中心)",
-        "backend/agents/toolkit.py (Tool 调用封装)",
-        "backend/agents/memory.py (短期/长期/工作记忆三层)",
-        "backend/agents/tracing.py (LangSmith/OpenTelemetry 集成)"
-      ],
-      "depends_on": [],
-      "estimate_days": 3
-    },
-    {
-      "id": "T002",
-      "phase": "P0",
-      "priority": "P0",
-      "title": "扩展 Supabase Schema — 支持智能体所需的记忆与对话表",
-      "requirement": ["1.2", "1.4", "2.3"],
-      "description": "在 supabase/migrations/ 下新增数据库表,支持智能体长期记忆、对话历史、情绪时间线、状态变更流",
-      "deliverables": [
-        "supabase/migrations/002_agent_memory.sql (memory 表 + RLS)",
-        "supabase/migrations/003_conversations.sql (对话历史,带情绪标签)",
-        "supabase/migrations/004_emotion_timeline.sql (求职者情绪曲线)",
-        "supabase/migrations/005_company_knowledge.sql (愿景/规划/制度存储)",
-        "supabase/migrations/006_clarification_artifacts.sql (澄清产物:画像+需求)"
-      ],
-      "depends_on": ["T001"],
-      "estimate_days": 2
-    },
-    {
-      "id": "T003",
-      "phase": "P0",
-      "priority": "P0",
-      "title": "实现 Realtime Orchestrator — 召唤即响应",
-      "requirement": ["1.3", "2.7"],
-      "description": "扩展现有 signals.py,实现求职者/HR 任意时刻召唤时的秒级路由与响应,SSE/WebSocket 双通道",
-      "deliverables": [
-        "backend/api/realtime.py (WebSocket 端点 /ws/invoke)",
-        "backend/services/realtime_router.py (按 persona+context 路由到对应 Agent)",
-        "backend/services/notify.py (推送通道:Web Push/SSE/邮件/钉钉/飞书)",
-        "frontend/app/realtime/SocketProvider.tsx (前端 WS 客户端)"
-      ],
-      "depends_on": ["T001", "T002"],
-      "estimate_days": 3
-    },
-    {
-      "id": "T004",
-      "phase": "P0",
-      "priority": "P1",
-      "title": "中文 i18n 全栈改造",
-      "requirement": ["*"],
-      "description": "前端 next-intl,后端响应中文优先;LLM prompt 中文化",
-      "deliverables": [
-        "frontend/messages/zh-CN.json + en-US.json",
-        "backend/prompts/zh/*.yaml (中文 prompt 库)",
-        "backend/services/i18n.py (locale resolver)"
-      ],
-      "depends_on": [],
-      "estimate_days": 2
-    },
-    {
-      "id": "T005",
-      "phase": "P0",
-      "priority": "P1",
-      "title": "扩展鉴权 — 求职者/企业主/HR/部门负责人/管理员 5 种 persona",
-      "requirement": ["2.5", "2.7"],
-      "description": "在 auth.py 上扩展角色模型,支持一人多角色(求职者同时是HR观察者;企业主/部门负责人/HRBP 共存)",
-      "deliverables": [
-        "backend/api/auth.py (扩展 5 种 persona)",
-        "backend/services/permissions.py (RBAC + 资源所有权检查)",
-        "supabase/migrations/007_multi_persona.sql (user_personas 关联表)"
-      ],
-      "depends_on": [],
-      "estimate_days": 2
-    },
-
-    {
       "id": "T101",
-      "phase": "P1",
+      "phase": "P0",
       "priority": "P0",
-      "title": "1.1 Profile Agent + Intake Agent — 知心朋友 + 学历/简历信息上传",
-      "requirement": ["1.1"],
-      "description": "扩展 candidates.py 现有 ingestion,新增对话式 Profile Agent:求职者聊天中即可完成上传,AI 自动抽取/追问/补全",
+      "title": "真实 LLM 接入 + 失败重试 + cost 控制",
+      "requirement": ["all"],
+      "description": "替换 mock LLMClient 为真实 OpenAI/Anthropic 客户端,实现指数退避、流式、断路器、cost 熔断",
       "deliverables": [
-        "backend/agents/jobseeker/profile_agent.py",
-        "backend/agents/jobseeker/intake_agent.py (对话式表单 + 文件上传)",
-        "backend/services/profile_extractor.py (CV/证书/作品集 解析)",
-        "frontend/app/(jobseeker)/profile/page.tsx (聊天式建档页)"
+        "backend/services/llm_real.py (OpenAI/Anthropic 双客户端)",
+        "backend/services/llm_circuit_breaker.py (断路器)",
+        "backend/services/cost_tracker.py (单租户 cost 限额)",
+        "tests/test_llm_real.py (mock HTTP server, 测重试/熔断)"
       ],
-      "depends_on": ["T001", "T002"],
-      "estimate_days": 4
+      "depends_on": [],
+      "estimate_days": 5
     },
     {
       "id": "T102",
-      "phase": "P1",
+      "phase": "P0",
       "priority": "P0",
-      "title": "1.2 Daily Journal Agent + Advisor Agent — 每日状态更新 + 智能评价",
-      "requirement": ["1.2"],
-      "description": "新增日报/打卡机制,求职者可随时推送当日工作内容、困惑、心得;Advisor Agent 给出评价、注意事项、改进建议",
+      "title": "真实 OCR 服务 (简历/营业执照)",
+      "requirement": ["1.1", "2.2"],
+      "description": "替换 ocr_document mock,接入真实 OCR (Tencent OCR / Baidu OCR / GPT-4V),支持 PDF/PNG/JPG",
       "deliverables": [
-        "backend/agents/jobseeker/daily_journal_agent.py (日记摄取与归档)",
-        "backend/agents/jobseeker/advisor_agent.py (基于日记生成建议)",
-        "backend/api/journal.py (POST /journal, GET /journal/timeline)",
-        "frontend/app/(jobseeker)/journal/page.tsx (日记 + AI 评论)"
+        "backend/services/ocr_provider.py (provider 抽象 + 3 实现)",
+        "backend/services/file_storage.py (Supabase Storage 集成)",
+        "tests/test_ocr.py"
       ],
-      "depends_on": ["T001", "T002", "T101"],
-      "estimate_days": 5
+      "depends_on": ["T101"],
+      "estimate_days": 4
     },
     {
       "id": "T103",
-      "phase": "P1",
+      "phase": "P0",
       "priority": "P0",
-      "title": "1.4 Emotion Agent — 喜怒哀乐全接收 + 共情回应",
-      "requirement": ["1.4"],
-      "description": "对求职者的每条输入做情感识别,生成情绪时间线,Agent 回复必须包含情绪共情段落",
-      "deliverables": [
-        "backend/agents/jobseeker/emotion_agent.py (sentiment + emotion classifier)",
-        "backend/services/empathy_prompts.py (按情绪选回应模板)",
-        "backend/api/emotion.py (GET /emotion/timeline)",
-        "frontend/components/EmotionChip.tsx (UI 显示当前情绪状态)"
-      ],
-      "depends_on": ["T001", "T003"],
-      "estimate_days": 4
-    },
-    {
-      "id": "T104",
-      "phase": "P1",
-      "priority": "P0",
-      "title": "1.5 Clarifier Agent — 海量信息澄清,产出清晰画像+真实需求",
-      "requirement": ["1.5"],
-      "description": "对求职者散落的多次输入(日记/对话/上传资料)进行结构化澄清,产出 1.5.1 清晰画像 + 1.5.2 真实需求(显性需求 vs 隐性需求)",
-      "deliverables": [
-        "backend/agents/jobseeker/clarifier_agent.py (信息聚合+冲突检测+追问)",
-        "backend/services/profile_synthesizer.py (画像合成)",
-        "backend/services/need_extractor.py (显隐性需求分离)",
-        "supabase/migrations/006_clarification_artifacts.sql (已有,补表结构)",
-        "frontend/app/(jobseeker)/profile/synthesis.tsx (画像 + 需求可视化)"
-      ],
-      "depends_on": ["T101", "T102"],
-      "estimate_days": 5
-    },
-    {
-      "id": "T105",
-      "phase": "P1",
-      "priority": "P0",
-      "title": "1.6 Career Planner Agent — 职业规划师/顾问",
-      "requirement": ["1.6"],
-      "description": "基于画像+真实需求+市场行情,生成短期/中期/长期职业规划路径,推荐学习/认证/实习机会",
-      "deliverables": [
-        "backend/agents/jobseeker/career_planner_agent.py",
-        "backend/services/market_intel.py (爬取招聘市场行情/薪资/趋势)",
-        "backend/api/career_plan.py (GET/POST /career-plan)",
-        "frontend/app/(jobseeker)/plan/page.tsx (时间线 + 推荐)"
-      ],
-      "depends_on": ["T104"],
-      "estimate_days": 5
-    },
-
-    {
-      "id": "T201",
-      "phase": "P2",
-      "priority": "P0",
-      "title": "2.1 Persona Agent — 真诚HR的人格化基底",
-      "requirement": ["2.1", "2.9"],
-      "description": "定义 HR persona 的语气、知识边界、价值观;同时作为员工生命周期 Agent 的入口",
-      "deliverables": [
-        "backend/agents/employer/persona_agent.py",
-        "backend/prompts/zh/hr_persona.yaml (语气/边界/价值观 prompt)",
-        "backend/services/persona_consistency.py (回复一致性检查)"
-      ],
-      "depends_on": ["T001", "T004"],
-      "estimate_days": 2
-    },
-    {
-      "id": "T202",
-      "phase": "P2",
-      "priority": "P0",
-      "title": "2.2 Compliance Agent — 企业资质上传 + 智能验证",
+      "title": "真实工商查询 + 信用代码校验",
       "requirement": ["2.2"],
-      "description": "营业执照/行业资质/法人证件/对公账户 OCR + 国家企业信用信息公示系统交叉验证,生成可信度评分",
+      "description": "替换 company_lookup mock,接入真实工商查询 API (天眼查/启信宝),信用代码校验",
       "deliverables": [
-        "backend/agents/employer/compliance_agent.py",
-        "backend/services/ocr.py (营业执照 OCR)",
-        "backend/services/qualification_check.py (对接工商系统/天眼查/启信宝)",
-        "backend/api/compliance.py (POST /compliance/upload, GET /compliance/status)",
-        "frontend/app/(employer)/compliance/page.tsx"
+        "backend/services/company_lookup_provider.py",
+        "backend/services/credit_code_validator.py (国家信用代码 GB 校验)",
+        "tests/test_compliance_real.py"
       ],
-      "depends_on": ["T001", "T005"],
-      "estimate_days": 5
-    },
-    {
-      "id": "T203",
-      "phase": "P2",
-      "priority": "P0",
-      "title": "2.3 Vision Agent — 愿景/规划/战略/战术传达与结构化",
-      "requirement": ["2.3"],
-      "description": "老板把愿景、3年规划、年度战略、季度战术向智能体描述,Agent 自动分层结构化,生成战略地图",
-      "deliverables": [
-        "backend/agents/employer/vision_agent.py (战略解构 + 战略地图)",
-        "backend/services/strategy_mapper.py (愿景→规划→战略→战术 4 层拆解)",
-        "backend/api/vision.py (POST /vision, GET /strategy-map)",
-        "frontend/app/(employer)/vision/page.tsx (4 层可视化)"
-      ],
-      "depends_on": ["T001", "T201"],
-      "estimate_days": 4
-    },
-    {
-      "id": "T204",
-      "phase": "P2",
-      "priority": "P0",
-      "title": "2.4 Talent Brief Agent — 老板描述人才框架 (高层级)",
-      "requirement": ["2.4"],
-      "description": "老板口述所需人才大概框架(行业/职级/价值观/潜力方向),Agent 提炼关键约束",
-      "deliverables": [
-        "backend/agents/employer/talent_brief_agent.py",
-        "backend/api/talent_brief.py",
-        "frontend/app/(employer)/talent-brief/page.tsx"
-      ],
-      "depends_on": ["T203"],
+      "depends_on": [],
       "estimate_days": 3
     },
     {
-      "id": "T205",
-      "phase": "P2",
+      "id": "T104",
+      "phase": "P0",
       "priority": "P0",
-      "title": "2.5 Job Spec Agent — 部门负责人描述具体细节",
-      "requirement": ["2.5"],
-      "description": "用人部门负责人补充:岗位职责、必备技能、加分项、协作风格、汇报关系、技术栈、出差强度",
+      "title": "真实通知通道 (Email/DingTalk/Feishu/Webhook)",
+      "requirement": ["2.7", "1.4"],
+      "description": "替换 5 通道 log-only 通知,接 SendGrid SMTP + 钉钉/飞书 Webhook",
       "deliverables": [
-        "backend/agents/employer/job_spec_agent.py",
-        "backend/services/job_detail_extractor.py",
-        "backend/api/job_spec.py",
-        "frontend/app/(employer)/job-spec/[id]/page.tsx"
+        "backend/services/notify/email.py (SMTP/SendGrid)",
+        "backend/services/notify/dingtalk.py (签名 + webhook)",
+        "backend/services/notify/feishu.py (签名 + webhook)",
+        "backend/services/notify/wecom.py",
+        "backend/services/notify/web.py (Web Push VAPID)",
+        "tests/test_notify.py"
       ],
-      "depends_on": ["T204"],
+      "depends_on": [],
+      "estimate_days": 4
+    },
+    {
+      "id": "T105",
+      "phase": "P0",
+      "priority": "P0",
+      "title": "可观测性 — 链路追踪 + 业务指标",
+      "requirement": ["all"],
+      "description": "OpenTelemetry 全链路 + Prometheus 指标 + Sentry 错误追踪 + 业务 dashboard",
+      "deliverables": [
+        "backend/services/telemetry.py (OTel 集成)",
+        "backend/services/metrics.py (Prometheus 客户端)",
+        "infra/grafana/dashboards/*.json",
+        "tests/test_telemetry.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 3
+    },
+    {
+      "id": "T106",
+      "phase": "P0",
+      "priority": "P0",
+      "title": "审计日志 + GDPR 强化",
+      "requirement": ["all"],
+      "description": "所有 PII 访问写审计日志,GDPR forget/export 加审计,支持 admin 端查询",
+      "deliverables": [
+        "supabase/migrations/009_audit_log.sql",
+        "backend/services/audit.py",
+        "backend/api/admin_audit.py",
+        "tests/test_audit.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 3
+    },
+    {
+      "id": "T201",
+      "phase": "P1",
+      "priority": "P0",
+      "title": "简历上传组件 + 完整度可视化",
+      "requirement": ["1.1"],
+      "description": "求职者侧建档页: 文件上传 + OCR 自动填字段 + 完整度仪表盘 + 缺失字段高亮",
+      "deliverables": [
+        "frontend/app/(jobseeker)/onboarding/page.tsx (建档向导)",
+        "frontend/components/ResumeUpload.tsx",
+        "frontend/components/ProfileCompleteness.tsx",
+        "frontend/components/FieldHighlight.tsx (缺失字段引导)"
+      ],
+      "depends_on": ["T102"],
+      "estimate_days": 5
+    },
+    {
+      "id": "T202",
+      "phase": "P1",
+      "priority": "P0",
+      "title": "画像可视化页 (1.5)",
+      "requirement": ["1.5"],
+      "description": "求职者侧: 综合画像卡 + 真实需求列表 + 冲突标注 + 追问引导",
+      "deliverables": [
+        "frontend/app/(jobseeker)/profile/page.tsx",
+        "frontend/components/ProfileCard.tsx",
+        "frontend/components/NeedsList.tsx",
+        "frontend/components/ContradictionBadge.tsx",
+        "frontend/components/FollowUpQuestions.tsx"
+      ],
+      "depends_on": [],
+      "estimate_days": 4
+    },
+    {
+      "id": "T203",
+      "phase": "P1",
+      "priority": "P0",
+      "title": "情绪时间线折线图",
+      "requirement": ["1.4"],
+      "description": "EmotionChip 升级为完整折线图,叠加情绪触发文本,高风险自动红色",
+      "deliverables": [
+        "frontend/app/(jobseeker)/emotion/page.tsx",
+        "frontend/components/charts/emotion-timeline-chart.tsx",
+        "frontend/components/EmotionEventDetail.tsx"
+      ],
+      "depends_on": [],
+      "estimate_days": 3
+    },
+    {
+      "id": "T204",
+      "phase": "P1",
+      "priority": "P0",
+      "title": "用人方人才画像页 (2.8)",
+      "requirement": ["2.8"],
+      "description": "Employer 侧: 岗位的人才画像 + 真实需求列表 + 多方共识度 + 冲突标注",
+      "deliverables": [
+        "frontend/app/(employer)/role-profile/page.tsx",
+        "frontend/components/mothership/TalentImageCard.tsx",
+        "frontend/components/ConsensusScore.tsx",
+        "frontend/components/StakeholderMatrix.tsx"
+      ],
+      "depends_on": [],
+      "estimate_days": 4
+    },
+    {
+      "id": "T205",
+      "phase": "P1",
+      "priority": "P0",
+      "title": "4 层战略地图可视化 (2.3)",
+      "requirement": ["2.3"],
+      "description": "Vision/Planning/Strategy/Tactic 四层结构图,时间线 diff,缺失层自动高亮",
+      "deliverables": [
+        "frontend/components/strategy/StrategyMap.tsx",
+        "frontend/components/strategy/StrategyDiff.tsx",
+        "frontend/components/strategy/StrategyTimeline.tsx",
+        "frontend/app/(employer)/strategy/page.tsx"
+      ],
+      "depends_on": [],
       "estimate_days": 4
     },
     {
       "id": "T206",
-      "phase": "P2",
+      "phase": "P1",
       "priority": "P0",
-      "title": "2.6 Policy Agent — 上下班时间 + 规章制度上传与查询",
+      "title": "规章制度浏览页 (2.6)",
       "requirement": ["2.6"],
-      "description": "管理部门上传考勤/请假/报销/晋升/薪酬制度,Agent 结构化存储并支持求职者面试前查询",
+      "description": "政策列表(按类别)+ 详情 + 法律风险提示 + 全文搜索 + chat 集成",
       "deliverables": [
-        "backend/agents/employer/policy_agent.py",
-        "backend/services/policy_rag.py (制度 RAG 检索)",
-        "backend/api/policy.py (POST /policy/upload, GET /policy/query)",
-        "frontend/app/(employer)/policy/page.tsx (制度管理)",
-        "frontend/app/(jobseeker)/policy/[companyId]/page.tsx (求职者查询页)"
+        "frontend/app/(employer)/policy/page.tsx",
+        "frontend/components/policy/PolicyList.tsx",
+        "frontend/components/policy/PolicyDetail.tsx",
+        "frontend/components/policy/PolicySearch.tsx",
+        "frontend/components/policy/LegalRiskBadge.tsx"
       ],
-      "depends_on": ["T202"],
-      "estimate_days": 4
+      "depends_on": [],
+      "estimate_days": 3
     },
     {
       "id": "T207",
-      "phase": "P2",
+      "phase": "P1",
       "priority": "P0",
-      "title": "2.7 Multi-party Interaction Agent — 与多部门/多角色频繁互动",
-      "requirement": ["2.7"],
-      "description": "支持老板/HR/部门负责人/管理部门/财务 同时与 Agent 对话,Agent 协调多方意见、自动汇总决策",
+      "title": "HR 工单系统 (2.9)",
+      "requirement": ["2.9"],
+      "description": "工单创建/分配/状态/历史/SLA,员工侧创建+追踪,HR 侧处理",
       "deliverables": [
-        "backend/agents/employer/multi_party_agent.py (多方对话协调)",
-        "backend/services/consensus_builder.py (多方意见汇总 + 决策建议)",
-        "backend/api/multiparty.py (POST /multiparty/thread)",
-        "frontend/app/(employer)/multilogue/page.tsx (多人同话题)"
+        "supabase/migrations/010_hr_tickets.sql",
+        "backend/services/ticket.py (工单服务)",
+        "backend/api/tickets.py",
+        "frontend/app/(employer)/tickets/page.tsx",
+        "frontend/app/(employer)/tickets/[id]/page.tsx",
+        "frontend/components/tickets/TicketBoard.tsx",
+        "frontend/components/tickets/TicketTimeline.tsx"
       ],
-      "depends_on": ["T005", "T203", "T204", "T205"],
-      "estimate_days": 4
+      "depends_on": [],
+      "estimate_days": 5
     },
     {
       "id": "T208",
-      "phase": "P2",
+      "phase": "P1",
       "priority": "P0",
-      "title": "2.8 Employer Clarifier Agent — 用人方信息澄清",
-      "requirement": ["2.8"],
-      "description": "对用人方分散的多角色输入进行澄清,产出 2.8.1 人才画像(所需人才的清晰画像) + 2.8.2 真实需求(岗位真实需求 vs 表面需求)",
+      "title": "偏见可视化 (2.4)",
+      "requirement": ["2.4"],
+      "description": "TalentBrief Agent 偏见检测结果以卡片展示,带依据解释 + 法律提示",
       "deliverables": [
-        "backend/agents/employer/clarifier_agent.py",
-        "backend/services/talent_image_synthesizer.py (所需人才画像)",
-        "backend/services/real_need_extractor.py (真实需求抽取,区分硬性/加分项/隐性)",
-        "frontend/app/(employer)/clarification/[roleId]/page.tsx"
+        "frontend/components/mothership/BiasAlert.tsx",
+        "frontend/components/mothership/BiasExplanation.tsx",
+        "frontend/components/mothership/LegalHint.tsx"
       ],
-      "depends_on": ["T204", "T205", "T207"],
-      "estimate_days": 5
+      "depends_on": [],
+      "estimate_days": 2
     },
     {
       "id": "T209",
-      "phase": "P2",
+      "phase": "P1",
       "priority": "P0",
-      "title": "2.9 HR Service Agent — 成为用人方HR (员工生命周期)",
-      "requirement": ["2.9"],
-      "description": "员工生命周期 Agent:招聘→入职→培训→绩效→晋升→离职 全流程服务,智能体可代为回答员工问题",
+      "title": "JD 模板 + over-spec 提示 UI (2.5)",
+      "requirement": ["2.5"],
+      "description": "JD 模板选择器 + 自动 over-spec 检测 + 版本历史",
       "deliverables": [
-        "backend/agents/employer/hr_service_agent.py",
-        "backend/services/employee_lifecycle.py",
-        "backend/api/hr_service.py",
-        "frontend/app/(employer)/hr-service/page.tsx"
+        "frontend/components/jd/JDTemplatePicker.tsx",
+        "frontend/components/jd/OverSpecWarning.tsx",
+        "frontend/components/jd/JDVersionHistory.tsx",
+        "frontend/app/(employer)/role/[id]/edit/page.tsx"
       ],
-      "depends_on": ["T206", "T207"],
-      "estimate_days": 5
+      "depends_on": [],
+      "estimate_days": 3
     },
-
     {
       "id": "T301",
-      "phase": "P3",
-      "priority": "P0",
-      "title": "Two-way Matcher — 求职者画像 ↔ 岗位画像 双向打分",
-      "requirement": ["3"],
-      "description": "扩展现有 matching/,实现双向匹配:求职者对岗位的契合度(JS→Role)+ 岗位对求职者的契合度(Role→JS),取调和值",
+      "phase": "P2",
+      "priority": "P1",
+      "title": "工单系统后端 + 升级人工",
+      "requirement": ["2.9", "2.1"],
+      "description": "工单服务: 状态机、SLA、人工升级、FAQ RAG 自动建议",
       "deliverables": [
-        "backend/matching/two_way.py (双向打分)",
-        "backend/matching/harmonic_score.py (调和均值/几何均值)",
-        "backend/api/two_way_match.py (POST /match/two-way)",
-        "frontend/app/match/page.tsx (双向匹配结果)"
+        "backend/services/ticket_state_machine.py",
+        "backend/services/faq_rag.py (pgvector 检索)",
+        "backend/services/escalation.py",
+        "tests/test_tickets.py"
       ],
-      "depends_on": ["T104", "T208"],
-      "estimate_days": 4
+      "depends_on": ["T207"],
+      "estimate_days": 5
     },
     {
       "id": "T302",
-      "phase": "P3",
-      "priority": "P0",
-      "title": "Mutual Evaluator — 双方互评机制",
+      "phase": "P2",
+      "priority": "P1",
+      "title": "互评解释器 + 双方对照视图",
       "requirement": ["3"],
-      "description": "面试前/面试后双向打分:求职者评企业、企业评求职者,形成信任分",
+      "description": "Mutual Evaluator 输出双方视角强弱对比,UI 表格化",
       "deliverables": [
-        "backend/agents/evaluator/mutual_evaluator.py",
-        "backend/api/evaluation.py (POST /evaluation)",
-        "frontend/components/MutualScore.tsx"
+        "backend/matching/explainer_v2.py",
+        "frontend/app/match/eval/[id]/page.tsx",
+        "frontend/components/match/EvalComparison.tsx",
+        "frontend/components/match/StrengthsList.tsx"
       ],
-      "depends_on": ["T301"],
-      "estimate_days": 3
+      "depends_on": [],
+      "estimate_days": 4
     },
     {
       "id": "T303",
-      "phase": "P3",
-      "priority": "P0",
-      "title": "Feedback Loop — 长期反馈闭环 (增强现有 signals.py)",
-      "requirement": ["3"],
-      "description": "所有匹配/面试/入职结果回流到画像,形成持续学习;冷启动期使用 talent-tool-mvp 已有的 mock 数据",
+      "phase": "P2",
+      "priority": "P1",
+      "title": "简历图片 OCR 端到端",
+      "requirement": ["1.1"],
+      "description": "Profile Agent 集成 OCR,图片简历直接入档,字段自动填",
       "deliverables": [
-        "backend/signals/feedback_loop.py",
-        "backend/services/embedding_updater.py (画像 embedding 增量更新)",
-        "backend/services/calibration.py (匹配质量校准)"
+        "backend/agents/jobseeker/intake_agent.py (OCR 调用)",
+        "tests/test_intake_ocr.py"
       ],
-      "depends_on": ["T301", "T302"],
+      "depends_on": ["T102"],
+      "estimate_days": 3
+    },
+    {
+      "id": "T304",
+      "phase": "P2",
+      "priority": "P1",
+      "title": "语音日记 (Whisper)",
+      "requirement": ["1.2", "1.4"],
+      "description": "前端录音 → Whisper 转写 → 触发 Daily Journal Agent",
+      "deliverables": [
+        "frontend/components/VoiceRecorder.tsx",
+        "backend/services/transcribe.py (Whisper 集成)",
+        "backend/api/voice.py",
+        "tests/test_voice.py"
+      ],
+      "depends_on": [],
       "estimate_days": 4
     },
-
+    {
+      "id": "T305",
+      "phase": "P2",
+      "priority": "P1",
+      "title": "人格记忆 (Persona Agent 长期偏好)",
+      "requirement": ["2.1"],
+      "description": "老板/HR 沟通风格、偏好术语、决策模式被记忆",
+      "deliverables": [
+        "backend/services/persona_memory.py",
+        "backend/agents/employer/persona_agent.py (升级)",
+        "supabase/migrations/011_persona_preferences.sql"
+      ],
+      "depends_on": [],
+      "estimate_days": 3
+    },
+    {
+      "id": "T306",
+      "phase": "P2",
+      "priority": "P1",
+      "title": "自动权重校准 (反馈闭环)",
+      "requirement": ["3"],
+      "description": "基于互评结果自动调整 matching 权重,人工可覆盖",
+      "deliverables": [
+        "backend/services/feedback_loop.py",
+        "backend/api/admin_weights.py",
+        "frontend/app/mothership/admin/weights/page.tsx",
+        "tests/test_feedback_loop.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 4
+    },
     {
       "id": "T401",
-      "phase": "P4",
+      "phase": "P3",
       "priority": "P1",
-      "title": "单测 + 集成测试覆盖 (目标覆盖率 80%)",
-      "requirement": ["*"],
-      "description": "每个 Agent 必须有单测,关键路径有集成测试",
+      "title": "可解释匹配 — 自然语言推荐理由",
+      "requirement": ["3"],
+      "description": "Match Explainer 输出 '为什么匹配' / '为什么不匹配' 自然语言解释",
       "deliverables": [
-        "backend/tests/agents/ (每个 agent 一个 test_*.py)",
-        "backend/tests/integration/ (端到端匹配流程)",
-        "frontend/__tests__/ (关键页面)"
+        "backend/matching/explainer_llm.py (用 LLM 生成解释)",
+        "frontend/components/match/MatchReason.tsx",
+        "frontend/components/match/MatchCounterfactual.tsx ('如果……会更匹配')"
       ],
-      "depends_on": ["T101-T303"],
-      "estimate_days": 5
+      "depends_on": [],
+      "estimate_days": 4
     },
     {
       "id": "T402",
-      "phase": "P4",
+      "phase": "P3",
       "priority": "P1",
-      "title": "性能压测 + LLM Cost 控制",
-      "requirement": ["*"],
-      "description": "Locust 压测 1000 并发,LLM 调用加缓存/降级/限流",
+      "title": "A/B 实验框架",
+      "requirement": ["3"],
+      "description": "匹配算法权重 / 推荐顺序 A/B 测试框架",
       "deliverables": [
-        "backend/tests/load/locustfile.py",
-        "backend/services/llm_cache.py (Redis 缓存相同 prompt)",
-        "backend/services/llm_budget.py (per-user token 配额)"
+        "backend/services/ab_test.py",
+        "backend/api/admin_ab.py",
+        "frontend/app/mothership/admin/experiments/page.tsx"
       ],
-      "depends_on": ["T401"],
-      "estimate_days": 3
+      "depends_on": ["T306"],
+      "estimate_days": 4
     },
     {
       "id": "T403",
-      "phase": "P4",
+      "phase": "P3",
       "priority": "P1",
-      "title": "安全审计 — PII 加密 + GDPR/个保法合规",
-      "requirement": ["*"],
-      "description": "简历/身份证/对话/情绪数据加密存储;支持删除权",
+      "title": "双向匹配 demo 数据集 + 评测脚本",
+      "requirement": ["3"],
+      "description": "构造 100 对 mock 求职+岗位,自动跑匹配质量评估",
       "deliverables": [
-        "backend/services/crypto.py (字段级加密)",
-        "supabase/migrations/008_pii_encryption.sql",
-        "backend/api/gdpr.py (DELETE /user/all-data)"
+        "tests/data/mock_match_dataset.json",
+        "tests/test_matching_quality.py (precision@10 / nDCG)"
       ],
-      "depends_on": ["T402"],
+      "depends_on": [],
       "estimate_days": 3
     },
     {
-      "id": "T404",
+      "id": "T501",
       "phase": "P4",
-      "priority": "P1",
-      "title": "生产部署 + 监控告警",
-      "requirement": ["*"],
-      "description": "Docker Compose 一键部署;Prometheus + Grafana 监控;钉钉/飞书告警",
+      "priority": "P2",
+      "title": "前端 i18n (zh-CN / en-US)",
+      "requirement": ["all"],
+      "description": "前端接入 next-intl,所有页面多语言",
       "deliverables": [
-        "docker-compose.prod.yml",
-        "infra/prometheus.yml + grafana-dashboard.json",
-        "infra/alertmanager.yml"
+        "frontend/messages/en-US.json",
+        "frontend/messages/zh-CN.json",
+        "frontend/i18n.ts (配置)",
+        "所有页面 + components 用 t() 函数"
       ],
-      "depends_on": ["T403"],
-      "estimate_days": 3
+      "depends_on": [],
+      "estimate_days": 5
+    },
+    {
+      "id": "T502",
+      "phase": "P4",
+      "priority": "P2",
+      "title": "Webhook 出口 (ATS 集成)",
+      "requirement": ["all"],
+      "description": "HR 可配置 webhook 接收匹配事件 / 工单事件",
+      "deliverables": [
+        "supabase/migrations/012_webhooks.sql",
+        "backend/services/webhook.py",
+        "backend/api/webhooks.py",
+        "frontend/app/mothership/admin/webhooks/page.tsx"
+      ],
+      "depends_on": [],
+      "estimate_days": 4
+    },
+    {
+      "id": "T503",
+      "phase": "P4",
+      "priority": "P2",
+      "title": "公开 API + API Key 管理",
+      "requirement": ["all"],
+      "description": "第三方开发者可通过 API Key 访问: 创建候选人、查询匹配",
+      "deliverables": [
+        "supabase/migrations/013_api_keys.sql",
+        "backend/services/api_key.py",
+        "backend/api/public.py (公开 API,带 rate limit)",
+        "frontend/app/mothership/admin/api-keys/page.tsx"
+      ],
+      "depends_on": [],
+      "estimate_days": 4
+    },
+    {
+      "id": "T504",
+      "phase": "P4",
+      "priority": "P2",
+      "title": "Webhook 触发器规则引擎",
+      "requirement": ["all"],
+      "description": "if-this-then-that: '当 HR service 自动解决率 < 60% 时告警 HRBP'",
+      "deliverables": [
+        "backend/services/rule_engine.py",
+        "frontend/app/mothership/admin/rules/page.tsx"
+      ],
+      "depends_on": ["T502"],
+      "estimate_days": 5
     }
   ],
 
   "milestones": [
     {
       "id": "M1",
-      "name": "底座就绪",
-      "after_tasks": ["T001", "T002", "T003", "T004", "T005"],
-      "demo": "5 种 persona 登录,可调用任意 Agent,中文交互"
+      "title": "v2.1 — 真实基线",
+      "target_date": "2026-08-15",
+      "tasks": ["T101", "T102", "T103", "T104", "T105", "T106"],
+      "deliverable": "所有 Agent 接到真实服务,有监控,生产环境可用"
     },
     {
       "id": "M2",
-      "name": "求职者侧 MVP",
-      "after_tasks": ["T101", "T102", "T103", "T104", "T105"],
-      "demo": "求职者上传简历→写日记→Agent 评价→生成画像+需求+规划"
+      "title": "v2.2 — 用户看得到",
+      "target_date": "2026-09-15",
+      "tasks": ["T201", "T202", "T203", "T204", "T205", "T206", "T207", "T208", "T209"],
+      "deliverable": "16 项需求全部从 🟡 → ✅ (生产级)"
     },
     {
       "id": "M3",
-      "name": "用人单位侧 MVP",
-      "after_tasks": ["T201", "T202", "T203", "T204", "T205", "T206", "T207", "T208", "T209"],
-      "demo": "企业上传资质→老板讲愿景→部门写 JD→Agent 产出人才画像"
+      "title": "v2.3 — 深度能力",
+      "target_date": "2026-10-15",
+      "tasks": ["T301", "T302", "T303", "T304", "T305", "T306"],
+      "deliverable": "工单 / OCR / 语音 / 人格记忆 / 反馈闭环全部可用"
     },
     {
       "id": "M4",
-      "name": "双向匹配上线",
-      "after_tasks": ["T301", "T302", "T303"],
-      "demo": "求职者和岗位双向打分 + 互评 + 反馈闭环"
+      "title": "v2.4 — 匹配 2.0",
+      "target_date": "2026-11-15",
+      "tasks": ["T401", "T402", "T403"],
+      "deliverable": "可解释匹配 + A/B 实验,匹配质量可量化"
     },
     {
       "id": "M5",
-      "name": "生产就绪",
-      "after_tasks": ["T401", "T402", "T403", "T404"],
-      "demo": "80% 测试覆盖 + 压测通过 + 安全审计通过 + 监控告警"
+      "title": "v2.5 — 规模化",
+      "target_date": "2026-12-15",
+      "tasks": ["T501", "T502", "T503", "T504"],
+      "deliverable": "i18n + Webhook + 公开 API + 规则引擎,可对接外部"
     }
   ],
 
-  "summary": {
-    "total_tasks": 23,
-    "phases": 5,
-    "milestones": 5,
-    "p0_tasks": 18,
-    "p1_tasks": 5,
-    "p2_tasks": 0,
-    "estimated_weeks": 16,
-    "estimated_man_days": 88,
-    "agents_to_build": 16,
-    "covers_all_requirements": true
-  }
+  "success_metrics": {
+    "coverage": "16 项需求 100% ✅ 完整 (当前 1/16 = 6%)",
+    "performance": "P95 agent 调用延迟 < 3s",
+    "reliability": "核心 API 可用性 ≥ 99.5%",
+    "observability": "100% 错误有 trace_id 可定位",
+    "user_value": "试用 NPS ≥ 40, 日活 ≥ 50 (中型企业)"
+  },
+
+  "risks": [
+    {
+      "risk": "真实第三方 API 限流/成本",
+      "mitigation": "加 LLM cache + 用 embedding 缓存 + 灰度降级"
+    },
+    {
+      "risk": "UI 工作量大,拖累后端",
+      "mitigation": "前端组件复用 Tailwind UI + shadcn/ui,优先 P0 UI"
+    },
+    {
+      "risk": "工单系统复杂度高",
+      "mitigation": "MVP 先 5 个状态,迭代加自动化"
+    },
+    {
+      "risk": "A/B 实验需要流量",
+      "mitigation": "先做框架,真实实验待 v3"
+    }
+  ]
 }
