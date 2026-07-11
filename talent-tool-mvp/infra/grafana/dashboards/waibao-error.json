@@ -1,0 +1,34 @@
+{
+  "title": "Waibao Errors",
+  "uid": "waibao-error",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "tags": ["waibao", "errors"],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Error rate by provider",
+      "type": "timeseries",
+      "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum by (provider) (rate(provider_calls_total{status=\"error\"}[5m]))",
+          "legendFormat": "{{provider}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Errors / Total ratio",
+      "type": "timeseries",
+      "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum(rate(provider_calls_total{status=\"error\"}[5m])) / sum(rate(provider_calls_total[5m]))",
+          "legendFormat": "global"
+        }
+      ]
+    }
+  ]
+}

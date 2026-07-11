@@ -1,0 +1,29 @@
+{
+  "title": "Waibao Cache",
+  "uid": "waibao-cache",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "tags": ["waibao", "cache"],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Cache hit ratio",
+      "type": "stat",
+      "gridPos": {"x": 0, "y": 0, "w": 8, "h": 6},
+      "targets": [{"expr": "llm_cache_hit_ratio"}]
+    },
+    {
+      "id": 2,
+      "title": "Cache hit vs miss (provider calls)",
+      "type": "timeseries",
+      "gridPos": {"x": 8, "y": 0, "w": 16, "h": 8},
+      "targets": [
+        {
+          "expr": "sum by (status) (rate(provider_calls_total[5m]))",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    }
+  ]
+}

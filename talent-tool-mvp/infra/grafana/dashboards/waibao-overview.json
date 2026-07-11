@@ -1,0 +1,60 @@
+{
+  "title": "Waibao Overview",
+  "uid": "waibao-overview",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "tags": ["waibao", "overview"],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Provider call rate (per sec)",
+      "type": "timeseries",
+      "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum by (provider) (rate(provider_calls_total[5m]))",
+          "legendFormat": "{{provider}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Provider error rate",
+      "type": "timeseries",
+      "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum by (provider) (rate(provider_calls_total{status=\"error\"}[5m])) / sum by (provider) (rate(provider_calls_total[5m]))",
+          "legendFormat": "{{provider}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Active users (24h)",
+      "type": "stat",
+      "gridPos": {"x": 0, "y": 8, "w": 8, "h": 6},
+      "targets": [{"expr": "active_users"}]
+    },
+    {
+      "id": 4,
+      "title": "LLM cache hit ratio",
+      "type": "gauge",
+      "gridPos": {"x": 8, "y": 8, "w": 8, "h": 6},
+      "targets": [{"expr": "llm_cache_hit_ratio"}]
+    },
+    {
+      "id": 5,
+      "title": "Tickets created (priority)",
+      "type": "timeseries",
+      "gridPos": {"x": 16, "y": 8, "w": 8, "h": 6},
+      "targets": [
+        {
+          "expr": "sum by (priority) (rate(tickets_created_total[5m]))",
+          "legendFormat": "{{priority}}"
+        }
+      ]
+    }
+  ]
+}
