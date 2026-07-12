@@ -1,575 +1,523 @@
 {
   "meta": {
     "project": "招聘智能体 (Recruitment Agent)",
-    "subtitle": "v5.0 — 代码健康整顿 + 真实业务落地 + 商业化",
-    "based_on": "v4.0.0 (16/16 需求 ✅ / 1242 tests / 12 维度 Provider / 5 端)",
-    "version": "5.0.0",
+    "subtitle": "v6.0 — 架构扩展性 + 真正差异化能力 (Realtime/Plugin/EventBus)",
+    "based_on": "v5.0.0 (16/16 需求 ✅ / 1434 tests / 7 维度 services / Storybook)",
+    "version": "6.0.0",
     "created": "2026-07-12",
-    "supersedes": "v4.0 todo.json (27 tasks)",
+    "supersedes": "v5.0 todo.json (28 tasks)",
     "owner": "waibao",
     "language": ["zh-CN", "en-US", "ja-JP"],
     "stack": {
-      "backend": "FastAPI + Python 3.12",
-      "frontend": "Next.js 16 + TypeScript + Tailwind + next-intl + Storybook",
-      "database": "Supabase (PostgreSQL + pgvector + Realtime)",
-      "ai": "OpenAI / Anthropic / DeepSeek / 智谱 / 通义 / Kimi + Whisper / GPT-4V + 国内 OCR SaaS",
-      "infra": "Docker Compose + Supabase + Redis + OpenTelemetry + Prometheus + Sentry + Locust + ArgoCD"
+      "backend": "FastAPI + Python 3.12 + EventBus + PluginSDK",
+      "frontend": "Next.js 16 + TypeScript + Tailwind + next-intl + Storybook + LiveKit",
+      "database": "Supabase (PostgreSQL + pgvector + Realtime) + Redis (pub/sub + cache)",
+      "ai": "OpenAI / Anthropic / DeepSeek / 智谱 / 通义 / Kimi + Whisper / GPT-4V / GPT-4o Realtime / Qwen-VL",
+      "infra": "Docker Compose + Supabase + Redis + OpenTelemetry + Prometheus + Sentry + Locust + ArgoCD + LiveKit"
     },
-    "audit": "docs/COVERAGE-AUDIT-v5.md"
+    "audit": "docs/COVERAGE-AUDIT-v6.md"
   },
 
-  "goal": "在 v4.0 (16/16 需求 ✅ / 1242 tests / 12 维度 Provider / 5 端) 基础上,做三件事:(1) 代码健康整顿 — services 拆包 + agents 拆 core/llm/memory + 删 dead code + 整合 mind/mothership;(2) 真实业务落地 — 找 1-2 家中型企业试用 + 配置真实 API key + 真实负载压测;(3) 业务深度上线 — 把 v3-v4 加的 stub 功能推到真实业务数据",
+  "goal": "在 v5.0 (16/16 需求 ✅ / 1434 tests / 代码健康) 基础上,做两件事:(1) **架构扩展性** — Event Bus / 配置中心 / Feature Flag / Plugin SDK / Agent Composition,让加新 Agent/Service/Provider 0.5-1 天搞定;(2) **真正差异化能力** — AI 模拟面试官 + GPT-4o Realtime 实时对话 + 视频简历理解,跳出「传统招聘系统」竞争",
 
   "background": {
-    "v4_achievements": [
+    "v5_achievements": [
       "16/16 项甲方需求 100% 形式覆盖",
-      "1242 tests pass (从 30+ 翻 41 倍)",
-      "12 维度 Provider 抽象 + 28+ 真实适配器",
-      "4 端可用 (Web + 微信小程序 + 钉钉 + 飞书 + PWA)",
-      "v4.0.0 Release 已发布"
+      "1434 tests pass",
+      "代码健康整顿: services 拆 7 包 / agents 拆 4 子包 / dead code 清理",
+      "Storybook + ErrorCode 73 码 + setup 统一入口",
+      "真实 API key 集成 / Pilot 框架 / 业务深度 8 项真实数据",
+      "12 维度 Provider 抽象 (加新供应商 1-2 天)",
+      "v5.0.0 Release"
     ],
-    "v4_debt": [
-      "❌ services/ 56 个文件过重,新功能难定位",
-      "❌ agents/runtime.py 一个文件塞太多 (BaseAgent + LLMClient + Memory + Registry + Tracing)",
-      "❌ adapters/ 是 v1.0 残留,已被 providers/ats/ 替代",
-      "❌ copilot/ + signals/ 使用度低,可能 dead code",
-      "❌ frontend mind/ + mothership/ 跟 employer/ 重叠",
-      "❌ frontend components/ 50+ 平铺,无分类",
-      "❌ 无 backend setup() 统一入口",
-      "❌ 无 Storybook",
-      "❌ 无统一错误代码 (ErrorCode 枚举)",
-      "❌ 28 个真实 API key 0 个配置",
-      "❌ Pilot 合作方 0 个",
-      "❌ 真实负载压测 0",
-      "❌ 业务深度功能全是 stub,无真实数据",
-      "❌ 微信小程序/钉钉/飞书 0 个真实上架"
+    "v5_extension_debt": [
+      "❌ Agent 间缺 Event Bus: 加新 hook 要改两个 agent 文件",
+      "❌ 缺配置中心: admin 改 prompt 阈值要发版",
+      "❌ 缺 Feature Flag: 灰度靠手工改 env",
+      "❌ 缺 Plugin SDK: 第三方开发者无法贡献",
+      "❌ 缺 Agent Composition: 非技术人员不能编排",
+      "❌ 缺 Realtime API: 没真正「实时对话」体验",
+      "❌ 缺视频简历理解: GPT-4V 没用起来",
+      "❌ 缺 AI 模拟面试官: 差异化能力"
     ],
-    "v5_thinking_shift": "v3-v4 是「功能铺开」(把功能做出来),v5.0 必须是「功能落地 + 代码健康」。**不做新功能**,只做「把现有功能真正用起来 + 把代码组织梳理清」。",
-    "north_star": "2027 Q2 签第 1 家中型企业付费客户,2027 Q4 NPS ≥ 50,2028 Q2 真实 ARR ≥ 100 万 RMB"
+    "v5_user_pain_points": [
+      "缺「为什么」: 匹配分 0.8 不知道为什么",
+      "缺「下一步」: AI 给建议不给今天该做什么",
+      "缺「信任」: 求职者不信任 AI 画像,无确认机制",
+      "缺「效率」: HR 无批量操作",
+      "缺「对比」: 多候选人/岗位无对比视图",
+      "缺「导出」: 无 Word/PPT 导出"
+    ],
+    "v6_thinking_shift": "v5.0 是「代码健康」,v6.0 必须是「可扩展架构 + 真正差异化能力」。两件事并行:架构解耦让加新功能 1 天搞定,差异化能力让产品在赛道胜出。",
+    "north_star": "2027 Q4 真实 ARR ≥ 500 万 RMB,产品 NPS ≥ 60,3 个月内新功能从「需求到上线」≤ 2 周"
   },
 
   "phases": [
     {
       "id": "P0",
-      "title": "代码健康整顿",
-      "goal": "services 拆包 + agents 拆 core/llm/memory + 删 dead code + 整合 mind/mothership + 统一入口",
-      "duration_weeks": 3,
+      "title": "架构扩展性基础",
+      "goal": "Event Bus + 配置中心 + Feature Flag + Plugin SDK + Agent Composition,让加新 Agent/Service 1 天搞定",
+      "duration_weeks": 5,
       "priority": "P0"
     },
     {
       "id": "P1",
-      "title": "真实业务落地",
-      "goal": "1-2 家中型企业试用 + 12+ 真实 API key 配置 + 真实负载压测 + 真实告警",
-      "duration_weeks": 4,
+      "title": "差异化能力 (Realtime + AI 模拟面试官 + 视频简历)",
+      "goal": "GPT-4o Realtime 实时语音对话 + AI 模拟面试官 + 视频简历理解 (GPT-4V),跳出传统招聘赛道",
+      "duration_weeks": 6,
       "priority": "P0"
     },
     {
       "id": "P2",
-      "title": "业务深度上线 (从 stub 到生产数据)",
-      "goal": "AI 面试 / Offer / 漏斗 / 订阅 / 视频面试 / 测评 / 背调 / ATS / Webhook / 公开 API / 规则引擎 / A/B / LLM cache / 协同房间 全部产生真实业务数据",
-      "duration_weeks": 6,
-      "priority": "P1"
-    },
-    {
-      "id": "P3",
-      "title": "多端真实上架 + 日活",
-      "goal": "微信小程序 + 钉钉 + 飞书 + PWA 真实上架 + 真实日活用户",
+      "title": "用户体验提升 (对比/批量/导出/通知)",
+      "goal": "候选人/岗位对比视图 + 批量操作 + 文档导出 (Word/PPT) + 通知偏好",
       "duration_weeks": 4,
       "priority": "P1"
     },
     {
+      "id": "P3",
+      "title": "业务深化 (评价/薪资/预测/推荐)",
+      "goal": "公司评价集成 + 行业薪资报告 + 离职预测 + 试用期跟踪 + 内部推荐",
+      "duration_weeks": 5,
+      "priority": "P1"
+    },
+    {
       "id": "P4",
-      "title": "商业化 + 规模化",
-      "goal": "第一个付费客户 + 多区域部署真实跑 + 灾备演练 + CDN + 灰度发布",
-      "duration_weeks": 6,
+      "title": "AI 高级能力 + 商业化升级",
+      "goal": "多模态搜索 + AI 自动生成 JD + 面试准备助手 + 薪资谈判模拟 + v6.0 Release",
+      "duration_weeks": 4,
       "priority": "P2"
     }
   ],
 
   "tasks": [
     {
-      "_section": "P0 — 代码健康整顿",
+      "_section": "P0 — 架构扩展性",
       "_comment_marker": 1,
-      "id": "T1601",
+      "id": "T2101",
       "phase": "P0",
       "priority": "P0",
-      "title": "services/ 按 domain 拆子包",
+      "title": "Event Bus — Agent 间解耦",
       "requirement": ["all"],
-      "description": "把 56 个 service 文件按 6 个 domain 重组,清理 import,确保测试全过",
+      "description": "引入 pub/sub 事件总线,Agent 不再直接互相调用,改为 fire event + subscribe",
       "deliverables": [
-        "backend/services/jobseeker/ (resume_parser, plan_tracker, learning_resources, offer_calculator, negotiation_advisor, ai_interviewer, video_processing, question_bank)",
-        "backend/services/employer/ (compliance_service, ticket_service, ats_sync, ats_sync_scheduler, channel_attribution, recruitment_funnel, corp_sync, dingtalk_sync, feishu_sync, dingtalk_approval, calendar_sync, assessment_service, background_check_service)",
-        "backend/services/matching/ (feedback_loop, calibration, global_search)",
-        "backend/services/billing/ (billing, payment_providers 包装, invoice_generator)",
-        "backend/services/observability/ (telemetry, metrics, sentry, audit, llm_cache, llm_budget, cost_tracker)",
-        "backend/services/integrations/ (collaboration_room, candidate_recommender, push_engine, job_subscription, api_key, persona_memory, pii_field_encryption, pilot_invitation, funnel_events, profile_extractor, transcribe, file_storage, realtime_router)",
-        "backend/services/platform/ (i18n, permissions, notify, handoff, collection, quote, credit_code_validator, crypto)",
-        "所有 service 拆完 + __init__.py 导出 + import 路径修复 + 1242 tests 全过"
+        "backend/eventbus/ (新模块): Event dataclass + EventBus ABC + InMemoryEventBus + RedisEventBus + 注册中心",
+        "backend/eventbus/decorators.py: @on_event('clarifier.completed') decorator",
+        "改造 16 个 Agent: 把 agent-to-agent 调用改为 event 触发 (例: clarifier 完成 → fire 'profile.updated' → emotion agent subscribe 自动触发)",
+        "事件 schema 文档 docs/EVENTBUS.md (30+ 事件类型)",
+        "backend/tests/test_eventbus.py (50+ 测试)"
+      ],
+      "depends_on": [],
+      "estimate_days": 5
+    },
+    {
+      "id": "T2102",
+      "phase": "P0",
+      "priority": "P0",
+      "title": "配置中心 — admin UI 改 agent 行为",
+      "requirement": ["all"],
+      "description": "所有 agent prompt / 阈值 / 业务参数 移到配置中心,admin 可在 UI 修改实时生效",
+      "deliverables": [
+        "supabase/migrations/034_config_center.sql (config 表: scope=system/org/agent/feature, value jsonb, version, updated_by, updated_at)",
+        "backend/services/platform/config_service.py: get/set/list + version control + change audit",
+        "backend/api/admin_config.py: CRUD + 实时生效 (用 Redis pub/sub 通知 worker)",
+        "改造 agent / service 走 config_service.get() 读配置 (不用 env)",
+        "前端: frontend/app/admin/config/page.tsx — 可视化配置编辑",
+        "frontend/components/config/ConfigEditor.tsx (key-value + JSON + 类型校验)",
+        "docs/CONFIG_CENTER.md"
+      ],
+      "depends_on": [],
+      "estimate_days": 5
+    },
+    {
+      "id": "T2103",
+      "phase": "P0",
+      "priority": "P0",
+      "title": "Feature Flag 系统",
+      "requirement": ["all"],
+      "description": "按 user / org / 百分比灰度发布功能,无需发版",
+      "deliverables": [
+        "supabase/migrations/035_feature_flags.sql (flags 表: name / description / rules jsonb / rollout_percent / created_at)",
+        "backend/services/platform/feature_flag.py: is_enabled(name, user_id, org_id) + 哈希分桶 + 强制白/黑名单",
+        "改造关键路径: 走 feature_flag.is_enabled() 判断",
+        "前端: frontend/app/admin/feature-flags/page.tsx (创建/编辑/灰度比例/白名单)",
+        "前端: frontend/hooks/use-feature-flag.ts (React Hook 灰度)",
+        "tests/test_feature_flag.py"
       ],
       "depends_on": [],
       "estimate_days": 4
     },
     {
-      "id": "T1602",
+      "id": "T2104",
       "phase": "P0",
       "priority": "P0",
-      "title": "agents/runtime.py 拆 core/llm/memory/observability",
+      "title": "Plugin SDK — 第三方开发者贡献 Agent/Service",
       "requirement": ["all"],
-      "description": "runtime.py 一个文件拆成 4 个子包,提升可维护性",
+      "description": "让第三方开发者写新 Agent / Service / Provider,通过 plugin manifest 自动注册",
       "deliverables": [
-        "backend/agents/core/ (BaseAgent + AgentInput + AgentOutput + ToolCall + MemoryScope 枚举)",
-        "backend/agents/llm/ (LLMClient + toolkit + llm_call)",
-        "backend/agents/memory/ (MemoryStore 抽象 + InMemoryStore + SupabaseStore + 迁移现有 memory.py 逻辑)",
-        "backend/agents/observability/ (Tracing + AgentMetrics)",
-        "backend/agents/registry.py (保留,从 llm/ 提取)",
-        "所有 agent 文件 import 路径更新 + tests 全过"
+        "backend/plugins/sdk/ (新模块): Plugin ABC + Manifest 规范 + Loader + Registry",
+        "plugins/ 目录约定: 第三方 plugin 放这里,每个 plugin 有 plugin.yaml + main.py",
+        "Plugin manifest schema: name / version / author / type (agent/service/provider) / entry_point / permissions / config_schema",
+        "backend/api/admin_plugins.py: install / uninstall / list / enable / disable / run 沙箱",
+        "安全: 沙箱执行 (用 RestrictedPython / Pyodide / subprocess 限制权限)",
+        "文档: docs/PLUGIN_SDK.md + 3 个示例 plugin",
+        "tests/test_plugins.py"
       ],
       "depends_on": [],
-      "estimate_days": 3
+      "estimate_days": 8
     },
     {
-      "id": "T1603",
+      "id": "T2105",
       "phase": "P0",
       "priority": "P0",
-      "title": "删除 v1.0 残留 (adapters/ copilot/ signals/)",
+      "title": "Agent Composition — 可视化编排",
       "requirement": ["all"],
-      "description": "3 个 v1.0 残留目录评估使用度,删 dead code",
+      "description": "非技术人员拖拽配置 agent 流程: 当 A 完成 → 触发 B + 传参",
       "deliverables": [
-        "adapters/ 目录评估报告(用 git log 30 天 + grep 引用) → 合并到 providers/ats/ 或删除",
-        "copilot/ 评估报告 → 大概率删除(NL 查询已被 realtime invoke 替代)",
-        "signals/ 评估报告 → 拆 event_tracker 到 services/observability/,删 funnel_events stub",
-        "删除文件后 import 路径修复 + tests 全过"
+        "supabase/migrations/036_agent_workflows.sql (workflows 表: name / definition jsonb / version)",
+        "backend/services/platform/workflow_engine.py: 执行 workflow definition (DAG)",
+        "backend/api/workflows.py: CRUD + run + 调试 + 模板",
+        "前端: frontend/app/admin/workflows/page.tsx (React Flow 拖拽编辑器)",
+        "frontend/components/workflow/WorkflowCanvas.tsx (节点: trigger / agent / condition / action)",
+        "frontend/components/workflow/NodePalette.tsx (16 agent + 8 trigger + 4 action 节点)",
+        "内置 5 个 workflow 模板 (新员工 onboarding / 面试流程 / 简历评分 / 偏见审查 / 工单 SLA)",
+        "tests/test_workflow_engine.py"
       ],
-      "depends_on": [],
-      "estimate_days": 2
+      "depends_on": ["T2101"],
+      "estimate_days": 8
     },
     {
-      "id": "T1604",
-      "phase": "P0",
-      "priority": "P0",
-      "title": "frontend mind/ + mothership/ 整合",
-      "requirement": ["all"],
-      "description": "v1.0 残留路由整合到 employer/ 与独立 admin/",
-      "deliverables": [
-        "mind/* 合并到 employer/ (candidates, pipeline, quotes, roles)",
-        "mothership/admin/* 移到 admin/*",
-        "mothership/{dashboard,matching,collections,handoffs,pilot,recommendations} 整合到 employer/ 或 admin/",
-        "所有引用路径修复 + 1242 tests + frontend tsc 全过"
-      ],
-      "depends_on": [],
-      "estimate_days": 2
-    },
-    {
-      "id": "T1605",
-      "phase": "P0",
-      "priority": "P0",
-      "title": "frontend components/ 按域分类",
-      "requirement": ["all"],
-      "description": "50+ 组件按 3 个域分类",
-      "deliverables": [
-        "components/jobseeker/ (ResumeUpload, ProfileCard, JournalAdviceList, ActionItemTracker, etc.)",
-        "components/employer/ (PolicyList, TalentImageCard, StrategyMap, TicketBoard, EvalComparison, etc.)",
-        "components/shared/ (charts, ui, common)",
-        "所有引用 import 路径修复 + tsc 通过"
-      ],
-      "depends_on": [],
-      "estimate_days": 2
-    },
-    {
-      "id": "T1606",
-      "phase": "P0",
-      "priority": "P0",
-      "title": "backend setup_application() 统一入口 + 统一错误代码",
-      "requirement": ["all"],
-      "description": "集中所有 init,加 ErrorCode 枚举",
-      "deliverables": [
-        "backend/setup.py — setup_application() 函数,集中 adapters / agents / services / providers 初始化",
-        "backend/main.py lifespan 改用 setup_application()",
-        "backend/errors.py — ErrorCode 枚举(覆盖 50+ 错误码) + error_response() helper",
-        "逐步替换散落的字符串错误为 ErrorCode",
-        "tests/test_errors.py 验证 ErrorCode 体系"
-      ],
-      "depends_on": [],
-      "estimate_days": 2
-    },
-    {
-      "id": "T1607",
-      "phase": "P0",
-      "priority": "P1",
-      "title": "Storybook + 组件文档",
-      "requirement": ["all"],
-      "description": "Storybook 8 + 50+ 组件 stories + Chromatic 视觉回归",
-      "deliverables": [
-        "frontend/.storybook/main.ts + preview.ts",
-        "50+ 组件每个 .stories.tsx (CSF3 format)",
-        "frontend/scripts/storybook-test.ts — 跑所有 stories",
-        ".github/workflows/storybook.yml (Chromatic 集成)",
-        "docs/COMPONENTS.md — 组件 API 文档"
-      ],
-      "depends_on": [],
-      "estimate_days": 4
-    },
-    {
-      "_section": "P1 — 真实业务落地",
+      "_section": "P1 — 差异化能力 (Realtime + AI 面试官 + 视频简历)",
       "_comment_marker": 2,
-      "id": "T1701",
+      "id": "T2201",
       "phase": "P1",
       "priority": "P0",
-      "title": "12+ 真实第三方 API key 配置",
-      "requirement": ["all"],
-      "description": "申请并配置所有真实 API key(28 个 provider 至少 12 个跑通真实)",
+      "title": "GPT-4o Realtime 实时语音对话",
+      "requirement": ["1.3", "1.4"],
+      "description": "用 GPT-4o Realtime API 实现真正低延迟(< 500ms)语音对话,替换 WebSocket + mock 流式",
       "deliverables": [
-        "LLM: OpenAI / Anthropic / DeepSeek / 智谱 (4 个真实 key)",
-        "Embedding: OpenAI / 智谱 (2 个)",
-        "OCR: 腾讯云 / 百度 (2 个)",
-        "STT: Whisper (1 个)",
-        "Notify: SendGrid SMTP (1 个)",
-        "Lookup: 天眼查 (1 个)",
-        "JobMarket: Boss直聘 (1 个)",
-        "Video Interview: Zoom (1 个)",
-        "Billing: Stripe test mode (1 个)",
-        ".env.example 更新 (key 名 + 申请 URL)",
-        "scripts/setup_real_keys.sh — 一键配置脚本"
+        "backend/providers/llm/openai_realtime.py — OpenAI Realtime Provider (WebSocket, audio in/out)",
+        "backend/services/platform/realtime_session.py — Realtime 会话管理 (per user per conversation)",
+        "backend/api/realtime_v2.py: POST /api/realtime/sessions + WebSocket /api/realtime/ws/{session_id}",
+        "前端: frontend/components/RealtimeVoice.tsx (MediaRecorder + AudioContext + WebSocket)",
+        "frontend/app/(jobseeker)/realtime/page.tsx (语音对话主页面,显示 3D 头像 + 波形)",
+        "前端 hooks: useRealtimeSession()",
+        "tests/test_realtime.py + 1 个真实 GPT-4o Realtime 集成测试"
       ],
       "depends_on": [],
-      "estimate_days": 5
+      "estimate_days": 8
     },
     {
-      "id": "T1702",
+      "id": "T2202",
       "phase": "P1",
       "priority": "P0",
-      "title": "Pilot 合作方落地 — 1-2 家中型企业试用 1 个月",
-      "requirement": ["all"],
-      "description": "找合作方真实试用,收集 NPS + 反馈 + Top 痛点",
+      "title": "AI 模拟面试官 — 完整端到端",
+      "requirement": ["1.4", "1.6", "3"],
+      "description": "AI 扮演面试官: 自我介绍 → 行为面试 → 技术面试 → 反问 → 评分报告;支持 Realtime 语音 + 视频",
       "deliverables": [
-        "合作方签约 (产品经理负责)",
-        "为合作方创建 pilot_program + 邀请 5-20 个用户",
-        "试用 30 天日报(产品经理 + 数据分析)",
-        "30 天后产出 pilot_report: NPS / 周活 / 采纳率 / Top 3 痛点 / 改进建议",
-        "目标: NPS ≥ 40 / 周活 ≥ 70% / Top 痛点 ≤ 5 个"
+        "backend/services/jobseeker/ai_interviewer_v2.py (重写): 集成 Realtime API + 5 阶段流程 (intro/behavioral/technical/reverse_q/closing)",
+        "backend/services/jobseeker/interview_personas.py: 5 种面试官人格 (友好/严谨/挑战/资深/技术专家)",
+        "backend/services/jobseeker/interview_prober.py: 智能追问 (根据回答深度决定继续/换题)",
+        "backend/services/jobseeker/interview_report.py: 5 维度评分 (技术/沟通/思维/潜力/文化匹配) + 自然语言评语",
+        "backend/api/ai_interview_v2.py + supabase/migrations/037_interview_v2.sql",
+        "前端: frontend/app/(jobseeker)/interview/ai/[id]/page.tsx (LiveKit 视频面试 UI + Realtime 语音)",
+        "frontend/components/interview/InterviewPersonaPicker.tsx",
+        "frontend/components/interview/LiveTranscript.tsx (实时转写显示)",
+        "tests/test_ai_interviewer_v2.py (含 Realtime mock)"
       ],
-      "depends_on": [],
-      "estimate_days": 30
+      "depends_on": ["T2201"],
+      "estimate_days": 12
     },
     {
-      "id": "T1703",
+      "id": "T2203",
       "phase": "P1",
       "priority": "P0",
-      "title": "真实负载压测 — 1000 并发用户 / 5000 WebSocket",
-      "requirement": ["all"],
-      "description": "用真实 API + 真实数据负载压测,产出 SLA 报告",
+      "title": "视频简历理解 (GPT-4V 看 30 秒自我介绍)",
+      "requirement": ["1.1"],
+      "description": "求职者上传 30-60 秒视频自我介绍,AI 提取沟通能力/性格/专业度,合并到画像",
       "deliverables": [
-        "Locust 1000 并发压测(覆盖 5 个核心 API: agent invoke / matches / tickets / clarifications / subscriptions)",
-        "WebSocket 5000 并发压测(协同房间 + 实时对话)",
-        "P95/P99/错误率/吞吐量报告 docs/PERFORMANCE_v5.md",
-        "识别瓶颈 + 优化(Redis 缓存 / DB index / 异步队列 / 水平扩容)",
-        "目标: P95 < 2s / 错误率 < 0.5% / 1000 并发稳定"
+        "backend/services/platform/video_processor.py (升级): 转码 + 关键帧提取 + GPT-4V 分析",
+        "backend/services/jobseeker/video_resume_analyzer.py: GPT-4V 多帧分析 → 沟通/表达/专业度评分",
+        "改造 profile_agent.py: 集成视频简历分析,合并到画像",
+        "前端: frontend/components/VideoResumeRecorder.tsx (30-60 秒倒计时)",
+        "前端: frontend/components/VideoResumePlayer.tsx (播放 + AI 评分叠加)",
+        "tests/test_video_resume.py (含 mock GPT-4V)"
       ],
       "depends_on": [],
-      "estimate_days": 5
+      "estimate_days": 8
     },
     {
-      "id": "T1704",
+      "id": "T2204",
       "phase": "P1",
       "priority": "P0",
-      "title": "真实告警通道 — 钉钉/飞书 + PagerDuty",
-      "requirement": ["all"],
-      "description": "生产告警接通真实通道,7×24 响应",
+      "title": "LiveKit 视频通话集成 (Realtime 面试用)",
+      "requirement": ["1.3", "1.4"],
+      "description": "用 LiveKit 替代 Zoom 用于内建 AI 面试视频通话,免账号",
       "deliverables": [
-        "backend/services/observability/alerting.py — 告警服务(对接钉钉/飞书 webhook + PagerDuty)",
-        "infra/prometheus/alerts.yml — 30+ 告警规则 (P95 延迟 / 错误率 / LLM 成本 / DB 连接池 / 磁盘)",
-        "告警分级: P0 (5 分钟) / P1 (15 分钟) / P2 (1 小时)",
-        "oncall 轮值 + 升级路径",
-        "演练: 故意触发 P0 告警,验证端到端"
+        "infra/livekit/docker-compose.yml (LiveKit server 自托管)",
+        "backend/providers/video_interview/livekit.py — LiveKitProvider (token 生成 + room 管理)",
+        "backend/api/livekit.py: 创建 room / 签发 token / 录制",
+        "前端: 集成 livekit-client SDK, video/audio 双向流",
+        "测试: 1 个真实 LiveKit 房间 + Realtime 集成",
+        "docs/LIVEKIT_SETUP.md"
       ],
       "depends_on": [],
-      "estimate_days": 3
+      "estimate_days": 6
     },
     {
-      "_section": "P2 — 业务深度上线 (从 stub 到生产数据)",
+      "_section": "P2 — 用户体验提升",
       "_comment_marker": 3,
-      "id": "T1801",
+      "id": "T2301",
       "phase": "P2",
       "priority": "P1",
-      "title": "AI 自动面试真实业务上线",
-      "requirement": ["1.4", "3"],
-      "description": "从 stub → 真实跑通 + 题库 100 题 + 评分模型调优",
+      "title": "候选人/岗位对比视图",
+      "requirement": ["3"],
+      "description": "多候选人/岗位并排对比,雷达图 + 详细表格 + 差异点高亮",
       "deliverables": [
-        "GPT-4V 真实接入(用 T1701 的 key)",
-        "题库 100 题(覆盖 10 类岗位) — backend/data/question_bank.json",
-        "评分模型: 从 mock template → 真实 LLM 评分 + 校准",
-        "10 个真实候选人走完整流程,收集反馈",
-        "改造 1 家用合作方试用 AI 面试"
-      ],
-      "depends_on": ["T1701"],
-      "estimate_days": 8
-    },
-    {
-      "id": "T1802",
-      "phase": "P2",
-      "priority": "P1",
-      "title": "Offer 比较 + 谈判 真实业务上线",
-      "requirement": ["1.2", "1.6"],
-      "description": "Offer 真实数据 + 谈判话术被采用",
-      "deliverables": [
-        "合作方提供 10 个真实 offer 数据,验证 calculator 准确度",
-        "谈判话术 5 个真实场景化模板(初创/中厂/大厂/外企/国企)",
-        "前端 Offer 卡片埋点(被复制/被分享/被采用统计)",
-        "10 个求职者试用,收集反馈"
+        "frontend/app/match/compare/page.tsx (候选人对比) + frontend/app/mothership/roles/compare/page.tsx (岗位对比)",
+        "frontend/components/compare/CompareTable.tsx (表格对比)",
+        "frontend/components/compare/CompareRadar.tsx (雷达图,5 维度)",
+        "frontend/components/compare/CompareDiff.tsx (差异高亮)",
+        "API: GET /api/match/compare?ids=c1,c2,c3 → 返回对比数据",
+        "tests/test_compare.py"
       ],
       "depends_on": [],
-      "estimate_days": 6
+      "estimate_days": 5
     },
     {
-      "id": "T1803",
+      "id": "T2302",
       "phase": "P2",
       "priority": "P1",
-      "title": "招聘漏斗 + 渠道 ROI 真实埋点 90 天",
-      "requirement": ["2.1", "3"],
-      "description": "漏斗埋点真实化 + 渠道归因 90 天数据",
+      "title": "批量操作 (候选人/工单/岗位)",
+      "requirement": ["3"],
+      "description": "HR 选 50 个候选人,一键批量发 offer / 邀请面试 / 移动到下个阶段",
       "deliverables": [
-        "前端每个关键事件埋点 (sourced/applied/screened/interviewed/offered/hired)",
-        "后端 funnel_events 表写入准确",
-        "90 天数据收集 + 漏斗分析报告",
-        "渠道 ROI 报告 (Boss直聘 vs 拉勾 vs 猎头 vs 内推)",
-        "给合作方的\"招聘漏斗\"页接入"
+        "backend/api/batch.py: POST /api/batch/candidates/{action} (bulk_update / bulk_email / bulk_offer)",
+        "backend/services/platform/batch_processor.py: Celery 异步批量任务 + 进度跟踪",
+        "前端: frontend/components/batch/BulkActionBar.tsx (复选框 + 操作菜单)",
+        "前端: frontend/components/batch/BulkProgress.tsx (进度条 + 失败重试)",
+        "前端: frontend/app/(employer)/candidates/bulk/page.tsx",
+        "tests/test_batch.py"
       ],
       "depends_on": [],
-      "estimate_days": 12
+      "estimate_days": 5
     },
     {
-      "id": "T1804",
+      "id": "T2303",
       "phase": "P2",
       "priority": "P1",
-      "title": "候选人订阅 + 主动推荐 真实使用",
-      "requirement": ["1.6", "3"],
-      "description": "订阅真实触发 + 推荐真实被采用",
-      "deliverables": [
-        "求职者订阅 50+ 条规则真实触发推送",
-        "HR 收到 20+ 条推荐,采纳 5+ 条",
-        "订阅匹配准确度统计 (CTR / 申请率)",
-        "推荐匹配度统计 (HR 实际联系率)",
-        "优化推荐算法"
-      ],
-      "depends_on": [],
-      "estimate_days": 8
-    },
-    {
-      "id": "T1805",
-      "phase": "P2",
-      "priority": "P1",
-      "title": "视频面试 + 测评 + 背调 真实集成",
-      "requirement": ["2.5"],
-      "description": "Zoom/腾讯/北森/Checkr 真实接入",
-      "deliverables": [
-        "Zoom OAuth2 真实配置 + 创建 5 个真实会议",
-        "腾讯会议企业版 API 接入",
-        "北森测评 1 个真实邀请 + 结果拉取",
-        "Checkr 1 个真实背调",
-        "工单完整流程跑通"
-      ],
-      "depends_on": ["T1701"],
-      "estimate_days": 8
-    },
-    {
-      "id": "T1806",
-      "phase": "P2",
-      "priority": "P1",
-      "title": "ATS 双向同步 真实使用",
+      "title": "文档导出 (Word/PPT/PDF)",
       "requirement": ["all"],
-      "description": "Greenhouse / Lever 真实同步",
+      "description": "候选人报告、漏斗分析、工单 SLA 报告可导出 Word/PPT/PDF 给老板/上级",
       "deliverables": [
-        "1 家用合作方用 Greenhouse,与 waibao 双向同步 100 个候选人 + 20 个岗位",
-        "1 家用合作方用 Lever,同样",
-        "同步冲突解决真实验证",
-        "同步频率 + 性能调优"
+        "backend/services/platform/document_generator.py (用 python-docx + python-pptx + reportlab)",
+        "backend/api/exports.py: GET /api/exports/{type}?format=docx|pptx|pdf",
+        "前端: 导出按钮 + 格式选择器",
+        "模板: 候选人报告 / 漏斗分析 / 工单 SLA / 招聘周报 / 招聘月报",
+        "tests/test_document_generator.py"
       ],
       "depends_on": [],
-      "estimate_days": 6
+      "estimate_days": 5
     },
     {
-      "id": "T1807",
+      "id": "T2304",
       "phase": "P2",
       "priority": "P1",
-      "title": "Webhook + 公开 API + 规则引擎 真实使用",
+      "title": "智能通知偏好",
       "requirement": ["all"],
-      "description": "第三方真实接入",
+      "description": "按类型/优先级/时间段过滤通知,避免轰炸",
       "deliverables": [
-        "Webhook 真实订阅方 ≥ 2 家 (ATS / Slack / 企业微信)",
-        "公开 API Key 注册 ≥ 3 个,被调用 ≥ 1000 次",
-        "规则引擎 ≥ 5 条真实业务规则(自动工单 / 告警 / 通知)",
-        "A/B 实验 ≥ 1 个真实跑(2 周)",
-        "LLM cache 命中率真实统计"
+        "supabase/migrations/038_notification_prefs.sql (user_id, category, priority, channel, frequency, quiet_hours)",
+        "改造 dispatcher 用 user prefs 过滤",
+        "前端: frontend/app/(jobseeker)/account/notifications/page.tsx (细粒度配置)",
+        "智能学习: 7 天后 LLM 推荐优化建议",
+        "tests/test_notification_prefs.py"
       ],
       "depends_on": [],
-      "estimate_days": 10
+      "estimate_days": 4
     },
     {
-      "id": "T1808",
-      "phase": "P2",
-      "priority": "P1",
-      "title": "协同房间真实日活 100+ 房间",
-      "requirement": ["1.3", "2.7"],
-      "description": "5 方实时协同真实使用",
-      "deliverables": [
-        "合作方真实使用协同房间 ≥ 100 个活跃房间",
-        "日均消息数 ≥ 1000 条",
-        "@mention 通知真实送达",
-        "性能优化(WebSocket 长连接 + 消息延迟 < 100ms)"
-      ],
-      "depends_on": [],
-      "estimate_days": 6
-    },
-    {
-      "_section": "P3 — 多端真实上架 + 日活",
+      "_section": "P3 — 业务深化",
       "_comment_marker": 4,
-      "id": "T1901",
+      "id": "T2401",
       "phase": "P3",
       "priority": "P1",
-      "title": "微信小程序 真实上架 + 审核",
-      "requirement": ["all"],
-      "description": "提交微信审核 + 真实上架",
+      "title": "公司评价集成 (看准网 / Glassdoor)",
+      "requirement": ["1.6", "2.3"],
+      "description": "求职者搜索公司时,显示看准网/Glassdoor 评价、面试经验、薪资中位数",
       "deliverables": [
-        "小程序类目选择 + 隐私协议配置",
-        "提交审核 + 1-3 次拒绝迭代(根据反馈)",
-        "审核通过 + 发布上线",
-        "首批 100 用户引导",
-        "小程序日活 ≥ 50"
-      ],
-      "depends_on": [],
-      "estimate_days": 10
-    },
-    {
-      "id": "T1902",
-      "phase": "P3",
-      "priority": "P1",
-      "title": "钉钉微应用 + 飞书应用 真实上架",
-      "requirement": ["2.7", "2.9"],
-      "description": "两个平台企业工作台发布",
-      "deliverables": [
-        "钉钉开放平台创建应用 + 上架企业工作台",
-        "飞书开放平台创建应用 + 上架",
-        "1 家用合作方安装 + 真实日活 ≥ 30 用户",
-        "通讯录同步真实跑通 (≥ 100 员工)",
-        "消息推送真实送达"
-      ],
-      "depends_on": [],
-      "estimate_days": 10
-    },
-    {
-      "id": "T1903",
-      "phase": "P3",
-      "priority": "P1",
-      "title": "PWA 真实上线 + 推送",
-      "requirement": ["all"],
-      "description": "PWA 上线 + Web Push",
-      "deliverables": [
-        "PWA 安装提示 + 用户引导",
-        "Web Push 通知(用 VAPID)",
-        "离线模式真实可用(关键页面缓存)",
-        "Lighthouse PWA 评分 ≥ 90"
-      ],
-      "depends_on": [],
-      "estimate_days": 4
-    },
-    {
-      "id": "T1904",
-      "phase": "P3",
-      "priority": "P2",
-      "title": "多端日活跨端统一",
-      "requirement": ["all"],
-      "description": "Web + 小程序 + 钉钉 + 飞书 跨端日活统一统计",
-      "deliverables": [
-        "backend/api/analytics/cross_platform.py — 跨端日活",
-        "前端 /mothership/admin/analytics/cross-platform/ 仪表盘",
-        "日活 / 周活 / 留存 按端拆分"
-      ],
-      "depends_on": [],
-      "estimate_days": 4
-    },
-    {
-      "_section": "P4 — 商业化 + 规模化",
-      "_comment_marker": 5,
-      "id": "T2001",
-      "phase": "P4",
-      "priority": "P2",
-      "title": "第一个付费客户 + 续费",
-      "requirement": ["all"],
-      "description": "把 Pilot 合作方转付费",
-      "deliverables": [
-        "商业方案 (pricing.pdf)",
-        "签单 + 第一个 ARR (目标 ≥ 30 万 RMB)",
-        "续费机制(自动续费 + 失败告警)",
-        "客户成功经理(CSM) 流程文档",
-        "客户案例 1 份 (case_study_1.pdf)"
-      ],
-      "depends_on": ["T1702"],
-      "estimate_days": 30
-    },
-    {
-      "id": "T2002",
-      "phase": "P4",
-      "priority": "P2",
-      "title": "多区域部署 真实跑通",
-      "requirement": ["all"],
-      "description": "中国 / 新加坡 / 美西 三区域部署并真实服务",
-      "deliverables": [
-        "中国(阿里云) 真实部署 + 真实用户",
-        "新加坡(Supabase SG) 真实部署 + 真实用户",
-        "美西(AWS us-west-1) 真实部署 + 真实用户",
-        "DNS 智能解析真实切流",
-        "数据驻留 100% 合规"
-      ],
-      "depends_on": [],
-      "estimate_days": 12
-    },
-    {
-      "id": "T2003",
-      "phase": "P4",
-      "priority": "P2",
-      "title": "灾备演练 + RTO/RPO 验证",
-      "requirement": ["all"],
-      "description": "每季度灾备演练,验证 RTO < 4h / RPO < 1h",
-      "deliverables": [
-        "灾备演练计划 + 脚本",
-        "Q3 演练: 模拟主库挂掉,验证从库 + 异地备份恢复",
-        "Q4 演练: 模拟整个 region 挂掉,验证跨 region 切换",
-        "演练报告 docs/DR_DRILL_REPORT.md",
-        "回填 + 改进"
-      ],
-      "depends_on": [],
-      "estimate_days": 8
-    },
-    {
-      "id": "T2004",
-      "phase": "P4",
-      "priority": "P2",
-      "title": "CDN + 灰度发布 + 蓝绿部署",
-      "requirement": ["all"],
-      "description": "静态资源 CDN + ArgoCD 灰度 + 蓝绿",
-      "deliverables": [
-        "CloudFlare / 阿里云 CDN 配置",
-        "前端 bundle 缓存命中率 > 80%",
-        "ArgoCD 灰度发布 (5% → 25% → 50% → 100%)",
-        "蓝绿部署脚本(0 downtime)",
-        "回滚机制 < 5 分钟"
+        "backend/providers/company_review/ (新维度): base.py + 看准网/Glassdoor/脉脉 + mock",
+        "backend/services/platform/company_review.py: 聚合 + 缓存 7 天",
+        "前端: frontend/app/(jobseeker)/company/[id]/page.tsx (公司详情:评分/面试经验/评价/对比)",
+        "前端组件: CompanyRating, CompanyReviewList, InterviewExperienceList",
+        "tests/test_company_review.py"
       ],
       "depends_on": [],
       "estimate_days": 6
     },
     {
-      "id": "T2005",
+      "id": "T2402",
+      "phase": "P3",
+      "priority": "P1",
+      "title": "行业薪资报告 (实时市场数据)",
+      "requirement": ["1.6", "3"],
+      "description": "基于 v3.0 招聘市场数据,生成行业/城市/职级 薪资分位报告",
+      "deliverables": [
+        "backend/services/platform/salary_report.py: compute percentiles (P10/P25/P50/P75/P90) 按 role/city/seniority",
+        "前端: frontend/app/(jobseeker)/salary-insights/page.tsx (薪资分位图 + 个人定位)",
+        "前端: frontend/app/mothership/analytics/salary-report/page.tsx (HR 视角)",
+        "frontend/components/salary/SalaryDistributionChart.tsx (箱线图)",
+        "tests/test_salary_report.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 4
+    },
+    {
+      "id": "T2403",
+      "phase": "P3",
+      "priority": "P1",
+      "title": "离职预测模型",
+      "requirement": ["1.4", "1.5"],
+      "description": "从情绪时间线 + 工作状态变化 + 工单模式预测员工/求职者离职风险",
+      "deliverables": [
+        "backend/services/platform/attrition_model.py: 用情绪 + journal + 互动频次训练预测模型 (LightGBM 或 LLM few-shot)",
+        "backend/api/attrition.py: GET /api/attrition/risk/{user_id}",
+        "前端: frontend/components/attrition/AttritionRiskCard.tsx (低/中/高 风险可视化)",
+        "前端: frontend/app/mothership/analytics/attrition/page.tsx (HR 视角: 团队离职风险地图)",
+        "tests/test_attrition_model.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 6
+    },
+    {
+      "id": "T2404",
+      "phase": "P3",
+      "priority": "P1",
+      "title": "试用期跟踪 (3/6 月评估)",
+      "requirement": ["2.9"],
+      "description": "新员工入职后 30/90/180 天自动评估,HR 收到反馈请求,记录到员工档案",
+      "deliverables": [
+        "supabase/migrations/039_probation.sql (probation_reviews 表)",
+        "backend/services/employer/probation_service.py: 定时任务 + 评估模板",
+        "前端: frontend/app/(employer)/probation/page.tsx (跟踪 + 评估)",
+        "前端: frontend/components/probation/ReviewForm.tsx (5 维度评估)",
+        "tests/test_probation.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 5
+    },
+    {
+      "id": "T2405",
+      "phase": "P3",
+      "priority": "P1",
+      "title": "内部推荐系统 (Referrals)",
+      "requirement": ["2.7", "3"],
+      "description": "在职员工推荐候选人,推荐人 + 候选人双奖励 (奖金/积分)",
+      "deliverables": [
+        "supabase/migrations/040_referrals.sql (referrals 表 + 积分表)",
+        "backend/services/employer/referral_service.py: 推荐流 + 积分/奖金",
+        "前端: frontend/app/(employer)/referrals/page.tsx (HR 视角)",
+        "前端: frontend/app/(jobseeker)/refer/page.tsx (员工推荐候选人)",
+        "tests/test_referral.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 5
+    },
+    {
+      "id": "T2406",
+      "phase": "P3",
+      "priority": "P1",
+      "title": "候选人 Rediscovery (沉睡激活)",
+      "requirement": ["3"],
+      "description": "6 个月没动的候选人,新职位匹配时主动激活",
+      "deliverables": [
+        "backend/services/integrations/candidate_rediscovery.py: 扫描沉睡库 + LLM 评估是否值得激活",
+        "backend/api/rediscovery.py: GET /api/rediscovery/candidates",
+        "前端: frontend/app/mothership/rediscovery/page.tsx (HR 主动激活面板)",
+        "前端组件: SleepyCandidateCard + ActivationPreview",
+        "tests/test_rediscovery.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 4
+    },
+    {
+      "_section": "P4 — AI 高级能力 + Release",
+      "_comment_marker": 5,
+      "id": "T2501",
       "phase": "P4",
       "priority": "P2",
-      "title": "v5.0.0 Release",
+      "title": "多模态语义搜索 (文本+图片+视频)",
       "requirement": ["all"],
-      "description": "集成 + 文档 + Release",
+      "description": "搜索框支持图片/视频/语音查询,跨候选人/岗位/工单/政策",
       "deliverables": [
-        "集成测试 (1500+ tests)",
-        "Release notes",
-        "v5.0.0 tag + release",
+        "backend/services/matching/multimodal_search.py: CLIP embedding + pgvector",
+        "改造 global_search.py 加图片/视频通道",
+        "前端: frontend/components/GlobalSearchPalette.tsx (支持图片/语音输入)",
+        "tests/test_multimodal_search.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 6
+    },
+    {
+      "id": "T2502",
+      "phase": "P4",
+      "priority": "P2",
+      "title": "AI 自动生成 JD",
+      "requirement": ["2.5"],
+      "description": "HR 一句话描述岗位,AI 生成完整 JD (含职责/要求/福利/文化)",
+      "deliverables": [
+        "backend/services/employer/jd_generator.py: 用 LLM 从一句话 → 完整 JD",
+        "改造 JobSpec Agent: 先调 jd_generator 再让 HR 编辑",
+        "前端: frontend/app/(employer)/roles/new/ai/page.tsx (AI 生成向导)",
+        "tests/test_jd_generator.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 4
+    },
+    {
+      "id": "T2503",
+      "phase": "P4",
+      "priority": "P2",
+      "title": "面试准备助手",
+      "requirement": ["1.6"],
+      "description": "求职者针对目标 JD 准备 10 道题,模拟练习 + AI 反馈",
+      "deliverables": [
+        "backend/services/jobseeker/interview_prep.py: 基于 JD 生成 10 题 + LLM 评分用户答案",
+        "前端: frontend/app/(jobseeker)/interview-prep/[role_id]/page.tsx",
+        "tests/test_interview_prep.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 5
+    },
+    {
+      "id": "T2504",
+      "phase": "P4",
+      "priority": "P2",
+      "title": "薪资谈判模拟 (AI 反向施压)",
+      "requirement": ["1.6"],
+      "description": "求职者练习薪资谈判,AI 扮演 HR 角色反向施压,提升谈判技巧",
+      "deliverables": [
+        "backend/services/jobseeker/negotiation_simulator.py: 5 角色 HR 谈判风格 (硬/软/混合/数据派/关系派)",
+        "前端: frontend/app/(jobseeker)/offers/negotiate-simulate/page.tsx",
+        "frontend/components/negotiation/ChatSimulator.tsx",
+        "tests/test_negotiation_simulator.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 4
+    },
+    {
+      "id": "T2505",
+      "phase": "P4",
+      "priority": "P2",
+      "title": "v6.0.0 Release",
+      "requirement": ["all"],
+      "description": "集成 + 测试 + 文档 + Release",
+      "deliverables": [
+        "集成测试 1800+ pass",
+        "release notes",
+        "v6.0.0 tag + release",
         "GitHub Pages 更新",
-        "公告邮件给所有 Pilot 用户"
+        "公告给 Pilot 客户"
       ],
       "depends_on": [],
       "estimate_days": 3
@@ -578,97 +526,94 @@
 
   "milestones": [
     {
-      "id": "M16",
-      "title": "v5.1 — 代码健康",
-      "target_date": "2026-08-15",
-      "tasks": ["T1601", "T1602", "T1603", "T1604", "T1605", "T1606", "T1607"],
-      "deliverable": "services 拆包 + agents 拆 core/llm/memory + 删 dead code + Storybook + 统一入口,1242 tests 全过"
+      "id": "M21",
+      "title": "v6.1 — 架构扩展性",
+      "target_date": "2026-09-15",
+      "tasks": ["T2101", "T2102", "T2103", "T2104", "T2105"],
+      "deliverable": "Event Bus + 配置中心 + Feature Flag + Plugin SDK + Agent Composition,加新功能 1 天搞定"
     },
     {
-      "id": "M17",
-      "title": "v5.2 — 真实落地",
-      "target_date": "2026-09-30",
-      "tasks": ["T1701", "T1702", "T1703", "T1704"],
-      "deliverable": "12+ 真实 API key + 1-2 家中型企业试用 NPS ≥ 40 + 1000 并发压测达标 + 真实告警"
+      "id": "M22",
+      "title": "v6.2 — 差异化能力",
+      "target_date": "2026-11-15",
+      "tasks": ["T2201", "T2202", "T2203", "T2204"],
+      "deliverable": "GPT-4o Realtime 实时对话 + AI 模拟面试官 + 视频简历 + LiveKit,跳出传统招聘赛道"
     },
     {
-      "id": "M18",
-      "title": "v5.3 — 业务深度",
-      "target_date": "2026-11-30",
-      "tasks": ["T1801", "T1802", "T1803", "T1804", "T1805", "T1806", "T1807", "T1808"],
-      "deliverable": "AI 面试 / Offer / 漏斗 / 订阅 / 视频面试 / 测评 / 背调 / ATS / Webhook / 公开 API / 规则 / A/B / 协同 全部从 stub → 真实业务数据"
-    },
-    {
-      "id": "M19",
-      "title": "v5.4 — 多端日活",
+      "id": "M23",
+      "title": "v6.3 — UX 提升",
       "target_date": "2026-12-31",
-      "tasks": ["T1901", "T1902", "T1903", "T1904"],
-      "deliverable": "微信小程序 + 钉钉 + 飞书 + PWA 真实上架,跨端日活 ≥ 200"
+      "tasks": ["T2301", "T2302", "T2303", "T2304"],
+      "deliverable": "对比视图 + 批量操作 + 文档导出 + 通知偏好,HR 效率提升 50%"
     },
     {
-      "id": "M20",
-      "title": "v5.5 — 商业化 + 规模化",
-      "target_date": "2027-03-31",
-      "tasks": ["T2001", "T2002", "T2003", "T2004", "T2005"],
-      "deliverable": "第一个付费客户 ARR ≥ 30 万 + 多区域真实服务 + 灾备演练 + CDN + 蓝绿 + v5.0.0 Release"
+      "id": "M24",
+      "title": "v6.4 — 业务深化",
+      "target_date": "2027-02-28",
+      "tasks": ["T2401", "T2402", "T2403", "T2404", "T2405", "T2406"],
+      "deliverable": "公司评价 + 薪资报告 + 离职预测 + 试用期 + 内部推荐 + 候选人激活"
+    },
+    {
+      "id": "M25",
+      "title": "v6.5 — AI 高级 + Release",
+      "target_date": "2027-04-30",
+      "tasks": ["T2501", "T2502", "T2503", "T2504", "T2505"],
+      "deliverable": "多模态搜索 + AI 生成 JD + 面试准备 + 谈判模拟 + v6.0.0 Release"
     }
   ],
 
   "success_metrics": {
-    "code_health": [
-      "services 拆成 6 个 domain 子包",
-      "agents 拆成 core/llm/memory/observability 4 个子包",
-      "adapters/ + copilot/ + signals/ dead code 清理",
-      "frontend mind/ + mothership/ 整合",
-      "components 50+ 按域分类",
-      "Storybook 50+ stories",
-      "ErrorCode 统一错误体系"
+    "extensibility": [
+      "Event Bus 支持 30+ 事件类型",
+      "配置中心 admin UI 改配置实时生效",
+      "Feature Flag 5+ 灰度中",
+      "Plugin SDK 文档完整 + 2 个示例 plugin",
+      "Agent Composition 5 个 workflow 模板"
     ],
-    "real_business": [
-      "12+ 真实 API key 配置",
-      "1-2 家中型企业试用 30 天 NPS ≥ 40",
-      "1000 并发压测 P95 < 2s",
-      "真实告警通道 7×24 响应"
+    "differentiation": [
+      "Realtime 语音对话延迟 < 500ms",
+      "AI 模拟面试官 5 人格 + 5 阶段",
+      "视频简历理解准确度 > 80%",
+      "LiveKit 自托管视频通话跑通"
     ],
-    "business_depth": [
-      "AI 面试真实跑通 10+ 候选人",
-      "Offer/谈判/漏斗/订阅/ATS 真实使用",
-      "Webhook + 公开 API ≥ 5 个真实订阅方",
-      "协同房间 ≥ 100 真实活跃"
+    "ux": [
+      "对比视图支持 ≥ 5 个对象",
+      "批量操作支持 ≥ 50 个",
+      "文档导出 3 种格式 (Word/PPT/PDF)",
+      "通知偏好细粒度配置"
     ],
-    "multi_platform": [
-      "微信小程序 + 钉钉 + 飞书 + PWA 真实上架",
-      "跨端日活 ≥ 200",
-      "Lighthouse PWA ≥ 90"
+    "business": [
+      "公司评价集成 (看准网/Glassdoor/脉脉)",
+      "薪资报告 10 个行业",
+      "离职预测模型 AUC > 0.75",
+      "试用期跟踪自动 30/90/180 天",
+      "内部推荐流",
+      "沉睡候选人激活"
     ],
-    "monetization": [
-      "第一个付费客户 ARR ≥ 30 万",
-      "中国 + SG + 美西 真实跑通",
-      "灾备演练 RTO < 4h / RPO < 1h",
-      "CDN 缓存命中率 > 80%"
+    "ai": [
+      "多模态搜索 3 种输入 (文本/图片/语音)",
+      "AI 生成 JD 1 句话 → 完整 JD",
+      "面试准备 10 道题 + 评分",
+      "谈判模拟 5 角色"
     ]
   },
 
   "risks": [
     {
-      "risk": "Pilot 合作方找不到",
-      "mitigation": "先做朋友公司内测,或免费赠送;实在不行就用 seed data 模拟"
+      "risk": "Event Bus 引入破坏现有 agent 调用",
+      "mitigation": "保留旧调用方式,event bus 渐进迁移,加 feature flag 切换"
     },
     {
-      "risk": "真实 API key 申请慢/被拒",
-      "mitigation": "并行申请,先 mock 通过 CI,后切真实"
+      "risk": "Plugin SDK 沙箱安全",
+      "mitigation": "用 RestrictedPython + 资源限制 + 白名单权限,先内测后开放"
     },
     {
-      "risk": "代码重构引入 regression",
-      "mitigation": "T1601-T1606 每步都跑 1242 tests,失败立即回滚"
+      "risk": "GPT-4o Realtime 成本高",
+      "mitigation": "限制并发数 + 用 gpt-4o-mini-realtime 降低成本 + 缓存常见回复"
     },
     {
-      "risk": "微信小程序审核拒绝",
-      "mitigation": "提前 1 个月提交,迭代 2-3 次,先用 H5 版本兜底"
-    },
-    {
-      "risk": "业务深度落地慢,没真实数据",
-      "mitigation": "P2 任务 6 周,前 2 周做脚手架,后 4 周边用边优化"
+      "risk": "LiveKit 自托管运维",
+      "mitigation": "先用 LiveKit Cloud 托管,稳定后切自托管"
     }
   ]
 }
