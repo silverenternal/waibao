@@ -1,0 +1,99 @@
+# =============================================================================
+# waibao sg - Backend Deployment (AWS EKS ap-southeast-1)
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: waibao-sg-backend
+  namespace: waibao-sg
+  labels: { app: waibao-sg-backend, region: sg, version: v4.0.0 }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: waibao-sg-backend }
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  template:
+    metadata:
+      labels: { app: waibao-sg-backend, region: sg }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: topology.kubernetes.io/zone
+                labelSelector:
+                  matchLabels: { app: waibao-sg-backend }
+      containers:
+        - name: backend
+          image: waibao/backend:v4.0.0-sg
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 8000, name: http }]
+          env:
+            - { name: ENV, value: "production" }
+            - { name: REGION, value: "sg" }
+            - { name: DATA_RESIDENCY, value: "sg" }
+            - { name: DEFAULT_LOCALE, value: "en" }
+            - { name: REGION_ROUTING_PRIMARY, value: "sg" }
+            - { name: REGION_ROUTING_REPLICAS, value: "us,cn" }
+            - { name: DATABASE_URL, valueFrom: { secretKeyRef: { name: waibao-sg-secrets, key: supabase-url } } }
+            - { name: READONLY_DATABASE_URL, valueFrom: { secretKeyRef: { name: waibao-sg-secrets, key: rds-sg-ro-url } } }
+            - { name: REDIS_URL, valueFrom: { secretKeyRef: { name: waibao-sg-secrets, key: elasticache-url } } }
+            - { name: SUPABASE_URL, valueFrom: { secretKeyRef: { name: waibao-sg-secrets, key: supabase-url } } }
+            - { name: SUPABASE_SERVICE_KEY, valueFrom: { secretKeyRef: { name: waibao-sg-secrets, key: supabase-service-key } } }
+            - { name: SUPABASE_JWT_SECRET, valueFrom: { secretKeyRef: { name: waibao-sg-secrets, key: supabase-jwt-secret } } }
+            - { name: OPENAI_API_KEY, valueFrom: { secretKeyRef: { name: waibao-sg-secrets, key: openai-key } } }
+            - { name: ANTHROPIC_API_KEY, valueFrom: { secretKeyRef: { name: waibao-sg-secrets, key: anthropic-key } } }
+            - { name: STRIPE_SECRET_KEY, valueFrom: { secretKeyRef: { name: waibao-sg-secrets, key: stripe-key } } }
+            - { name: ZOOM_API_KEY, valueFrom: { secretKeyRef: { name: waibao-sg-secrets, key: zoom-key } } }
+            - { name: ZOOM_API_SECRET, valueFrom: { secretKeyRef: { name: waibao-sg-secrets, key: zoom-secret } } }
+            - { name: GREENHOUSE_API_KEY, valueFrom: { secretKeyRef: { name: waibao-sg-secrets, key: greenhouse-key } } }
+            - { name: CHECKR_API_KEY, valueFrom: { secretKeyRef: { name: waibao-sg-secrets, key: checkr-key } } }
+            - { name: PII_ENCRYPTION_KEY, valueFrom: { secretKeyRef: { name: waibao-sg-secrets, key: pii-key } } }
+          resources:
+            requests: { cpu: "250m", memory: "512Mi" }
+            limits:   { cpu: "1000m", memory: "2Gi" }
+          livenessProbe:
+            httpGet: { path: /health, port: 8000 }
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          readinessProbe:
+            httpGet: { path: /ready, port: 8000 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: waibao-sg-backend
+  namespace: waibao-sg
+spec:
+  type: ClusterIP
+  ports:
+    - { name: http, port: 8000, targetPort: 8000 }
+  selector: { app: waibao-sg-backend }
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: waibao-sg-backend-hpa
+  namespace: waibao-sg
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: waibao-sg-backend
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: { type: Utilization, averageUtilization: 70 }

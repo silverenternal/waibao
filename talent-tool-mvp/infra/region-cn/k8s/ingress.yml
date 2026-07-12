@@ -1,0 +1,71 @@
+# =============================================================================
+# waibao cn - Ingress (阿里云 SLB + cert-manager)
+# 主域: waibao.cn / www.waibao.cn / api.waibao.cn / m.waibao.cn
+# 备案号: 京ICP备2024xxxxxx号-1 (由变量替换)
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: waibao-cn-ingress
+  namespace: waibao-cn
+  annotations:
+    kubernetes.io/ingress.class: alb                    # 阿里云 ALB Ingress Controller
+    alb.ingress.kubernetes.io/scheme: internet
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/cert-manager/cluster-issuer: letsencrypt-prod-cn
+    alb.ingress.kubernetes.io/healthcheck-enabled: "true"
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/load-balancer-protocol: https
+    # ICP 备案 (中国大陆合规要求)
+    meta.helm.sh/release-name: waibao-cn
+    alb.ingress.kubernetes.io/load-balancer-name: waibao-cn-slb
+    # 限流
+    alb.ingress.kubernetes.io/load-balancer-conn-limit: "20000"
+    # 跨域
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://waibao.cn,https://www.waibao.cn"
+  labels: { app: waibao-cn, region: cn }
+spec:
+  ingressClassName: alb
+  tls:
+    - hosts:
+        - waibao.cn
+        - www.waibao.cn
+        - api.waibao.cn
+        - m.waibao.cn
+      secretName: waibao-cn-tls
+  rules:
+    # 主站
+    - host: waibao.cn
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: waibao-cn-frontend, port: { number: 3000 } }
+    - host: www.waibao.cn
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: waibao-cn-frontend, port: { number: 3000 } }
+    # API
+    - host: api.waibao.cn
+      http:
+        paths:
+          - path: /health
+            pathType: Exact
+            backend:
+              service: { name: waibao-cn-backend, port: { number: 8000 } }
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: waibao-cn-backend, port: { number: 8000 } }
+    # 移动端 H5
+    - host: m.waibao.cn
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: waibao-cn-frontend, port: { number: 3000 } }

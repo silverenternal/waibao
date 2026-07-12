@@ -1,0 +1,43 @@
+# =============================================================================
+# waibao sg - Ingress (AWS ALB Controller)
+# sg.waibao.io / api.sg.waibao.io
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: waibao-sg-ingress
+  namespace: waibao-sg
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-southeast-1:ACCOUNT:certificate/xxxx
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-2-2021-06
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    # WAF
+    alb.ingress.kubernetes.io/wafv2-acl-arn: arn:aws:wafv2:ap-southeast-1:ACCOUNT:regional/webacl/xxxx
+    # Cloudflare 注入真实客户端 IP
+    alb.ingress.kubernetes.io/load-balancer-attributes: routing.http.drop_invalid_header_fields.enabled=true
+  labels: { app: waibao-sg, region: sg }
+spec:
+  ingressClassName: alb
+  rules:
+    - host: sg.waibao.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: waibao-sg-frontend, port: { number: 3000 } }
+    - host: api.sg.waibao.io
+      http:
+        paths:
+          - path: /health
+            pathType: Exact
+            backend:
+              service: { name: waibao-sg-backend, port: { number: 8000 } }
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: waibao-sg-backend, port: { number: 8000 } }

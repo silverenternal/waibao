@@ -1,0 +1,60 @@
+# =============================================================================
+# waibao cn - Frontend Deployment (Next.js SSR)
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: waibao-cn-frontend
+  namespace: waibao-cn
+  labels: { app: waibao-cn-frontend, region: cn, version: v4.0.0 }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: waibao-cn-frontend }
+  template:
+    metadata:
+      labels: { app: waibao-cn-frontend, region: cn }
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels: { app: waibao-cn-frontend }
+      containers:
+        - name: frontend
+          image: registry.cn-hangzhou.aliyuncs.com/waibao/frontend:v4.0.0
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 3000, name: http }]
+          env:
+            - { name: NEXT_PUBLIC_API_URL, value: "https://api.waibao.cn" }
+            - { name: NEXT_PUBLIC_SUPABASE_URL, valueFrom: { secretKeyRef: { name: waibao-cn-secrets, key: supabase-url } } }
+            - { name: NEXT_PUBLIC_SUPABASE_ANON_KEY, valueFrom: { secretKeyRef: { name: waibao-cn-secrets, key: supabase-anon-key } } }
+            - { name: NEXT_PUBLIC_REGION, value: "cn" }
+            - { name: NEXT_PUBLIC_LOCALE_DEFAULT, value: "zh" }
+            - { name: NEXT_PUBLIC_SENTRY_DSN, valueFrom: { secretKeyRef: { name: waibao-cn-secrets, key: sentry-dsn } } }
+          resources:
+            requests: { cpu: "100m", memory: "256Mi" }
+            limits:   { cpu: "500m", memory: "1Gi" }
+          livenessProbe:
+            httpGet: { path: /api/health, port: 3000 }
+            initialDelaySeconds: 45
+            periodSeconds: 30
+          readinessProbe:
+            httpGet: { path: /api/ready, port: 3000 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: waibao-cn-frontend
+  namespace: waibao-cn
+spec:
+  type: ClusterIP
+  ports:
+    - { name: http, port: 3000, targetPort: 3000 }
+  selector: { app: waibao-cn-frontend }

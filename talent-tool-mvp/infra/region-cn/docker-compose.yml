@@ -1,0 +1,115 @@
+# =============================================================================
+# waibao 中国区域 (region-cn) — 阿里云生产部署
+# T1503 多区域部署
+# =============================================================================
+# 依赖托管服务:
+#   - 阿里云 RDS PostgreSQL 15 (主实例 + 1 只读副本)
+#   - 阿里云 Redis (社区版 7.0, 1 GB, 主从)
+#   - 阿里云 OSS (bucket: waibao-cn-prod)
+#   - 阿里云 SLB (内网 HTTPS 443 → ingress)
+#   - 阿里云 ACK (K8s 1.30) — backend/frontend 通过 k8s/ 部署
+#   - 阿里云 DNS (alidns) — 国内解析 → region-cn
+#
+# 此 docker-compose 仅用于本地 / staging 模拟生产 (开发联调 + 灾备演练)
+# 生产环境以 k8s/ + terraform/ 为准
+# =============================================================================
+
+version: "3.9"
+
+x-common-env: &common-env
+  ENV: production
+  REGION: cn
+  DATA_RESIDENCY: cn
+  DEFAULT_LOCALE: zh
+  PII_ENCRYPTION_KEY: ${PII_ENCRYPTION_KEY}
+  ICP_LICENSE: ${ICP_LICENSE}   # 备案号: 京ICP备2024xxxxxx号-1
+  AUDIT_LOG_ENDPOINT: https://log-cn.waibao.cn
+  TZ: Asia/Shanghai
+
+services:
+  # ---------- 后端 API ----------
+  backend:
+    <<: *common-env
+    build: ../../backend
+    image: registry.cn-hangzhou.aliyuncs.com/waibao/backend:v4.0.0
+    container_name: waibao-cn-backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${RDS_CN_URL}
+      - REDIS_URL=${REDIS_CN_URL}
+      - SUPABASE_URL=${SUPABASE_CN_URL}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}        # 国内 LLM 备用
+      - QWEN_API_KEY=${QWEN_API_KEY}                # 通义千问
+      - OSS_ENDPOINT=oss-cn-hangzhou.aliyuncs.com
+      - OSS_BUCKET=waibao-cn-prod
+      - OSS_ACCESS_KEY_ID=${OSS_ACCESS_KEY_ID}
+      - OSS_ACCESS_KEY_SECRET=${OSS_ACCESS_KEY_SECRET}
+      - DINGTALK_APP_KEY=${DINGTALK_APP_KEY}
+      - DINGTALK_APP_SECRET=${DINGTALK_APP_SECRET}
+      - WECHAT_MINIPROGRAM_APPID=${WECHAT_MINIPROGRAM_APPID}
+      - WECHAT_MINIPROGRAM_SECRET=${WECHAT_MINIPROGRAM_SECRET}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY_CN}    # 国际 Stripe
+      - CORS_ORIGINS=https://waibao.cn,https://www.waibao.cn,https://m.waibao.cn
+      - REGION_ROUTING_PRIMARY=cn
+      - REGION_ROUTING_REPLICAS=sg,us
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits: { cpus: "2.0", memory: 2048M }
+        reservations: { cpus: "0.5", memory: 512M }
+    logging:
+      driver: json-file
+      options: { max-size: "100m", max-file: "10" }
+    networks: [waibao-cn-net]
+
+  # ---------- 前端 ----------
+  frontend:
+    <<: *common-env
+    build: ../../frontend
+    image: registry.cn-hangzhou.aliyuncs.com/waibao/frontend:v4.0.0
+    container_name: waibao-cn-frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=https://api.waibao.cn
+      - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_CN_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - NEXT_PUBLIC_REGION=cn
+      - NEXT_PUBLIC_LOCALE_DEFAULT=zh
+      - NEXT_PUBLIC_GA_ID=${GA_ID_CN}
+      - NEXT_PUBLIC_BAIDU_TONGJI=${BAIDU_TONGJI_ID}
+      - NEXT_PUBLIC_SENTRY_DSN=${SENTRY_DSN_CN}
+    depends_on:
+      backend: { condition: service_healthy }
+    networks: [waibao-cn-net]
+
+  # ---------- nginx ingress ----------
+  nginx:
+    image: registry.cn-hangzhou.aliyuncs.com/library/nginx:1.27-alpine
+    container_name: waibao-cn-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+      - frontend
+    networks: [waibao-cn-net]
+
+networks:
+  waibao-cn-net:
+    driver: bridge

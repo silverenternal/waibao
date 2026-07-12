@@ -1,0 +1,187 @@
+# =============================================================================
+# waibao 全球 DNS 智能解析配置
+# T1503 多区域部署
+# =============================================================================
+# 国内 → 阿里云 DNS (alidns) → region-cn (waibao.cn)
+# 海外 → Cloudflare DNS → region-sg / region-us (waibao.io)
+#
+# 两个 NS 集使用相同的 SOA, 通过 GeoDNS 把用户路由到最近的健康区域
+# =============================================================================
+
+version: "1.0"
+generated_at: "2026-07-12"
+owner: sre@waibao.io
+
+# ---------------------------------------------------------------------------
+# 1) 国内主域 (waibao.cn) — 阿里云 DNS (alidns)
+# ---------------------------------------------------------------------------
+alidns:
+  zone: waibao.cn
+  records:
+    # Apex (主域)
+    - type: A
+      host: "@"
+      ttl: 300
+      # 国内智能解析: 阿里云 SLB 入口 IP, 区域 = 中国
+      values:
+        - { value: "39.104.${CN_SLB_IP}", line: "default" }   # 默认中国
+        - { value: "39.104.${CN_SLB_IP}", line: "china" }     # 显式中国
+        - { value: "39.104.${CN_SLB_IP}", line: "ct" }        # 电信
+        - { value: "39.104.${CN_SLB_IP}", line: "cucc" }      # 联通
+        - { value: "39.104.${CN_SLB_IP}", line: "cmcc" }      # 移动
+
+    # www
+    - type: A
+      host: www
+      ttl: 300
+      values:
+        - { value: "39.104.${CN_SLB_IP}", line: "default" }
+
+    # api
+    - type: A
+      host: api
+      ttl: 60
+      values:
+        - { value: "39.104.${CN_SLB_API_IP}", line: "default" }
+
+    # m (移动 H5)
+    - type: A
+      host: m
+      ttl: 300
+      values:
+        - { value: "39.104.${CN_SLB_IP}", line: "default" }
+
+  # 健康检查 (DNS 层面切流)
+  health_check:
+    enabled: true
+    interval: 30s
+    timeout: 5s
+    fail_threshold: 3
+    pass_threshold: 1
+    probes:
+      - { host: "https://api.waibao.cn/health", expected: "200" }
+      - { host: "https://waibao.cn/",         expected: "200" }
+
+  # 监控告警 (alidns → CloudMonitor)
+  monitoring:
+    metrics:
+      - dns_query_latency_p99
+      - dns_query_error_rate
+      - health_check_pass_rate
+    alerts:
+      - { metric: dns_query_error_rate, threshold: 0.01, severity: critical, channel: pagerduty }
+      - { metric: health_check_pass_rate, threshold: 0.5,  severity: critical, channel: pagerduty }
+
+# ---------------------------------------------------------------------------
+# 2) 国际主域 (waibao.io) — Cloudflare
+# ---------------------------------------------------------------------------
+cloudflare:
+  zone: waibao.io
+  records:
+    # Apex
+    - type: A
+      name: "@"
+      ttl: 1   # Cloudflare 自动 (proxy)
+      proxied: true
+      values:
+        # GeoDNS: 国内 → 阿里云 SLB (兜底)
+        - { value: "39.104.${CN_SLB_IP}", continent: "Asia", country: "CN" }
+        # SG (亚太除中国)
+        - { value: "${SG_ALB_DNS}", continent: "Asia" }
+        # US
+        - { value: "${US_ALB_DNS}", continent: "North America" }
+        # 默认 SG
+        - { value: "${SG_ALB_DNS}", default: true }
+
+    # www
+    - type: A
+      name: www
+      ttl: 1
+      proxied: true
+      values:
+        - { value: "${US_ALB_DNS}", continent: "North America" }
+        - { value: "${SG_ALB_DNS}", continent: "Asia" }
+        - { value: "39.104.${CN_SLB_IP}", continent: "Asia", country: "CN" }
+        - { value: "${US_ALB_DNS}", default: true }
+
+    # api (绑定最近区域, 低延迟)
+    - type: A
+      name: api
+      ttl: 60
+      proxied: true
+      values:
+        - { value: "39.104.${CN_SLB_API_IP}", continent: "Asia", country: "CN" }
+        - { value: "${SG_ALB_API_DNS}", continent: "Asia" }
+        - { value: "${US_ALB_API_DNS}", continent: "North America" }
+        - { value: "${US_ALB_API_DNS}", continent: "Europe" }
+        - { value: "${US_ALB_API_DNS}", default: true }
+
+    # 区域子域
+    - type: A
+      name: sg
+      ttl: 1
+      proxied: true
+      values: [ "${SG_ALB_DNS}" ]
+    - type: A
+      name: api.sg
+      ttl: 60
+      proxied: true
+      values: [ "${SG_ALB_API_DNS}" ]
+    - type: A
+      name: us
+      ttl: 1
+      proxied: true
+      values: [ "${US_ALB_DNS}" ]
+    - type: A
+      name: api.us
+      ttl: 60
+      proxied: true
+      values: [ "${US_ALB_API_DNS}" ]
+
+  # Cloudflare 配置
+  settings:
+    ssl: full_strict
+    min_tls_version: "1.2"
+    tls_13: true
+    always_https: true
+    hsts:
+      enabled: true
+      max_age: 31536000
+      include_subdomains: true
+      preload: true
+    waf:
+      enabled: true
+      sensitivity: high
+    bot_fight_mode: true
+    rate_limit:
+      enabled: true
+      rule: "200 req / 10s / IP"
+
+  # 健康检查 + 智能路由 (Cloudflare Load Balancer)
+  load_balancer:
+    enabled: true
+    pools:
+      - { id: "us-primary",  region: "us-west-1", weight: 1.0, endpoint: "${US_ALB_DNS}" }
+      - { id: "sg-primary",  region: "ap-southeast-1", weight: 1.0, endpoint: "${SG_ALB_DNS}" }
+      - { id: "cn-fallback", region: "cn-hangzhou", weight: 0.5, endpoint: "39.104.${CN_SLB_IP}" }
+    steering_policy: random_steering    # 健康检查失败时自动切流
+    health_check:
+      type: https
+      path: /health
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+# ---------------------------------------------------------------------------
+# 3) 切流演练 (DR drill)
+# ---------------------------------------------------------------------------
+failover:
+  description: |
+    主区域故障 → 切流至备用区域:
+      1. SRE 在 PagerDuty 收到 alert, ack
+      2. 在 Cloudflare LB pool 把主区域 weight=0, 备用 weight=1
+      3. (国内) 在 alidns 修改 A 记录到备份 SLB IP
+      4. 在 #inc Slack 通知 + ETA
+      5. 演练后: 还原 weight + 写 postmortem
+  rto_minutes: 15
+  rpo_minutes: 5     # 跨区域只读副本通常 ≤ 5 分钟

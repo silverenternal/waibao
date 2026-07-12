@@ -1,0 +1,111 @@
+# =============================================================================
+# waibao cn - Backend Deployment
+# 阿里云 ACK (K8s 1.30) - cn-hangzhou
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: waibao-cn-backend
+  namespace: waibao-cn
+  labels: { app: waibao-cn-backend, region: cn, version: v4.0.0 }
+spec:
+  replicas: 3
+  selector:
+    matchLabels: { app: waibao-cn-backend }
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  template:
+    metadata:
+      labels: { app: waibao-cn-backend, region: cn }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "8000"
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels: { app: waibao-cn-backend }
+      containers:
+        - name: backend
+          image: registry.cn-hangzhou.aliyuncs.com/waibao/backend:v4.0.0
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 8000, name: http }]
+          env:
+            - { name: ENV, value: "production" }
+            - { name: REGION, value: "cn" }
+            - { name: DATA_RESIDENCY, value: "cn" }
+            - { name: DEFAULT_LOCALE, value: "zh" }
+            - { name: REGION_ROUTING_PRIMARY, value: "cn" }
+            - { name: REGION_ROUTING_REPLICAS, value: "sg,us" }
+            - { name: DATABASE_URL, valueFrom: { secretKeyRef: { name: waibao-cn-secrets, key: rds-url } } }
+            - { name: REDIS_URL, valueFrom: { secretKeyRef: { name: waibao-cn-secrets, key: redis-url } } }
+            - { name: SUPABASE_URL, valueFrom: { secretKeyRef: { name: waibao-cn-secrets, key: supabase-url } } }
+            - { name: SUPABASE_SERVICE_KEY, valueFrom: { secretKeyRef: { name: waibao-cn-secrets, key: supabase-service-key } } }
+            - { name: SUPABASE_JWT_SECRET, valueFrom: { secretKeyRef: { name: waibao-cn-secrets, key: supabase-jwt-secret } } }
+            - { name: OPENAI_API_KEY, valueFrom: { secretKeyRef: { name: waibao-cn-secrets, key: openai-key } } }
+            - { name: DEEPSEEK_API_KEY, valueFrom: { secretKeyRef: { name: waibao-cn-secrets, key: deepseek-key } } }
+            - { name: QWEN_API_KEY, valueFrom: { secretKeyRef: { name: waibao-cn-secrets, key: qwen-key } } }
+            - { name: OSS_ENDPOINT, value: "oss-cn-hangzhou.aliyuncs.com" }
+            - { name: OSS_BUCKET, value: "waibao-cn-prod" }
+            - { name: OSS_ACCESS_KEY_ID, valueFrom: { secretKeyRef: { name: waibao-cn-secrets, key: oss-ak } } }
+            - { name: OSS_ACCESS_KEY_SECRET, valueFrom: { secretKeyRef: { name: waibao-cn-secrets, key: oss-sk } } }
+            - { name: PII_ENCRYPTION_KEY, valueFrom: { secretKeyRef: { name: waibao-cn-secrets, key: pii-key } } }
+          resources:
+            requests: { cpu: "250m", memory: "512Mi" }
+            limits:   { cpu: "1000m", memory: "2Gi" }
+          livenessProbe:
+            httpGet: { path: /health, port: 8000 }
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet: { path: /ready, port: 8000 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+          lifecycle:
+            preStop:
+              exec: { command: ["/bin/sh", "-c", "sleep 15"] }  # 给 SLB 摘流时间
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: waibao-cn-backend
+  namespace: waibao-cn
+  labels: { app: waibao-cn-backend }
+spec:
+  type: ClusterIP
+  ports:
+    - { name: http, port: 8000, targetPort: 8000, protocol: TCP }
+  selector: { app: waibao-cn-backend }
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: waibao-cn-backend-hpa
+  namespace: waibao-cn
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: waibao-cn-backend
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: { type: Utilization, averageUtilization: 70 }
+    - type: Resource
+      resource:
+        name: memory
+        target: { type: Utilization, averageUtilization: 75 }

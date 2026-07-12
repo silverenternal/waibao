@@ -1,0 +1,55 @@
+# =============================================================================
+# waibao us - Ingress (AWS ALB Controller)
+# us.waibao.io / api.us.waibao.io / www.waibao.io (default → us)
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: waibao-us-ingress
+  namespace: waibao-us
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-west-1:ACCOUNT:certificate/xxxx
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-2-2021-06
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/wafv2-acl-arn: arn:aws:wafv2:us-west-1:ACCOUNT:regional/webacl/xxxx
+    # Cloudflare 真实 IP
+    alb.ingress.kubernetes.io/load-balancer-attributes: routing.http.drop_invalid_header_fields.enabled=true,routing.http.xff_client_port.enabled=true
+spec:
+  ingressClassName: alb
+  rules:
+    - host: us.waibao.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: waibao-us-frontend, port: { number: 3000 } }
+    - host: api.us.waibao.io
+      http:
+        paths:
+          - path: /health
+            pathType: Exact
+            backend:
+              service: { name: waibao-us-backend, port: { number: 8000 } }
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: waibao-us-backend, port: { number: 8000 } }
+    - host: www.waibao.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: waibao-us-frontend, port: { number: 3000 } }
+    - host: api.waibao.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: waibao-us-backend, port: { number: 8000 } }

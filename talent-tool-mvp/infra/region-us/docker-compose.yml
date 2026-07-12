@@ -1,0 +1,107 @@
+# =============================================================================
+# waibao 美西区域 (region-us) — AWS us-west-1 / Supabase US West
+# T1503 多区域部署
+# =============================================================================
+# 依赖托管服务:
+#   - Supabase US West (Oregon)
+#   - AWS us-west-1: RDS PostgreSQL (主库 - 美国用户的写主库)
+#   - AWS ElastiCache US West (Redis)
+#   - AWS ALB → EKS (us-west-1)
+#   - Cloudflare (DNS + WAF + DDoS)
+#
+# 美国用户的写操作主落到 region-us, region-sg/region-cn 仅作副本
+# =============================================================================
+
+version: "3.9"
+
+x-common-env: &common-env
+  ENV: production
+  REGION: us
+  DATA_RESIDENCY: us
+  DEFAULT_LOCALE: en
+  PII_ENCRYPTION_KEY: ${PII_ENCRYPTION_KEY}
+  GDPR_DPO_CONTACT: dpo@waibao.io
+  CCPA_OPT_OUT_ENABLED: "true"
+  TZ: America/Los_Angeles
+
+services:
+  backend:
+    <<: *common-env
+    build: ../../backend
+    image: waibao/backend:v4.0.0-us
+    container_name: waibao-us-backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${SUPABASE_US_URL}        # Supabase US West 主库
+      - READONLY_DATABASE_URL=${RDS_US_RO_URL}
+      - REDIS_URL=${ELASTICACHE_US_URL}
+      - SUPABASE_URL=${SUPABASE_US_URL}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - ZOOM_API_KEY=${ZOOM_API_KEY}
+      - ZOOM_API_SECRET=${ZOOM_API_SECRET}
+      - GREENHOUSE_API_KEY=${GREENHOUSE_API_KEY}
+      - LEVER_API_KEY=${LEVER_API_KEY}
+      - CHECKR_API_KEY=${CHECKR_API_KEY}
+      - CORS_ORIGINS=https://waibao.io,https://www.waibao.io,https://us.waibao.io
+      - REGION_ROUTING_PRIMARY=us
+      - REGION_ROUTING_REPLICAS=sg,cn
+      - COOKIE_DOMAIN=.waibao.io
+      - CCPA_ENABLED=true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits: { cpus: "2.0", memory: 2048M }
+    logging:
+      driver: json-file
+      options: { max-size: "100m", max-file: "10" }
+    networks: [waibao-us-net]
+
+  frontend:
+    <<: *common-env
+    build: ../../frontend
+    image: waibao/frontend:v4.0.0-us
+    container_name: waibao-us-frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=https://api.us.waibao.io
+      - NEXT_PUBLIC_SUPABASE_URL=${SUPABASE_US_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - NEXT_PUBLIC_REGION=us
+      - NEXT_PUBLIC_LOCALE_DEFAULT=en
+      - NEXT_PUBLIC_GA_ID=${GA_ID_US}
+      - NEXT_PUBLIC_SENTRY_DSN=${SENTRY_DSN_US}
+    depends_on:
+      backend: { condition: service_healthy }
+    networks: [waibao-us-net]
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: waibao-us-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+      - frontend
+    networks: [waibao-us-net]
+
+networks:
+  waibao-us-net:
+    driver: bridge
