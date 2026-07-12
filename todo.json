@@ -1,11 +1,11 @@
 {
   "meta": {
     "project": "招聘智能体 (Recruitment Agent)",
-    "subtitle": "v3.0 — 把剩余 8 项 🟡 推到 ✅ + 横切能力补齐",
-    "based_on": "v2.0.0 (Providers 抽象层 + 4 关键 UI + 23 供应商适配器 + 542 测试)",
-    "version": "3.0.0",
-    "created": "2026-07-11",
-    "supersedes": "v2.0 todo.json (28 tasks)",
+    "subtitle": "v4.0 — 从「功能完整」到「生产可用」+ 业务深度 + 合规 + 多端",
+    "based_on": "v3.0.0 (16/16 需求 100% ✅ / 904 tests / 23+5 供应商 / 21 migrations)",
+    "version": "4.0.0",
+    "created": "2026-07-12",
+    "supersedes": "v3.0 todo.json (26 tasks)",
     "owner": "waibao",
     "language": ["zh-CN", "en-US", "ja-JP"],
     "stack": {
@@ -13,555 +13,552 @@
       "frontend": "Next.js 16 + TypeScript + Tailwind + next-intl",
       "database": "Supabase (PostgreSQL + pgvector + Realtime)",
       "ai": "OpenAI / Anthropic / DeepSeek / 智谱 / 通义 / Kimi + Whisper / GPT-4V + 国内 OCR SaaS",
-      "infra": "Docker Compose + Supabase + Redis + OpenTelemetry + Prometheus + Sentry"
+      "infra": "Docker Compose + Supabase + Redis + OpenTelemetry + Prometheus + Sentry + Locust"
     },
-    "audit": "docs/COVERAGE-AUDIT-v3.md"
+    "audit": "docs/COVERAGE-AUDIT-v4.md"
   },
 
-  "goal": "在 v2.0 (16 Agent + 23 供应商 + 542 tests + Providers 抽象层) 基础上,把 8 项 🟡 推到 ✅ 完整,补齐政策浏览/用人方画像/偏见可视化/over-spec/情绪趋势 5 大关键 UI,接入真实招聘市场数据(Boss直聘/拉勾/LinkedIn),完成 i18n + Webhook + 公开 API + 规则引擎横切能力,达成 16 项需求 100% ✅ 完整",
+  "goal": "在 v3.0 (16 需求 100% ✅ / 904 tests) 基础上,从「功能完整的 MVP」升级到「生产级 SaaS」,3 个真实第三方 API 跑通 + 性能压测达标 + 至少 1 家中型企业试用验证 NPS + GDPR/中国合规补齐 + 微信小程序/钉钉多端 + 业务深度(AI 面试/Offer/ROI)+ UX(A11y/SEO/产品 tour)",
 
   "background": {
-    "v1_achievements": ["16 Agent", "30+ API", "v1.0.0 Release"],
-    "v2_achievements": [
-      "🔌 Providers 抽象层 (LLM × 6 / Embedding × 3 / Vision × 2 / OCR × 3 / STT × 2 / Notify × 5 / Lookup × 2 = 23 供应商)",
-      "📦 4 大业务模块 (OCR + 工商 + 通知 + 工单)",
-      "🎨 4 大关键 UI (简历上传 + 画像可视化 + 工单看板 + 战略地图)",
-      "🧪 542 tests pass (从 30+ 翻 18 倍)",
-      "📚 7 份文档 + Issue 模板更新"
+    "v3_achievements": [
+      "✅ 16/16 项甲方需求 100% 完整",
+      "✅ 904 tests pass (从 30+ 翻 30 倍)",
+      "✅ Providers 抽象层 7 维度 + 28 个真实供应商适配器",
+      "✅ 4 关键 UI (简历/画像/工单/战略) + 8 补齐 UI (政策/用人方画像/偏见/over-spec/情绪/日报)",
+      "✅ 横切生态: i18n 3 语言 / Webhook / 公开 API / 规则引擎 / A/B / LLM cache",
+      "✅ 多模态: 语音日记 / 简历图片 OCR / 协同房间 WebSocket",
+      "✅ 可观测性: OTel + Prometheus + Sentry + 5 Grafana dashboards",
+      "✅ v3.0.0 Release 已发布"
     ],
-    "v2_gaps": [
-      "8 项需求仍 🟡 部分覆盖 (1.2/1.4/1.6/2.1/2.4/2.5/2.6/2.7/2.8)",
-      "横切能力缺: i18n(前端)/ Webhook / 公开 API / A/B 实验 UI / 规则引擎",
-      "招聘市场数据全 mock",
-      "语音日记 + 简历图片 OCR 端到端未做",
-      "双向匹配 explainer 浅 + 双方对照 UI 缺",
-      "老板偏好记忆 + 升级人工按钮 UI 缺"
+    "v3_gaps_to_production": [
+      "❌ 真实集成验证: 28 个供应商全是 mock 兜底,没在真实账号下跑过",
+      "❌ 性能压测: P95 < 2s / 99.5% 可用性 / 5000 WebSocket 连接 — 完全没验证",
+      "❌ 中型企业试用: 0 个真实客户 / 0 NPS / 0 真实简历岗位数据",
+      "❌ 合规: ToS/Privacy Policy/GDPR cookie banner/数据驻留声明/网络安全法等保 2.0 全缺",
+      "❌ 多端: 仅 Web(响应式还不全),无 PWA/小程序/钉钉嵌入/微信公众号",
+      "❌ 业务深度: AI 面试/Offer 比较/招聘渠道 ROI/候选人订阅/视频面试/ATS 集成 全缺",
+      "❌ UX: A11y/SEO/产品 tour/产品内搜索/空状态/错误边界 全缺",
+      "❌ 商业化: 定价/SaaS 计费/账单/发票 全缺"
     ],
-    "north_star": "2027 Q1 前,让一家中型企业(HR + 求职者)真实使用 3 个月,NPS ≥ 50,日活 ≥ 200"
+    "north_star": "2027 Q4 前,签 3 家中型企业付费客户,ARR ≥ 100 万 RMB,真实 NPS ≥ 50"
   },
 
   "phases": [
     {
       "id": "P0",
-      "title": "补齐 8 项 🟡 的 UI + 真实数据",
-      "goal": "政策浏览/用人方画像/偏见可视化/over-spec/情绪趋势/双向对照 6 大 UI + 招聘市场真实接入",
-      "duration_weeks": 4,
+      "title": "生产验证 — 真实集成 + 性能压测 + 1 家试用",
+      "goal": "3 个真实第三方 API 跑通 + Locust 压测达标 + 至少 1 家中型企业试用 1 个月",
+      "duration_weeks": 6,
       "priority": "P0"
     },
     {
       "id": "P1",
-      "title": "深度能力 — 语音 + 多模态 + 学习资源 + 人格记忆",
-      "goal": "语音日记端到端 + 简历图片 OCR 端到端 + 学习资源库 + 老板偏好记忆",
-      "duration_weeks": 3,
+      "title": "合规 + 多端",
+      "goal": "ToS/Privacy/GDPR/中国合规 + 微信小程序 + 钉钉嵌入应用 + PWA",
+      "duration_weeks": 6,
       "priority": "P0"
     },
     {
       "id": "P2",
-      "title": "横切能力 — i18n + Webhook + 公开 API + 规则引擎 + A/B",
-      "goal": "i18n(3 语言) + Webhook 出口 + 公开 API Key + 规则引擎 + A/B 实验 UI",
-      "duration_weeks": 4,
+      "title": "业务深度",
+      "goal": "AI 自动面试 / Offer 比较 / 招聘渠道 ROI / 候选人订阅 / 视频面试集成 / 测评集成",
+      "duration_weeks": 8,
       "priority": "P1"
     },
     {
       "id": "P3",
-      "title": "双向匹配 2.0 — 可解释 + 自动权重 + 互评深度",
-      "goal": "可解释 AI UI + 互评对照视图 + 自动权重校准 + 匹配质量 dashboard",
-      "duration_weeks": 3,
+      "title": "用户体验 + 商业化",
+      "goal": "A11y / SEO / 产品 tour / 产品内搜索 / 定价 / 计费 / 账单 / 发票",
+      "duration_weeks": 4,
       "priority": "P1"
     },
     {
       "id": "P4",
-      "title": "可观测性 + 安全 + 合规",
-      "goal": "OpenTelemetry 链路追踪 + Prometheus 指标 + Sentry + 审计日志 + GDPR 强化 + 渗透测试",
-      "duration_weeks": 2,
+      "title": "生态集成 + 灾备",
+      "goal": "ATS 双向同步 (Greenhouse/Lever) / 灾备方案 / 多区域部署",
+      "duration_weeks": 4,
       "priority": "P2"
     }
   ],
 
-  "requirements_map_v3": {
-    "1.1": "✅ v2.0 已完整",
-    "1.2": "🟡 → ✅ DailyJournal Agent + AI 评价可视化趋势图 + 行动项自动追踪",
-    "1.3": "✅ v2.0 已完整",
-    "1.4": "🟡 → ✅ Emotion Agent + 折线图 + 历史趋势 + 触发事件关联",
-    "1.5": "✅ v2.0 已完整",
-    "1.6": "🟡 → ✅ CareerPlanner + 真实招聘市场 API + 学习资源库 + 计划调整 + 执行追踪",
-    "2.1": "🟡 → ✅ Persona Agent + 老板偏好记忆 + 升级人工按钮 + HRBP 工单触发",
-    "2.2": "✅ v2.0 已完整",
-    "2.3": "✅ v2.0 已完整",
-    "2.4": "🟡 → ✅ TalentBrief + BiasAlert UI + BiasExplanation + LegalHint",
-    "2.5": "🟡 → ✅ JobSpec + JDTemplatePicker UI + OverSpecWarning UI + JDVersionHistory",
-    "2.6": "🟡 → ✅ Policy + PolicyList 列表页 + PolicyDetail + LegalRiskBadge + PolicySearch + 法律风险可视化",
-    "2.7": "🟡 → ✅ MultiParty + 多人实时协同房间 + @mention + 线程",
-    "2.8": "🟡 → ✅ EmployerClarifier + 人才画像可视化页 + 多方共识度 + StakeholderMatrix",
-    "2.9": "✅ v2.0 已完整",
-    "3":   "🟡 → ✅ TwoWay + Mutual + 双方对照视图 + 解释器 UI + 自动权重 + 匹配 dashboard"
-  },
-
   "tasks": [
     {
-      "_section": "P0 — 补齐 8 项 🟡 UI + 真实招聘市场数据",
+      "_section": "P0 — 生产验证 (真实集成 + 性能 + 试用)",
       "_comment_marker": 1,
-      "id": "T601",
-      "id": "T601",
+      "id": "T1101",
       "phase": "P0",
       "priority": "P0",
-      "title": "政策浏览页 UI (2.6 完整化)",
-      "requirement": ["2.6"],
-      "description": "规章制度列表(按类别)+ 详情 + 法律风险可视化 + 全文搜索 + chat 集成",
-      "deliverables": [
-        "frontend/app/(employer)/policy/page.tsx",
-        "frontend/app/(employer)/policy/[id]/page.tsx",
-        "frontend/components/policy/PolicyList.tsx",
-        "frontend/components/policy/PolicyDetail.tsx",
-        "frontend/components/policy/PolicySearch.tsx",
-        "frontend/components/policy/LegalRiskBadge.tsx",
-        "frontend/components/policy/CategoryFilter.tsx",
-        "frontend/lib/api-policy.ts"
-      ],
-      "depends_on": [],
-      "estimate_days": 4
-    },
-    {
-      "id": "T602",
-      "phase": "P0",
-      "priority": "P0",
-      "title": "用人方人才画像可视化页 (2.8 完整化)",
-      "requirement": ["2.8"],
-      "description": "岗位的人才画像 + 真实需求列表 + 多方共识度 + 冲突标注 + StakeholderMatrix",
-      "deliverables": [
-        "frontend/app/(employer)/role/[id]/talent-image/page.tsx",
-        "frontend/components/mothership/TalentImageCard.tsx",
-        "frontend/components/mothership/ConsensusScore.tsx",
-        "frontend/components/mothership/StakeholderMatrix.tsx",
-        "frontend/components/mothership/EmployerContradictionList.tsx",
-        "frontend/lib/api-clarification.ts"
-      ],
-      "depends_on": [],
-      "estimate_days": 4
-    },
-    {
-      "id": "T603",
-      "phase": "P0",
-      "priority": "P0",
-      "title": "偏见可视化 UI (2.4 完整化)",
-      "requirement": ["2.4"],
-      "description": "TalentBrief Agent 偏见检测结果以卡片展示,带依据解释 + 法律提示 + 替代话术",
-      "deliverables": [
-        "frontend/components/mothership/BiasAlert.tsx",
-        "frontend/components/mothership/BiasExplanation.tsx",
-        "frontend/components/mothership/LegalHint.tsx",
-        "frontend/components/mothership/AlternativeWording.tsx",
-        "改造 talent_brief/page.tsx 集成"
-      ],
-      "depends_on": [],
-      "estimate_days": 3
-    },
-    {
-      "id": "T604",
-      "phase": "P0",
-      "priority": "P0",
-      "title": "JD 模板 + over-spec 提示 UI (2.5 完整化)",
-      "requirement": ["2.5"],
-      "description": "JD 模板选择器 + 自动 over-spec 检测 + 版本历史 + diff",
-      "deliverables": [
-        "frontend/components/jd/JDTemplatePicker.tsx (10+ 行业模板)",
-        "frontend/components/jd/OverSpecWarning.tsx",
-        "frontend/components/jd/JDVersionHistory.tsx",
-        "frontend/components/jd/JDVersionDiff.tsx",
-        "frontend/app/(employer)/role/[id]/edit/page.tsx",
-        "frontend/lib/api-jd.ts",
-        "backend/api/jd_templates.py"
-      ],
-      "depends_on": [],
-      "estimate_days": 4
-    },
-    {
-      "id": "T605",
-      "phase": "P0",
-      "priority": "P0",
-      "title": "情绪折线图 + 历史趋势 (1.4 完整化)",
-      "requirement": ["1.4"],
-      "description": "Emotion Agent 完整折线图 + 触发事件关联 + 周/月趋势",
-      "deliverables": [
-        "frontend/app/(jobseeker)/emotion/page.tsx",
-        "frontend/components/charts/emotion-timeline-chart.tsx",
-        "frontend/components/EmotionEventDetail.tsx",
-        "frontend/components/EmotionWeekSummary.tsx",
-        "frontend/components/EmotionTriggerCorrelation.tsx"
-      ],
-      "depends_on": [],
-      "estimate_days": 3
-    },
-    {
-      "id": "T606",
-      "phase": "P0",
-      "priority": "P0",
-      "title": "日报 AI 评价可视化趋势图 (1.2 完整化)",
-      "requirement": ["1.2"],
-      "description": "AI 评价(rating/advice/warnings/action_items)长期趋势图 + 行动项追踪",
-      "deliverables": [
-        "frontend/app/(jobseeker)/journal/analytics/page.tsx",
-        "frontend/components/charts/journal-rating-trend.tsx",
-        "frontend/components/JournalAdviceList.tsx",
-        "frontend/components/ActionItemTracker.tsx",
-        "frontend/components/JournalWarningTimeline.tsx",
-        "backend/api/action_items.py (行动项 CRUD)"
-      ],
-      "depends_on": [],
-      "estimate_days": 4
-    },
-    {
-      "id": "T607",
-      "phase": "P0",
-      "priority": "P0",
-      "title": "职业规划增强 — 真实招聘市场 + 学习资源 + 调整机制 (1.6 完整化)",
+      "title": "Boss直聘真实接入验证",
       "requirement": ["1.6"],
-      "description": "接 Boss直聘/拉勾/LinkedIn 招聘市场 API,真实薪资/趋势/在招岗位;学习资源库(book/course/cert);计划调整 + 执行追踪",
+      "description": "申请 Boss直聘企业 OpenAPI AppKey,在真实账号下跑通招聘市场数据,替换 mock fallback",
       "deliverables": [
-        "backend/providers/job_market/ (招聘市场 Provider 抽象,接 Boss直聘/拉勾/LinkedIn/Adzuna)",
-        "backend/providers/job_market/boss_zhipin.py (OpenAPI)",
-        "backend/providers/job_market/lagou.py",
-        "backend/providers/job_market/linkedin.py",
-        "backend/providers/job_market/mock.py (国内开源职位数据兜底)",
-        "backend/services/learning_resources.py (Coursera/极客时间/掘金小册 API 聚合)",
-        "backend/services/plan_tracker.py (计划执行追踪)",
-        "frontend/app/(jobseeker)/plan/market-insights/page.tsx",
-        "frontend/components/plan/MarketSalaryChart.tsx",
-        "frontend/components/plan/LearningResourceList.tsx",
-        "frontend/components/plan/PlanAdjustmentDialog.tsx",
-        "frontend/components/plan/PlanProgressTracker.tsx"
+        "真实 AppKey 配置到 config.example.env + .env (不入仓)",
+        "boss_zhipin.py 真实调用测试报告 (≥ 100 个真实职位检索成功率 > 90%)",
+        "真实数据接入 docs/PROVIDERS.md 更新",
+        "失败兜底链路验证(网络中断/限流/认证失败时自动降级)"
       ],
       "depends_on": [],
-      "estimate_days": 8
+      "estimate_days": 3
     },
     {
-      "id": "T608",
+      "id": "T1102",
       "phase": "P0",
       "priority": "P0",
-      "title": "多人实时协同房间 (2.7 完整化)",
-      "requirement": ["2.7"],
-      "description": "老板/HR/部门负责人/财务/管理员 5 方实时协同,@mention、线程、未读标记",
-      "deliverables": [
-        "backend/services/collaboration_room.py (房间服务)",
-        "backend/api/rooms.py",
-        "supabase/migrations/011_collaboration_rooms.sql (rooms + members + messages + threads + mentions)",
-        "frontend/app/(employer)/rooms/page.tsx (房间列表)",
-        "frontend/app/(employer)/rooms/[id]/page.tsx (协同对话)",
-        "frontend/components/rooms/RoomSidebar.tsx",
-        "frontend/components/rooms/MessageThread.tsx",
-        "frontend/components/rooms/MentionAutocomplete.tsx",
-        "WebSocket 服务端扩展 (room_id 维度)"
-      ],
-      "depends_on": [],
-      "estimate_days": 7
-    },
-
-    {
-      "_section": "P1 — 深度能力",
-      "_comment_marker": 2,
-      "id": "T701",
-      "id": "T701",
-      "phase": "P1",
-      "priority": "P0",
-      "title": "语音日记端到端 (Whisper)",
+      "title": "Whisper 真实接入 + 语音日记端到端测试",
       "requirement": ["1.2", "1.4"],
-      "description": "前端录音 → Whisper 转写 → 自动写日记 + 情绪分析",
+      "description": "OpenAI Whisper API 真实调用,录音→ 转写 → journal → emotion 端到端验证",
       "deliverables": [
-        "frontend/components/VoiceRecorder.tsx (MediaRecorder API)",
-        "frontend/components/VoiceWaveform.tsx",
-        "frontend/app/(jobseeker)/journal/voice/page.tsx",
-        "backend/services/transcribe.py (Whisper Provider 接入)",
-        "backend/api/voice.py (上传 + 转写 + 触发 journal)",
-        "tests/test_voice.py"
+        "whisper_provider.py 真实音频转写成功率 > 95% 测试报告",
+        "100 条真实语音样本(用户授权)测试",
+        "中文/英文/日语支持验证",
+        "降级到 aliyun_stt 链路测试"
       ],
       "depends_on": [],
-      "estimate_days": 5
+      "estimate_days": 3
     },
     {
-      "id": "T702",
-      "phase": "P1",
+      "id": "T1103",
+      "phase": "P0",
       "priority": "P0",
-      "title": "简历图片 OCR 端到端 (1.1 强化)",
-      "requirement": ["1.1"],
-      "description": "Profile Agent 完整集成 OCR,图片简历直接入档,字段自动填",
+      "title": "钉钉/飞书 Webhook 真实推送验证",
+      "requirement": ["2.7", "2.9"],
+      "description": "申请钉钉群机器人 + 飞书群机器人真实 URL,端到端验证工单/情绪高风险推送",
       "deliverables": [
-        "backend/agents/jobseeker/profile_agent.py (OCR 调用 + 字段合并)",
-        "tests/test_intake_ocr_e2e.py"
-      ],
-      "depends_on": [],
-      "estimate_days": 3
-    },
-    {
-      "id": "T703",
-      "phase": "P1",
-      "priority": "P0",
-      "title": "老板偏好记忆 (Persona Agent 长期偏好)",
-      "requirement": ["2.1"],
-      "description": "老板/HR 沟通风格、偏好术语、决策模式被记忆;同人对同一老板的回答越来越个性化",
-      "deliverables": [
-        "backend/services/persona_memory.py",
-        "backend/agents/employer/persona_agent.py (升级)",
-        "supabase/migrations/012_persona_preferences.sql",
-        "tests/test_persona_memory.py"
-      ],
-      "depends_on": [],
-      "estimate_days": 4
-    },
-    {
-      "id": "T704",
-      "phase": "P1",
-      "priority": "P0",
-      "title": "升级人工按钮 + HRBP 工单触发 (2.1 完整化)",
-      "requirement": ["2.1"],
-      "description": "智能体回答任何敏感问题可一键升级人工;自动按部门/角色创建工单",
-      "deliverables": [
-        "frontend/components/EscalateToHumanButton.tsx",
-        "backend/api/escalation.py",
-        "改造 persona_agent / hr_service_agent 自动检测升级场景"
-      ],
-      "depends_on": [],
-      "estimate_days": 3
-    },
-
-    {
-      "_section": "P2 — 横切能力 (i18n + Webhook + 公开 API + 规则 + A/B)",
-      "_comment_marker": 3,
-      "id": "T801",
-      "phase": "P2",
-      "priority": "P1",
-      "title": "前端 i18n (zh-CN / en-US / ja-JP)",
-      "requirement": ["all"],
-      "description": "前端接入 next-intl,3 语言切换,所有页面/组件用 t() 函数",
-      "deliverables": [
-        "frontend/messages/zh-CN.json",
-        "frontend/messages/en-US.json",
-        "frontend/messages/ja-JP.json",
-        "frontend/i18n.ts (配置)",
-        "所有页面 + components 用 t() 函数",
-        "LocaleSwitcher 组件"
-      ],
-      "depends_on": [],
-      "estimate_days": 6
-    },
-    {
-      "id": "T802",
-      "phase": "P2",
-      "priority": "P1",
-      "title": "Webhook 出口 (ATS 集成)",
-      "requirement": ["all"],
-      "description": "HR 可配置 webhook 接收匹配事件 / 工单事件 / 情绪高风险",
-      "deliverables": [
-        "supabase/migrations/013_webhooks.sql",
-        "backend/services/webhook.py (HMAC 签名 + 重试 + 死信队列)",
-        "backend/api/webhooks.py",
-        "frontend/app/mothership/admin/webhooks/page.tsx",
-        "frontend/app/mothership/admin/webhooks/[id]/page.tsx",
-        "tests/test_webhooks.py"
-      ],
-      "depends_on": [],
-      "estimate_days": 5
-    },
-    {
-      "id": "T803",
-      "phase": "P2",
-      "priority": "P1",
-      "title": "公开 API + API Key 管理",
-      "requirement": ["all"],
-      "description": "第三方开发者可通过 API Key 访问: 创建候选人、查询匹配、创建工单",
-      "deliverables": [
-        "supabase/migrations/014_api_keys.sql",
-        "backend/services/api_key.py (生成/验证/吊销/限流)",
-        "backend/api/public.py (公开 API,带 rate limit + scope)",
-        "frontend/app/mothership/admin/api-keys/page.tsx",
-        "tests/test_public_api.py"
-      ],
-      "depends_on": [],
-      "estimate_days": 5
-    },
-    {
-      "id": "T804",
-      "phase": "P2",
-      "priority": "P1",
-      "title": "Webhook 触发器规则引擎",
-      "requirement": ["all"],
-      "description": "if-this-then-that: '当 HR service 自动解决率 < 60% 时告警 HRBP';可视化编辑规则",
-      "deliverables": [
-        "backend/services/rule_engine.py (DSL + 求值器)",
-        "supabase/migrations/015_rules.sql",
-        "backend/api/rules.py",
-        "frontend/app/mothership/admin/rules/page.tsx",
-        "frontend/components/rules/RuleEditor.tsx",
-        "frontend/components/rules/RuleTester.tsx"
-      ],
-      "depends_on": ["T802"],
-      "estimate_days": 6
-    },
-    {
-      "id": "T805",
-      "phase": "P2",
-      "priority": "P1",
-      "title": "A/B 实验框架 + UI",
-      "requirement": ["3"],
-      "description": "匹配算法权重 / 推荐顺序 A/B 测试,流量分配 + 效果对比",
-      "deliverables": [
-        "backend/services/ab_test.py (流量哈希 + 桶分配 + 效果统计)",
-        "backend/api/admin_ab.py",
-        "frontend/app/mothership/admin/experiments/page.tsx",
-        "frontend/app/mothership/admin/experiments/[id]/page.tsx",
-        "frontend/components/experiments/ExperimentCard.tsx",
-        "frontend/components/experiments/ResultsChart.tsx"
-      ],
-      "depends_on": [],
-      "estimate_days": 5
-    },
-    {
-      "id": "T806",
-      "phase": "P2",
-      "priority": "P1",
-      "title": "LLM cache 真实启用 + cost dashboard",
-      "requirement": ["all"],
-      "description": "LRU+TTL 缓存真实启用,按 prompt hash 复用;per-tenant cost dashboard",
-      "deliverables": [
-        "backend/services/llm_cache.py (升级:Redis LRU + TTL + 命中率统计)",
-        "backend/api/admin_cost.py",
-        "frontend/app/mothership/admin/cost/page.tsx",
-        "tests/test_llm_cache.py"
-      ],
-      "depends_on": [],
-      "estimate_days": 4
-    },
-
-    {
-      "_section": "P3 — 双向匹配 2.0",
-      "_comment_marker": 4,
-      "id": "T901",
-      "phase": "P3",
-      "priority": "P1",
-      "title": "可解释匹配 — 自然语言推荐理由 UI",
-      "requirement": ["3"],
-      "description": "Match Explainer 输出 '为什么匹配' / '为什么不匹配' 自然语言解释 + 反事实匹配",
-      "deliverables": [
-        "backend/matching/explainer_llm.py (用 LLM 生成解释 + counterfactual)",
-        "frontend/app/match/[id]/explain/page.tsx",
-        "frontend/components/match/MatchReason.tsx",
-        "frontend/components/match/MatchCounterfactual.tsx ('如果……会更匹配')",
-        "frontend/components/match/MatchWeakPoints.tsx"
-      ],
-      "depends_on": [],
-      "estimate_days": 4
-    },
-    {
-      "id": "T902",
-      "phase": "P3",
-      "priority": "P1",
-      "title": "互评对照视图 UI",
-      "requirement": ["3"],
-      "description": "Mutual Evaluator 双方视角强弱对比,UI 表格化,可发起讨论",
-      "deliverables": [
-        "frontend/app/match/eval/[id]/page.tsx",
-        "frontend/components/match/EvalComparison.tsx",
-        "frontend/components/match/StrengthsList.tsx",
-        "frontend/components/match/ConcernsList.tsx",
-        "frontend/components/match/EvalDiscuss.tsx"
-      ],
-      "depends_on": [],
-      "estimate_days": 3
-    },
-    {
-      "id": "T903",
-      "phase": "P3",
-      "priority": "P1",
-      "title": "自动权重校准 + 匹配质量 dashboard",
-      "requirement": ["3"],
-      "description": "基于互评结果自动调整 matching 权重,人工可覆盖;dashboard 展示 precision/recall/F1/桶分布",
-      "deliverables": [
-        "backend/services/feedback_loop.py (闭环调度器)",
-        "backend/api/admin_weights.py",
-        "frontend/app/mothership/admin/weights/page.tsx",
-        "frontend/app/mothership/admin/matching-quality/page.tsx",
-        "frontend/components/matching/WeightTuner.tsx",
-        "frontend/components/matching/QualityDashboard.tsx"
-      ],
-      "depends_on": [],
-      "estimate_days": 5
-    },
-
-    {
-      "_section": "P4 — 可观测性 + 安全 + 合规",
-      "_comment_marker": 5,
-      "id": "T1001",
-      "phase": "P4",
-      "priority": "P2",
-      "title": "OpenTelemetry 全链路追踪",
-      "requirement": ["all"],
-      "description": "FastAPI/requests/asyncio/Supabase/Provider 全埋点,Jaeger UI",
-      "deliverables": [
-        "backend/services/telemetry.py (OTel SDK + auto-instrumentation)",
-        "infra/jaeger/docker-compose.yml",
-        "tests/test_telemetry.py"
-      ],
-      "depends_on": [],
-      "estimate_days": 4
-    },
-    {
-      "id": "T1002",
-      "phase": "P4",
-      "priority": "P2",
-      "title": "Prometheus 指标 + Grafana dashboard",
-      "requirement": ["all"],
-      "description": "provider 调用/延迟/成功率 + 业务指标(注册/匹配/工单/情绪) + Grafana JSON",
-      "deliverables": [
-        "backend/services/metrics.py (Prometheus client)",
-        "infra/prometheus/prometheus.yml",
-        "infra/grafana/dashboards/*.json (5 个 dashboard)",
-        "tests/test_metrics.py"
-      ],
-      "depends_on": [],
-      "estimate_days": 3
-    },
-    {
-      "id": "T1003",
-      "phase": "P4",
-      "priority": "P2",
-      "title": "Sentry 错误追踪",
-      "requirement": ["all"],
-      "description": "前后端统一接入 Sentry,自动去重 + 关联到 trace",
-      "deliverables": [
-        "backend/services/sentry.py",
-        "frontend/lib/sentry.ts",
-        "前后端 Sentry SDK 集成"
+        "dingtalk_provider.py + feishu_provider.py 真实群机器人测试报告",
+        "签名验证 + 重试链路验证",
+        "工单 SLA 告警推送配置文档"
       ],
       "depends_on": [],
       "estimate_days": 2
     },
     {
-      "id": "T1004",
-      "phase": "P4",
-      "priority": "P2",
-      "title": "审计日志 + GDPR 强化",
+      "id": "T1104",
+      "phase": "P0",
+      "priority": "P0",
+      "title": "Locust 压测 — 核心 API",
       "requirement": ["all"],
-      "description": "所有 PII 访问写审计;GDPR forget/export 加审计;admin 端查询 + 导出",
+      "description": "Locust 压测核心 API,产出 P95/P99/错误率报告",
       "deliverables": [
-        "supabase/migrations/016_audit_log.sql",
-        "backend/services/audit.py (自动装饰器审计 PII 读写)",
-        "backend/api/admin_audit.py",
-        "frontend/app/mothership/admin/audit/page.tsx",
-        "tests/test_audit.py"
+        "backend/tests/load/locustfile.py (覆盖: agent invoke / matches / tickets / clarifications)",
+        "压测报告 docs/PERFORMANCE.md: 100/500/1000 并发下 P95/P99/错误率/吞吐量",
+        "性能瓶颈识别 + 优化建议(Redis 缓存 / DB index / 异步队列)",
+        "目标: P95 < 2s / 错误率 < 0.5% / 1000 并发稳定"
       ],
       "depends_on": [],
       "estimate_days": 4
     },
     {
-      "id": "T1005",
+      "id": "T1105",
+      "phase": "P0",
+      "priority": "P0",
+      "title": "WebSocket 并发压测",
+      "requirement": ["1.3", "2.7"],
+      "description": "wscat/websocat 压测协同房间 + 实时对话",
+      "deliverables": [
+        "5000 WebSocket 连接压测脚本",
+        "消息延迟 < 200ms (P95)",
+        "Redis pub/sub 瓶颈识别",
+        "自动扩容策略文档"
+      ],
+      "depends_on": [],
+      "estimate_days": 2
+    },
+    {
+      "id": "T1106",
+      "phase": "P0",
+      "priority": "P0",
+      "title": "中型企业试用 — Pilot 计划",
+      "requirement": ["all"],
+      "description": "找 1-2 家中型企业(50-500 人 HR 团队)试用 1 个月,收集 NPS + 反馈",
+      "deliverables": [
+        "pilot_partner_survey.docx — 试用协议模板",
+        "frontend/app/onboarding/welcome-tour.tsx — 新手引导",
+        "frontend/app/feedback/quick-survey.tsx — 实时反馈",
+        "pilot_report_v1.md — 试用 1 个月后报告 (NPS/活跃/采纳率/Top 痛点)",
+        "目标: NPS ≥ 50 / 周活 ≥ 70% / 主要痛点 ≤ 3 个"
+      ],
+      "depends_on": [],
+      "estimate_days": 25
+    },
+    {
+      "_section": "P1 — 合规 + 多端",
+      "_comment_marker": 2,
+      "id": "T1201",
+      "phase": "P1",
+      "priority": "P0",
+      "title": "ToS + Privacy Policy + Cookie 横幅",
+      "requirement": ["all"],
+      "description": "正式法律条款 + GDPR cookie 同意横幅 + 数据导出/删除 UI",
+      "deliverables": [
+        "docs/legal/TERMS_OF_SERVICE.md (zh-CN/en-US/ja-JP 三语)",
+        "docs/legal/PRIVACY_POLICY.md",
+        "docs/legal/DATA_PROCESSING_AGREEMENT.md (DPA)",
+        "frontend/components/CookieConsentBanner.tsx (GDPR 合规)",
+        "frontend/app/(public)/terms/page.tsx",
+        "frontend/app/(public)/privacy/page.tsx",
+        "frontend/app/(jobseeker)/account/export-data/page.tsx",
+        "frontend/app/(jobseeker)/account/delete-account/page.tsx",
+        "审计日志记录同意时间戳"
+      ],
+      "depends_on": [],
+      "estimate_days": 5
+    },
+    {
+      "id": "T1202",
+      "phase": "P1",
+      "priority": "P0",
+      "title": "中国合规 — 网络安全法 / 等保 2.0",
+      "requirement": ["all"],
+      "description": "中国数据合规:个人信息保护法 / 数据安全法 / 网络安全法 / 等保 2.0",
+      "deliverables": [
+        "PII 加密全链路覆盖(数据库 / 日志 / 缓存 / 备份)",
+        "数据驻留: 中国用户数据物理隔离在境内 Supabase / 海外阿里云新加坡",
+        "等保 2.0 三级合规清单 + 差距分析",
+        "docs/legal/CHINA_COMPLIANCE.md",
+        "实名认证集成(可选, 钉钉/企业微信 OAuth 认证企业身份)"
+      ],
+      "depends_on": [],
+      "estimate_days": 10
+    },
+    {
+      "id": "T1203",
+      "phase": "P1",
+      "priority": "P0",
+      "title": "微信小程序",
+      "requirement": ["all"],
+      "description": "原生微信小程序(中国用户主流入口),覆盖求职者 + HR 主要流程",
+      "deliverables": [
+        "miniprogram/uni-app (uni-app 跨端, 同时输出 H5/小程序/App)",
+        "miniprogram/pages/jobseeker/index (对话/简历/工作状态)",
+        "miniprogram/pages/jobseeker/profile (画像)",
+        "miniprogram/pages/jobseeker/journal (日记+语音)",
+        "miniprogram/pages/employer/tickets (工单看板)",
+        "miniprogram/pages/employer/strategy (战略地图)",
+        "后端 API 复用 Web API (兼容小程序登录)",
+        "小程序发布审核文档"
+      ],
+      "depends_on": [],
+      "estimate_days": 12
+    },
+    {
+      "id": "T1204",
+      "phase": "P1",
+      "priority": "P0",
+      "title": "钉钉 + 飞书 嵌入应用",
+      "requirement": ["2.7", "2.9"],
+      "description": "钉钉微应用 + 飞书应用,企业内直接使用,集成通讯录 + 审批 + 通知",
+      "deliverables": [
+        "dingtalk-microapp/ (钉钉微应用, 用 dingtalk JSAPI)",
+        "feishu-app/ (飞书应用, 用 feishu SDK)",
+        "通讯录同步: HR 用钉钉/飞书账号一键登录,自动同步部门/角色",
+        "审批集成: 工单可走钉钉/飞书审批流",
+        "消息推送集成: 工单状态变更 → 钉钉/飞书 IM 消息"
+      ],
+      "depends_on": [],
+      "estimate_days": 10
+    },
+    {
+      "id": "T1205",
+      "phase": "P1",
+      "priority": "P0",
+      "title": "PWA 离线支持",
+      "requirement": ["all"],
+      "description": "Progressive Web App,支持离线访问关键页面(画像 / 政策 / 工单列表)",
+      "deliverables": [
+        "frontend/public/manifest.json",
+        "frontend/public/sw.js (Service Worker)",
+        "离线缓存策略: stale-while-revalidate",
+        "安装提示 + 推送通知"
+      ],
+      "depends_on": [],
+      "estimate_days": 4
+    },
+    {
+      "_section": "P2 — 业务深度",
+      "_comment_marker": 3,
+      "id": "T1301",
+      "phase": "P2",
+      "priority": "P1",
+      "title": "AI 自动面试 (用 GPT-4V/Whisper)",
+      "requirement": ["1.4", "3"],
+      "description": "AI 模拟面试官: 自动出题 / 视频分析 / 评分 / 反馈",
+      "deliverables": [
+        "backend/services/ai_interviewer.py (用 GPT-4V 分析视频, Whisper 转写回答)",
+        "backend/services/question_bank.py (按岗位动态生成面试题)",
+        "backend/api/ai_interview.py",
+        "frontend/app/(jobseeker)/interview/page.tsx (视频面试 UI)",
+        "frontend/components/VideoInterviewRecorder.tsx",
+        "frontend/components/InterviewFeedback.tsx",
+        "supabase/migrations/022_ai_interviews.sql",
+        "tests/test_ai_interviewer.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 10
+    },
+    {
+      "id": "T1302",
+      "phase": "P2",
+      "priority": "P1",
+      "title": "Offer 比较器 + 薪资谈判助手",
+      "requirement": ["1.2", "1.6"],
+      "description": "多个 Offer 横向比较(薪资/股权/福利/通勤/发展);AI 辅助谈判",
+      "deliverables": [
+        "backend/services/offer_calculator.py (含税/年薪化/股权折现)",
+        "backend/services/negotiation_advisor.py (LLM 生成谈判策略)",
+        "backend/api/offers.py",
+        "frontend/app/(jobseeker)/offers/page.tsx",
+        "frontend/app/(jobseeker)/offers/compare/page.tsx",
+        "frontend/app/(jobseeker)/offers/negotiate/page.tsx",
+        "frontend/components/OfferComparisonTable.tsx (雷达图)",
+        "frontend/components/NegotiationScript.tsx (AI 生成话术)",
+        "tests/test_offer_calculator.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 6
+    },
+    {
+      "id": "T1303",
+      "phase": "P2",
+      "priority": "P1",
+      "title": "招聘漏斗 + 渠道 ROI 分析",
+      "requirement": ["2.1", "3"],
+      "description": "招聘漏斗(sourcing → applied → screened → interviewed → offered → hired) + 各渠道 ROI",
+      "deliverables": [
+        "backend/services/recruitment_funnel.py",
+        "backend/services/channel_attribution.py (归因模型: first-touch / last-touch / multi-touch)",
+        "backend/api/analytics.py",
+        "frontend/app/mothership/analytics/funnel/page.tsx",
+        "frontend/app/mothership/analytics/channels/page.tsx",
+        "frontend/components/charts/recruitment-funnel.tsx",
+        "frontend/components/charts/channel-roi-chart.tsx",
+        "supabase/migrations/023_funnel_events.sql",
+        "tests/test_funnel.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 8
+    },
+    {
+      "id": "T1304",
+      "phase": "P2",
+      "priority": "P1",
+      "title": "候选人订阅 + 主动推荐",
+      "requirement": ["1.6", "3"],
+      "description": "求职者订阅「AI 产品经理 北京 30k+」,新职位实时推送;HR 主动收到候选人推荐",
+      "deliverables": [
+        "backend/services/job_subscription.py",
+        "backend/services/candidate_recommender.py (用 matching v2 算法)",
+        "backend/services/push_engine.py (复用 v2.0 通知 dispatcher)",
+        "backend/api/subscriptions.py",
+        "frontend/app/(jobseeker)/subscriptions/page.tsx",
+        "frontend/app/mothership/recommendations/page.tsx",
+        "tests/test_subscriptions.py",
+        "tests/test_recommender.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 8
+    },
+    {
+      "id": "T1305",
+      "phase": "P2",
+      "priority": "P1",
+      "title": "视频面试集成 (Zoom / 腾讯会议)",
+      "requirement": ["2.5", "2.7"],
+      "description": "在工单/匹配中创建视频面试,日历同步,自动提醒",
+      "deliverables": [
+        "backend/providers/video_interview/ (抽象 + Zoom + 腾讯会议实现)",
+        "backend/api/video_interview.py",
+        "frontend/app/(employer)/interviews/page.tsx",
+        "frontend/components/ScheduleVideoInterview.tsx",
+        "tests/test_video_interview.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 6
+    },
+    {
+      "id": "T1306",
+      "phase": "P2",
+      "priority": "P1",
+      "title": "测评集成 (北森 / 光辉国际)",
+      "requirement": ["2.5", "3"],
+      "description": "集成第三方测评,匹配分加入测评结果权重",
+      "deliverables": [
+        "backend/providers/assessment/ (抽象 + 北森 API)",
+        "backend/api/assessments.py",
+        "matching 权重集成测评结果",
+        "frontend/components/AssessmentReport.tsx"
+      ],
+      "depends_on": [],
+      "estimate_days": 5
+    },
+    {
+      "id": "T1307",
+      "phase": "P2",
+      "priority": "P1",
+      "title": "背景调查集成 (Checkr / iCIMS)",
+      "requirement": ["2.5"],
+      "description": "Offer 前自动触发背景调查",
+      "deliverables": [
+        "backend/providers/background_check/ (抽象 + Checkr)",
+        "backend/api/background_check.py",
+        "frontend/components/BackgroundCheckStatus.tsx"
+      ],
+      "depends_on": [],
+      "estimate_days": 5
+    },
+    {
+      "_section": "P3 — UX + 商业化",
+      "_comment_marker": 4,
+      "id": "T1401",
+      "phase": "P3",
+      "priority": "P1",
+      "title": "WCAG 2.1 AA 可访问性",
+      "requirement": ["all"],
+      "description": "全套页面通过 axe-core 检查,键盘导航 + 屏幕阅读器友好",
+      "deliverables": [
+        "所有交互组件加 aria-label / role / keyboard handlers",
+        "色彩对比度 ≥ 4.5:1",
+        "跳到主内容链接",
+        "CI 集成 axe-core",
+        "tests/test_a11y.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 6
+    },
+    {
+      "id": "T1402",
+      "phase": "P3",
+      "priority": "P1",
+      "title": "SEO + OpenGraph",
+      "requirement": ["all"],
+      "description": "公开页面 SEO meta + sitemap + robots.txt",
+      "deliverables": [
+        "所有页面 metadata (title/description/og:image/twitter:card)",
+        "frontend/app/sitemap.ts (动态生成)",
+        "frontend/app/robots.ts",
+        "frontend/app/manifest.ts (PWA manifest)",
+        "Schema.org JSON-LD (JobPosting / Organization)"
+      ],
+      "depends_on": [],
+      "estimate_days": 3
+    },
+    {
+      "id": "T1403",
+      "phase": "P3",
+      "priority": "P1",
+      "title": "新手引导 + 产品 Tour",
+      "requirement": ["all"],
+      "description": "首次使用引导流程,关键功能 tour(react-joyride 或自己实现)",
+      "deliverables": [
+        "frontend/components/ProductTour.tsx (聚焦下一步高亮)",
+        "Onboarding 4 步骤(求职者 + HR 各一套)",
+        "功能发现卡片(对话气泡)"
+      ],
+      "depends_on": [],
+      "estimate_days": 4
+    },
+    {
+      "id": "T1404",
+      "phase": "P3",
+      "priority": "P1",
+      "title": "产品内全局搜索",
+      "requirement": ["all"],
+      "description": "跨候选人/岗位/工单/政策/对话的全文 + 语义搜索",
+      "deliverables": [
+        "backend/services/global_search.py (PostgreSQL FTS + pgvector 语义)",
+        "backend/api/search.py",
+        "frontend/components/GlobalSearchBar.tsx (⌘K 触发)",
+        "前端混合结果展示"
+      ],
+      "depends_on": [],
+      "estimate_days": 5
+    },
+    {
+      "id": "T1405",
+      "phase": "P3",
+      "priority": "P1",
+      "title": "定价 + 计费 + 账单",
+      "requirement": ["all"],
+      "description": "多租户 SaaS 计费系统:Starter/Pro/Enterprise 三档 + Stripe / 微信支付 / 支付宝",
+      "deliverables": [
+        "supabase/migrations/024_billing.sql (subscriptions / invoices / payment_methods)",
+        "backend/services/billing.py (Stripe webhook + 微信支付回调)",
+        "backend/providers/payment/ (抽象 + Stripe + 微信支付 + 支付宝)",
+        "backend/api/billing.py",
+        "frontend/app/(employer)/billing/page.tsx",
+        "frontend/app/(employer)/billing/plans/page.tsx",
+        "frontend/app/(employer)/billing/invoices/page.tsx",
+        "前端 Pricing 表 + 升级流程",
+        "tests/test_billing.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 10
+    },
+    {
+      "_section": "P4 — 生态 + 灾备",
+      "_comment_marker": 5,
+      "id": "T1501",
       "phase": "P4",
       "priority": "P2",
-      "title": "安全渗透测试 + SAST",
+      "title": "ATS 双向同步 (Greenhouse / Lever)",
       "requirement": ["all"],
-      "description": "OWASP Top 10 检查 + SQL 注入 + XSS + SSRF + 密钥泄露扫描",
+      "description": "与主流 ATS 双向同步候选人/岗位/工单状态",
       "deliverables": [
-        ".github/workflows/security.yml (bandit + safety + npm audit)",
-        "tests/test_security.py",
-        "docs/SECURITY.md"
+        "backend/providers/ats/ (抽象 + Greenhouse + Lever 实现)",
+        "backend/services/ats_sync.py (双向同步引擎 + 冲突解决)",
+        "backend/api/ats_integrations.py",
+        "supabase/migrations/025_ats_sync.sql",
+        "frontend/app/mothership/admin/ats/page.tsx",
+        "tests/test_ats_sync.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 8
+    },
+    {
+      "id": "T1502",
+      "phase": "P4",
+      "priority": "P2",
+      "title": "灾备方案 + 数据库备份",
+      "requirement": ["all"],
+      "description": "Supabase PITR + 异地备份 + 灾难恢复演练",
+      "deliverables": [
+        "Supabase PITR 配置 (7 天保留)",
+        "异地备份脚本 (S3 / 阿里云 OSS)",
+        "备份恢复演练文档 docs/DISASTER_RECOVERY.md",
+        "RTO < 4h / RPO < 1h 验证"
+      ],
+      "depends_on": [],
+      "estimate_days": 5
+    },
+    {
+      "id": "T1503",
+      "phase": "P4",
+      "priority": "P2",
+      "title": "多区域部署",
+      "requirement": ["all"],
+      "description": "中国(阿里云)/ 新加坡(海外)/ 美西(AWS) 三区域",
+      "deliverables": [
+        "infra/region-cn/ (阿里云 K8s)",
+        "infra/region-sg/ (海外)",
+        "infra/region-us/ (AWS)",
+        "DNS 智能解析 + 区域路由",
+        "数据同步策略(用户主区域 + 跨区域只读副本)"
+      ],
+      "depends_on": [],
+      "estimate_days": 10
+    },
+    {
+      "id": "T1504",
+      "phase": "P4",
+      "priority": "P2",
+      "title": "v4.0.0 Release",
+      "requirement": ["all"],
+      "description": "全部 P0-P4 完成后,集成测试 + 文档 + Release",
+      "deliverables": [
+        "集成测试全过 (1000+ tests)",
+        "Release notes",
+        "v4.0.0 tag + release",
+        "GitHub Pages 更新"
       ],
       "depends_on": [],
       "estimate_days": 3
@@ -570,71 +567,73 @@
 
   "milestones": [
     {
-      "id": "M6",
-      "title": "v3.1 — UI 完整 + 真实市场",
-      "target_date": "2026-09-15",
-      "tasks": ["T601", "T602", "T603", "T604", "T605", "T606", "T607", "T608"],
-      "deliverable": "8 项 🟡 → ✅ 完整,16/16 需求生产级"
+      "id": "M11",
+      "title": "v4.1 — 生产验证",
+      "target_date": "2026-09-30",
+      "tasks": ["T1101", "T1102", "T1103", "T1104", "T1105", "T1106"],
+      "deliverable": "3 个真实 API + 性能压测达标 + 1 家试用 NPS ≥ 50"
     },
     {
-      "id": "M7",
-      "title": "v3.2 — 深度能力",
-      "target_date": "2026-10-15",
-      "tasks": ["T701", "T702", "T703", "T704"],
-      "deliverable": "语音日记 + 简历图片 OCR + 人格记忆 + 升级人工"
+      "id": "M12",
+      "title": "v4.2 — 合规 + 多端",
+      "target_date": "2026-12-15",
+      "tasks": ["T1201", "T1202", "T1203", "T1204", "T1205"],
+      "deliverable": "GDPR/中国合规 + 微信小程序 + 钉钉/飞书嵌入 + PWA"
     },
     {
-      "id": "M8",
-      "title": "v3.3 — 规模化生态",
-      "target_date": "2026-11-30",
-      "tasks": ["T801", "T802", "T803", "T804", "T805", "T806"],
-      "deliverable": "i18n(3 语言) + Webhook + 公开 API + 规则引擎 + A/B + LLM cache"
+      "id": "M13",
+      "title": "v4.3 — 业务深度",
+      "target_date": "2027-02-28",
+      "tasks": ["T1301", "T1302", "T1303", "T1304", "T1305", "T1306", "T1307"],
+      "deliverable": "AI 面试 + Offer 比较 + 漏斗 + 订阅 + 视频面试 + 测评 + 背调"
     },
     {
-      "id": "M9",
-      "title": "v3.4 — 匹配 2.0",
-      "target_date": "2026-12-31",
-      "tasks": ["T901", "T902", "T903"],
-      "deliverable": "可解释匹配 + 互评对照 + 自动权重校准"
+      "id": "M14",
+      "title": "v4.4 — UX + 商业化",
+      "target_date": "2027-04-30",
+      "tasks": ["T1401", "T1402", "T1403", "T1404", "T1405"],
+      "deliverable": "A11y + SEO + Tour + 全局搜索 + 定价 + 计费"
     },
     {
-      "id": "M10",
-      "title": "v3.5 — 生产级可观测性",
-      "target_date": "2027-01-31",
-      "tasks": ["T1001", "T1002", "T1003", "T1004", "T1005"],
-      "deliverable": "OTel + Prometheus + Sentry + 审计 + 安全扫描,可对外 SLA 99.5%"
+      "id": "M15",
+      "title": "v4.5 — 生态 + 灾备",
+      "target_date": "2027-06-30",
+      "tasks": ["T1501", "T1502", "T1503", "T1504"],
+      "deliverable": "ATS 双向同步 + 灾备 + 多区域 + v4.0.0 Release"
     }
   ],
 
   "success_metrics": {
-    "coverage": "16 项需求 100% ✅ 完整 (v2.0: 8/16 = 50%, v3.0 目标: 16/16 = 100%)",
-    "performance": "P95 agent 调用延迟 < 2s (含 LLM)",
-    "reliability": "核心 API 可用性 ≥ 99.5%",
-    "observability": "100% 错误有 trace_id + Sentry + Prometheus",
-    "global": "i18n 3 语言 / Webhook / 公开 API / 规则引擎 / A/B 全可用",
-    "user_value": "试用 NPS ≥ 50, 日活 ≥ 200 (中型企业 3 个月)"
+    "production_ready": "P95 < 2s / 99.5% 可用性 / 5000 WebSocket / 真实 API 跑通 ≥ 3 家",
+    "user_validation": "1-2 家中型企业试用 NPS ≥ 50",
+    "compliance": "GDPR + 中国合规 + ToS/Privacy + 等保 2.0 达标",
+    "multi_platform": "Web + 微信小程序 + 钉钉 + 飞书 + PWA 五端",
+    "business_depth": "AI 面试 / Offer / 漏斗 / 订阅 / 视频面试 全可用",
+    "ux": "WCAG 2.1 AA / SEO 100 / 产品 tour 覆盖 / 全局搜索",
+    "monetization": "定价 + Stripe/微信支付/支付宝 + 3 档套餐",
+    "resilience": "ATS 双向同步 + RTO < 4h / RPO < 1h + 多区域"
   },
 
   "risks": [
     {
-      "risk": "招聘市场 API 国内合规(爬虫风险)",
-      "mitigation": "用官方 OpenAPI(Boss直聘/拉勾企业版);未授权时用 mock 数据兜底;法务 review"
+      "risk": "Boss直聘等国内 API 申请慢/限流",
+      "mitigation": "T1101/T1102/T1103 并行;失败时继续用 mock 但有明确降级文档"
     },
     {
-      "risk": "WebSocket 多房间扩展性",
-      "mitigation": "Redis pub/sub + 房间分片 + 单实例 ≤ 5000 连接"
+      "risk": "微信小程序审核时间长",
+      "mitigation": "提前 2 周提交审核;先用 H5 版本"
     },
     {
-      "risk": "i18n 工作量大,易拖慢上线",
-      "mitigation": "先 zh-CN + en-US,ja-JP 用机器翻译;key 命名规范;CI 检查 missing key"
+      "risk": "P0 中型企业试用找不到合作方",
+      "mitigation": "先做朋友公司内测;或免费赠送"
     },
     {
-      "risk": "语音/OCR 端到端集成 bug 多",
-      "mitigation": "分阶段灰度;失败 fallback 到文本输入;详细 metrics"
+      "risk": "性能压测暴露瓶颈,需返工",
+      "mitigation": "预留 T1104 4 天时间优化;Redis 缓存 + DB index 优先"
     },
     {
-      "risk": "A/B 实验需要真实流量",
-      "mitigation": "先做框架 + UI;真实实验待 v4"
+      "risk": "中国合规成本高(等保 2.0 三级评估要 50 万+)",
+      "mitigation": "先做技术合规(加密/审计/数据驻留),等保评估找合作伙伴分担"
     }
   ]
 }
