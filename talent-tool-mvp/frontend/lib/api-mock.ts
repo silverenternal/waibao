@@ -318,4 +318,241 @@ export const mockApi: ApiClient = {
     me: async () => { await delay(); return MOCK_USERS[0]; },
   },
   health: async () => { await delay(); return { status: "ok" }; },
+  analytics: {
+    funnel: async (days = 30) => {
+      await delay();
+      const stages = ["sourced", "applied", "screened", "interviewed", "offered", "hired"];
+      const counts = [120, 84, 56, 32, 18, 9];
+      const stage_metrics = stages.map((s, i) => ({
+        stage: s,
+        candidates: counts[i],
+        events: counts[i] + 5,
+      }));
+      const conversion: Record<string, number> = {};
+      for (let i = 1; i < stages.length; i++) {
+        conversion[`${stages[i - 1]}_to_${stages[i]}`] =
+          Math.round((counts[i] / counts[i - 1]) * 1000) / 10;
+      }
+      return {
+        org_id: null,
+        since_days: days,
+        period_start: new Date(Date.now() - days * 86400000).toISOString(),
+        period_end: new Date().toISOString(),
+        total_candidates: counts[0],
+        stages: stage_metrics,
+        conversion_rates: conversion,
+        by_source: {
+          linkedin: { sourced: 60, applied: 42, screened: 28, interviewed: 18, offered: 10, hired: 5 },
+          referral: { sourced: 30, applied: 22, screened: 14, interviewed: 8, offered: 5, hired: 3 },
+          indeed: { sourced: 30, applied: 20, screened: 14, interviewed: 6, offered: 3, hired: 1 },
+        },
+        overall_conversion: Math.round((counts[5] / counts[0]) * 1000) / 10,
+      };
+    },
+    funnelStages: async (days = 30) => {
+      const f = await mockApi.analytics.funnel(days);
+      return {
+        stages: f.stages,
+        conversion_rates: f.conversion_rates,
+        overall_conversion: f.overall_conversion,
+        total_candidates: f.total_candidates,
+        since_days: f.since_days,
+        period_start: f.period_start,
+        period_end: f.period_end,
+      };
+    },
+    channels: async (
+      days = 30,
+      model: "first_touch" | "last_touch" | "multi_touch" = "last_touch",
+    ) => {
+      await delay();
+      const channels = [
+        { channel: "linkedin", model, candidates: 60, hires: 5, hire_credit: 1, cost_cents: 30000, revenue_cents: 100000, roi: 2.33, cost_per_hire: 6000 },
+        { channel: "referral", model, candidates: 30, hires: 3, hire_credit: 1, cost_cents: 10000, revenue_cents: 100000, roi: 9.0, cost_per_hire: 3333.3 },
+        { channel: "indeed", model, candidates: 30, hires: 1, hire_credit: 1, cost_cents: 50000, revenue_cents: 100000, roi: 1.0, cost_per_hire: 50000 },
+      ];
+      return { model, channels, best_channel: "referral" };
+    },
+    channelRoi: async (days = 30) => {
+      const c = await mockApi.analytics.channels(days);
+      const first = await mockApi.analytics.channels(days, "first_touch");
+      const multi = await mockApi.analytics.channels(days, "multi_touch");
+      return {
+        org_id: null,
+        since_days: days,
+        period_start: new Date(Date.now() - days * 86400000).toISOString(),
+        period_end: new Date().toISOString(),
+        by_model: {
+          first_touch: first.channels,
+          last_touch: c.channels,
+          multi_touch: multi.channels,
+        },
+        best_channel_by_model: {
+          first_touch: "referral",
+          last_touch: "referral",
+          multi_touch: "referral",
+        },
+        summary: {
+          first_touch: { channels: first.channels.length, total_hires: 9, total_cost_cents: 90000, total_revenue_cents: 300000, avg_roi: 4.1 },
+          last_touch: { channels: c.channels.length, total_hires: 9, total_cost_cents: 90000, total_revenue_cents: 300000, avg_roi: 4.1 },
+          multi_touch: { channels: multi.channels.length, total_hires: 9, total_cost_cents: 90000, total_revenue_cents: 300000, avg_roi: 4.1 },
+        },
+      };
+    },
+  },
+  subscriptions: {
+    list: async () => {
+      await delay();
+      return {
+        subscriptions: [
+          {
+            id: "sub-1",
+            user_id: "u1",
+            name: "Shanghai senior Python",
+            criteria: {
+              role: "engineer",
+              city: "Shanghai",
+              salary_min: 30000,
+              currency: "CNY",
+              skills: ["python", "django"],
+              seniority: "senior",
+              remote_policy: "hybrid",
+            },
+            channels: ["web", "email"],
+            enabled: true,
+            created_at: "2026-07-01T00:00:00Z",
+            updated_at: "2026-07-01T00:00:00Z",
+          },
+        ],
+      };
+    },
+    get: async (id: string) => {
+      const { subscriptions } = await mockApi.subscriptions.list();
+      const sub = subscriptions.find((s) => s.id === id);
+      if (!sub) throw new Error("not found");
+      return sub;
+    },
+    create: async (data) => {
+      await delay();
+      return {
+        id: `sub-${Date.now()}`,
+        user_id: "u1",
+        name: data.name,
+        criteria: data.criteria,
+        channels: data.channels,
+        enabled: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+    },
+    update: async (id, data) => {
+      const sub = await mockApi.subscriptions.get(id);
+      return {
+        ...sub,
+        ...data,
+        criteria: { ...sub.criteria, ...(data.criteria ?? {}) },
+        updated_at: new Date().toISOString(),
+      };
+    },
+    delete: async (id) => {
+      await delay();
+      return { ok: true, id };
+    },
+    matches: async (id) => {
+      await delay();
+      return {
+        subscription_id: id,
+        count: 2,
+        matches: [
+          {
+            id: "j1",
+            title: "Senior Backend Engineer",
+            company: "Acme",
+            city: "Shanghai",
+            salary_min: 30000,
+            salary_max: 50000,
+            currency: "CNY",
+            skills: ["python", "django"],
+            seniority: "senior",
+            remote_policy: "hybrid",
+            score: 0.82,
+            reasons: ["title matches 'engineer'", "matched skills: python, django"],
+          },
+          {
+            id: "j2",
+            title: "Python Tech Lead",
+            company: "Globex",
+            city: "Shanghai",
+            salary_min: 40000,
+            salary_max: 70000,
+            currency: "CNY",
+            skills: ["python"],
+            seniority: "lead",
+            remote_policy: "remote",
+            score: 0.71,
+            reasons: ["title matches 'engineer'"],
+          },
+        ],
+      };
+    },
+  },
+  recommendations: {
+    forRole: async (roleId) => {
+      await delay();
+      return {
+        role_id: roleId,
+        count: 3,
+        candidates: [
+          {
+            candidate_id: "c1",
+            full_name: "Alice Chen",
+            headline: "Senior Python",
+            city: "Shanghai",
+            seniority: "senior",
+            skills: ["python", "django", "postgres"],
+            years_experience: 7,
+            overall_score: 0.86,
+            structured_score: 0.9,
+            semantic_score: 0.82,
+            experience_score: 0.85,
+            confidence: "strong",
+            reasons: ["matched 3 skills", "seniority matches (senior)"],
+            missing_skills: [],
+          },
+          {
+            candidate_id: "c2",
+            full_name: "Bob Liu",
+            headline: "Backend dev",
+            city: "Beijing",
+            seniority: "mid",
+            skills: ["python"],
+            years_experience: 4,
+            overall_score: 0.62,
+            structured_score: 0.7,
+            semantic_score: 0.55,
+            experience_score: 0.6,
+            confidence: "good",
+            reasons: ["matched 1 skills"],
+            missing_skills: ["django"],
+          },
+          {
+            candidate_id: "c3",
+            full_name: "Carol Wang",
+            headline: "Full-stack",
+            city: "Shanghai",
+            seniority: "senior",
+            skills: ["python", "react"],
+            years_experience: 6,
+            overall_score: 0.58,
+            structured_score: 0.6,
+            semantic_score: 0.55,
+            experience_score: 0.6,
+            confidence: "possible",
+            reasons: ["seniority matches (senior)"],
+            missing_skills: ["django"],
+          },
+        ],
+      };
+    },
+  },
 };

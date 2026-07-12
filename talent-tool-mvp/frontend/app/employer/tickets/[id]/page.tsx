@@ -36,6 +36,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 
 import { TicketTimeline } from "@/components/tickets/TicketTimeline";
+import { BackgroundCheckStatus } from "@/components/BackgroundCheckStatus";
 import {
   ticketsApi,
   type Ticket,
@@ -273,6 +274,15 @@ export default function HrTicketDetailPage() {
             onSubmitComment={handleAddComment}
             allowInternal
           />
+
+          {/* T1307: Background check panel (candidate-level) */}
+          {(ticket as any).candidate_id ? (
+            <BackgroundCheckStatus
+              candidateId={(ticket as any).candidate_id}
+              offerId={(ticket as any).related_offer_id}
+              refreshMs={15000}
+            />
+          ) : null}
         </section>
       </main>
     </div>

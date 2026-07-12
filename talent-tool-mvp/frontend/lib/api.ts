@@ -9,6 +9,16 @@ import type {
   Signal,
   User,
 } from "@/contracts/canonical";
+import type {
+  FunnelResponse,
+  FunnelStagesResponse,
+  ChannelAttributionResponse,
+  ChannelRoiReport,
+  Subscription,
+  SubscriptionBody,
+  JobMatch,
+  RecommendedCandidate,
+} from "@/lib/types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const MAX_RETRIES = 2;
@@ -224,6 +234,62 @@ export const api = {
     me: () => fetchAPI<User>("/api/users/me"),
   },
   health: () => fetchAPI<{ status: string }>("/health"),
+
+  // T1303: Recruitment funnel + channel ROI
+  analytics: {
+    funnel: (days = 30, orgId?: string) => {
+      const qs = new URLSearchParams({ days: String(days) });
+      if (orgId) qs.set("org_id", orgId);
+      return fetchAPI<FunnelResponse>(`/api/analytics/funnel?${qs.toString()}`);
+    },
+    funnelStages: (days = 30) =>
+      fetchAPI<FunnelStagesResponse>(`/api/analytics/funnel/stages?days=${days}`),
+    channels: (
+      days = 30,
+      model: "first_touch" | "last_touch" | "multi_touch" = "last_touch",
+    ) =>
+      fetchAPI<ChannelAttributionResponse>(
+        `/api/analytics/channels?days=${days}&model=${model}`,
+      ),
+    channelRoi: (days = 30) =>
+      fetchAPI<ChannelRoiReport>(`/api/analytics/channels/roi?days=${days}`),
+  },
+  // T1304: Job subscriptions + candidate recommendations
+  subscriptions: {
+    list: () => fetchAPI<{ subscriptions: Subscription[] }>("/api/subscriptions"),
+    get: (id: string) => fetchAPI<Subscription>(`/api/subscriptions/${id}`),
+    create: (data: SubscriptionBody) =>
+      fetchAPI<Subscription>("/api/subscriptions", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    update: (
+      id: string,
+      data: Partial<SubscriptionBody & { enabled: boolean }>,
+    ) =>
+      fetchAPI<Subscription>(`/api/subscriptions/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
+    delete: (id: string) =>
+      fetchAPI<{ ok: boolean; id: string }>(`/api/subscriptions/${id}`, {
+        method: "DELETE",
+      }),
+    matches: (id: string, limit = 20) =>
+      fetchAPI<{
+        subscription_id: string;
+        matches: JobMatch[];
+        count: number;
+      }>(`/api/subscriptions/${id}/matches?limit=${limit}`),
+  },
+  recommendations: {
+    forRole: (roleId: string, limit = 20) =>
+      fetchAPI<{
+        role_id: string;
+        count: number;
+        candidates: RecommendedCandidate[];
+      }>(`/api/recommendations/candidates/${roleId}?limit=${limit}`),
+  },
 };
 
 export type ApiClient = typeof api;

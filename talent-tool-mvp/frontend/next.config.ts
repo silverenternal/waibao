@@ -30,8 +30,37 @@ function withSentryIfAvailable<T>(config: T): T {
 // 详见: node_modules/next/dist/docs/01-app/02-guides/upgrading/version-16.md (resolveAlias)
 const contractsCanonical = path.resolve(__dirname, "../contracts/canonical.ts");
 
+// T1205 — PWA headers (manifest, service worker, icons).
+// 实际 SW 缓存策略由 public/sw.js 处理 (避免 next-pwa 依赖,Next 16 兼容).
+const PWA_HEADERS: Array<{ source: string; headers: Array<{ key: string; value: string }> }> = [
+  {
+    source: "/sw.js",
+    headers: [
+      { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+      { key: "Service-Worker-Allowed", value: "/" },
+      { key: "Content-Type", value: "application/javascript" },
+    ],
+  },
+  {
+    source: "/manifest.json",
+    headers: [
+      { key: "Cache-Control", value: "public, max-age=3600" },
+      { key: "Content-Type", value: "application/manifest+json" },
+    ],
+  },
+  {
+    source: "/icons/(.*)",
+    headers: [
+      { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+    ],
+  },
+];
+
 const nextConfig: NextConfig = {
   /* config options here */
+  async headers() {
+    return PWA_HEADERS;
+  },
 };
 
 export default withSentryIfAvailable(withNextIntl(nextConfig));
