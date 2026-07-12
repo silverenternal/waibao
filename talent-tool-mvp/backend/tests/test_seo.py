@@ -81,8 +81,8 @@ def test_jsonld_component_render_safe():
 def test_no_metadata_leak_in_protected_layouts():
     # All client "use client" route groups must NOT export metadata directly.
     for rel in (
-        "frontend/app/(jobseeker)/layout.tsx",
-        "frontend/app/(employer)/layout.tsx",
+        "frontend/app/jobseeker/layout.tsx",
+        "frontend/app/employer/layout.tsx",
     ):
         text = _read(rel)
         assert "export const metadata" not in text or "use client" not in text, (

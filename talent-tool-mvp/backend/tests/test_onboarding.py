@@ -60,8 +60,8 @@ def test_onboarding_hook_persists_progress():
 
 def test_welcome_pages_exist_both_personas():
     for path in (
-        "frontend/app/(jobseeker)/onboarding/welcome/page.tsx",
-        "frontend/app/(employer)/onboarding/welcome/page.tsx",
+        "frontend/app/jobseeker/onboarding/welcome/page.tsx",
+        "frontend/app/employer/onboarding/welcome/page.tsx",
     ):
         text = _read(path)
         for needle in ("ProductTour", "OnboardingChecklist", "markProductTourDone"):
@@ -70,8 +70,8 @@ def test_welcome_pages_exist_both_personas():
 
 def test_dashboards_auto_trigger_tour():
     for path in (
-        "frontend/app/(jobseeker)/dashboard/page.tsx",
-        "frontend/app/(employer)/dashboard/page.tsx",
+        "frontend/app/jobseeker/dashboard/page.tsx",
+        "frontend/app/employer/dashboard/page.tsx",
     ):
         text = _read(path)
         for needle in ("isProductTourDone", "setTourOpen(true)", "ProductTour"):
