@@ -1,619 +1,602 @@
 {
   "meta": {
     "project": "招聘智能体 (Recruitment Agent)",
-    "subtitle": "v6.0 — 架构扩展性 + 真正差异化能力 (Realtime/Plugin/EventBus)",
-    "based_on": "v5.0.0 (16/16 需求 ✅ / 1434 tests / 7 维度 services / Storybook)",
-    "version": "6.0.0",
-    "created": "2026-07-12",
-    "supersedes": "v5.0 todo.json (28 tasks)",
+    "subtitle": "v7.0 — Enterprise SaaS 化 + AI 能力深化 (RAG/Multi-Agent/Memory)",
+    "based_on": "v6.0.0 (16/16 需求 ✅ / 2273 tests / 架构可扩展 + 差异化能力)",
+    "version": "7.0.0",
+    "created": "2026-07-13",
+    "supersedes": "v6.0 todo.json (24 tasks)",
     "owner": "waibao",
-    "language": ["zh-CN", "en-US", "ja-JP"],
+    "language": [
+      "zh-CN",
+      "en-US",
+      "ja-JP"
+    ],
     "stack": {
-      "backend": "FastAPI + Python 3.12 + EventBus + PluginSDK",
-      "frontend": "Next.js 16 + TypeScript + Tailwind + next-intl + Storybook + LiveKit",
-      "database": "Supabase (PostgreSQL + pgvector + Realtime) + Redis (pub/sub + cache)",
-      "ai": "OpenAI / Anthropic / DeepSeek / 智谱 / 通义 / Kimi + Whisper / GPT-4V / GPT-4o Realtime / Qwen-VL",
-      "infra": "Docker Compose + Supabase + Redis + OpenTelemetry + Prometheus + Sentry + Locust + ArgoCD + LiveKit"
+      "backend": "FastAPI + Python 3.12 + EventBus + RAG + MultiAgent + TenantIsolation",
+      "frontend": "Next.js 16 + TypeScript + Tailwind + next-intl + Storybook + ReactFlow",
+      "database": "Supabase (OLTP) + ClickHouse (OLAP) + pgvector (embedding) + Neo4j (knowledge graph)",
+      "ai": "OpenAI / Anthropic / DeepSeek / 智谱 / 通义 / Kimi + Whisper / GPT-4V / GPT-4o Realtime + LoRA fine-tuning",
+      "infra": "Docker Compose + Supabase + ClickHouse + Redis + OpenTelemetry + Prometheus + Sentry + Locust + ArgoCD + LiveKit"
     },
-    "audit": "docs/COVERAGE-AUDIT-v6.md"
+    "audit": "docs/COVERAGE-AUDIT-v7.md"
   },
-
-  "goal": "在 v5.0 (16/16 需求 ✅ / 1434 tests / 代码健康) 基础上,做两件事:(1) **架构扩展性** — Event Bus / 配置中心 / Feature Flag / Plugin SDK / Agent Composition,让加新 Agent/Service/Provider 0.5-1 天搞定;(2) **真正差异化能力** — AI 模拟面试官 + GPT-4o Realtime 实时对话 + 视频简历理解,跳出「传统招聘系统」竞争",
-
+  "goal": "在 v6.0 (16/16 ✅ / 2273 tests / 可扩展架构 + 差异化) 基础上,做两件事:(1) Enterprise SaaS 化 — 严格多租户 + 配额 + Rate Limiting + 完整审计 + GDPR/PIPL/CCPA + SLA 99.9% + SSO;(2) AI 能力深化 — 完整 RAG(文档解析/分块/重排/citation) + 统一 Agent Memory + Multi-Agent 协作框架 + Prompt 版本化/自动评估。让产品能卖钱 + 技术护城河更深",
   "background": {
-    "v5_achievements": [
-      "16/16 项甲方需求 100% 形式覆盖",
-      "1434 tests pass",
-      "代码健康整顿: services 拆 7 包 / agents 拆 4 子包 / dead code 清理",
-      "Storybook + ErrorCode 73 码 + setup 统一入口",
-      "真实 API key 集成 / Pilot 框架 / 业务深度 8 项真实数据",
-      "12 维度 Provider 抽象 (加新供应商 1-2 天)",
-      "v5.0.0 Release"
+    "v6_achievements": [
+      "16/16 项甲方需求 100% 覆盖",
+      "2273 tests collected",
+      "架构扩展性: EventBus/ConfigCenter/FeatureFlag/PluginSDK/WorkflowEngine",
+      "差异化能力: GPT-4o Realtime + AI 模拟面试官 + 视频简历 + LiveKit",
+      "v6.0.0 Release"
     ],
-    "v5_extension_debt": [
-      "❌ Agent 间缺 Event Bus: 加新 hook 要改两个 agent 文件",
-      "❌ 缺配置中心: admin 改 prompt 阈值要发版",
-      "❌ 缺 Feature Flag: 灰度靠手工改 env",
-      "❌ 缺 Plugin SDK: 第三方开发者无法贡献",
-      "❌ 缺 Agent Composition: 非技术人员不能编排",
-      "❌ 缺 Realtime API: 没真正「实时对话」体验",
-      "❌ 缺视频简历理解: GPT-4V 没用起来",
-      "❌ 缺 AI 模拟面试官: 差异化能力"
+    "v6_debt_to_saas": [
+      "多租户隔离弱",
+      "Rate Limiting 散落",
+      "审计日志不完整",
+      "GDPR/PIPL/CCPA 合规只部分",
+      "无 SSO/SAML",
+      "无状态页",
+      "SLA 99.9% 未验证",
+      "API 无版本化"
     ],
-    "v5_user_pain_points": [
-      "缺「为什么」: 匹配分 0.8 不知道为什么",
-      "缺「下一步」: AI 给建议不给今天该做什么",
-      "缺「信任」: 求职者不信任 AI 画像,无确认机制",
-      "缺「效率」: HR 无批量操作",
-      "缺「对比」: 多候选人/岗位无对比视图",
-      "缺「导出」: 无 Word/PPT 导出"
+    "v6_debt_to_ai": [
+      "RAG 是基础版",
+      "Agent Memory 分散",
+      "Multi-Agent 弱",
+      "Prompt 无版本化 + 无自动评估",
+      "无 Fine-tuning",
+      "智能路由缺"
     ],
-    "v6_thinking_shift": "v5.0 是「代码健康」,v6.0 必须是「可扩展架构 + 真正差异化能力」。两件事并行:架构解耦让加新功能 1 天搞定,差异化能力让产品在赛道胜出。",
-    "north_star": "2027 Q4 真实 ARR ≥ 500 万 RMB,产品 NPS ≥ 60,3 个月内新功能从「需求到上线」≤ 2 周"
+    "v7_thinking_shift": "v6.0 是「可扩展架构」,v7.0 必须是「SaaS 化(能卖钱) + AI Deep(技术护城河)」。让产品能商业化,让 AI 能力更深不可替代。",
+    "north_star": "2027 Q4 真实 ARR ≥ 1000 万 RMB, NPS ≥ 65, RAG 检索准确度 > 85%, Multi-Agent 任务成功率 > 80%"
   },
-
   "phases": [
     {
       "id": "P0",
-      "title": "架构扩展性基础",
-      "goal": "Event Bus + 配置中心 + Feature Flag + Plugin SDK + Agent Composition,让加新 Agent/Service 1 天搞定",
+      "title": "Enterprise SaaS 化 (多租户 + 配额 + Rate Limiting + 审计)",
+      "goal": "严格多租户隔离 + 统一配额 + 统一限流 + 完整审计 + SLA 99.9% + 状态页",
       "duration_weeks": 5,
       "priority": "P0"
     },
     {
       "id": "P1",
-      "title": "差异化能力 (Realtime + AI 模拟面试官 + 视频简历)",
-      "goal": "GPT-4o Realtime 实时语音对话 + AI 模拟面试官 + 视频简历理解 (GPT-4V),跳出传统招聘赛道",
+      "title": "AI 能力深化 (RAG + 统一 Memory + Multi-Agent)",
+      "goal": "完整 RAG(文档解析/分块/检索/重排/citation) + Agent 统一记忆库 + Multi-Agent 协作 + Prompt 版本化",
       "duration_weeks": 6,
       "priority": "P0"
     },
     {
       "id": "P2",
-      "title": "用户体验提升 (对比/批量/导出/通知)",
-      "goal": "候选人/岗位对比视图 + 批量操作 + 文档导出 (Word/PPT) + 通知偏好",
-      "duration_weeks": 4,
+      "title": "数据仓库 + BI + 预测分析",
+      "goal": "ClickHouse 数据仓库 + ETL + 自定义 BI 报表 + 预测性分析(流失/成功率)",
+      "duration_weeks": 5,
       "priority": "P1"
     },
     {
       "id": "P3",
-      "title": "业务深化 (评价/薪资/预测/推荐)",
-      "goal": "公司评价集成 + 行业薪资报告 + 离职预测 + 试用期跟踪 + 内部推荐",
+      "title": "合规 + 生态 (SSO/开放平台/应用市场)",
+      "goal": "GDPR/PIPL/CCPA 完整合规 + SSO/SAML + 开放 API 平台 + Developer Portal + 第三方应用市场",
       "duration_weeks": 5,
       "priority": "P1"
     },
     {
       "id": "P4",
-      "title": "AI 高级能力 + 商业化升级",
-      "goal": "多模态搜索 + AI 自动生成 JD + 面试准备助手 + 薪资谈判模拟 + v6.0 Release",
+      "title": "AI 高级 + 商业化 + v7.0 Release",
+      "goal": "Fine-tuning (LoRA) + AI 主动 Sourcing + 预测招聘 + 白标 + v7.0.0 Release",
       "duration_weeks": 4,
       "priority": "P2"
     }
   ],
-
   "tasks": [
     {
-      "_section": "P0 — 架构扩展性",
+      "_section": "P0 — Enterprise SaaS 化",
       "_comment_marker": 1,
-      "id": "T2101",
+      "id": "T2601",
       "phase": "P0",
       "priority": "P0",
-      "title": "Event Bus — Agent 间解耦",
-      "requirement": ["all"],
-      "description": "引入 pub/sub 事件总线,Agent 不再直接互相调用,改为 fire event + subscribe",
+      "title": "严格多租户隔离 (RLS + Tenant 上下文)",
+      "requirement": [
+        "all"
+      ],
+      "description": "所有表加 tenant_id,严格 RLS,每个请求自动注入 TenantContext",
       "deliverables": [
-        "backend/eventbus/ (新模块): Event dataclass + EventBus ABC + InMemoryEventBus + RedisEventBus + 注册中心",
-        "backend/eventbus/decorators.py: @on_event('clarifier.completed') decorator",
-        "改造 16 个 Agent: 把 agent-to-agent 调用改为 event 触发 (例: clarifier 完成 → fire 'profile.updated' → emotion agent subscribe 自动触发)",
-        "事件 schema 文档 docs/EVENTBUS.md (30+ 事件类型)",
-        "backend/tests/test_eventbus.py (50+ 测试)"
+        "supabase/migrations/046_tenant_context.sql: 所有业务表加 tenant_id NOT NULL + RLS policy USING (tenant_id = current_setting('app.tenant_id')::uuid)",
+        "backend/services/platform/tenant_context.py: TenantContext + set/get/with_tenant",
+        "backend/services/platform/tenant_resolver.py: 解析请求的 tenant (从 JWT/header/cookie)",
+        "改造 main.py lifespan: 启动时 disable RLS by default,每个请求 context manager 启用",
+        "改造所有 API: 加 Depends(get_tenant_context) 自动注入",
+        "跨租户访问需要 explicit override (admin tool 才有)",
+        "tests/test_tenant_isolation.py 60+ 测试"
       ],
       "depends_on": [],
       "estimate_days": 5
     },
     {
-      "id": "T2102",
+      "id": "T2602",
       "phase": "P0",
       "priority": "P0",
-      "title": "配置中心 — admin UI 改 agent 行为",
-      "requirement": ["all"],
-      "description": "所有 agent prompt / 阈值 / 业务参数 移到配置中心,admin 可在 UI 修改实时生效",
-      "deliverables": [
-        "supabase/migrations/034_config_center.sql (config 表: scope=system/org/agent/feature, value jsonb, version, updated_by, updated_at)",
-        "backend/services/platform/config_service.py: get/set/list + version control + change audit",
-        "backend/api/admin_config.py: CRUD + 实时生效 (用 Redis pub/sub 通知 worker)",
-        "改造 agent / service 走 config_service.get() 读配置 (不用 env)",
-        "前端: frontend/app/admin/config/page.tsx — 可视化配置编辑",
-        "frontend/components/config/ConfigEditor.tsx (key-value + JSON + 类型校验)",
-        "docs/CONFIG_CENTER.md"
+      "title": "统一 Rate Limiting + 配额管理",
+      "requirement": [
+        "all"
       ],
-      "depends_on": [],
+      "description": "用 Redis token bucket 统一限流,per-tenant/per-user/per-API 多维度",
+      "deliverables": [
+        "backend/services/platform/rate_limiter.py: RateLimiter 滑动窗口 + 令牌桶",
+        "backend/services/platform/quota.py: Plan Free/Pro/Enterprise + enforce(tenant_id, resource)",
+        "改造 main.py: middleware 注入 rate_limit + quota check",
+        "公开 API: 自动套用 rate limit + 配额",
+        "限流响应: 429 + Retry-After 头",
+        "前端: use-rate-limit.ts 显示配额剩余",
+        "tests/test_rate_limiter.py 40+ + test_quota.py"
+      ],
+      "depends_on": [
+        "T2601"
+      ],
+      "estimate_days": 4
+    },
+    {
+      "id": "T2603",
+      "phase": "P0",
+      "priority": "P0",
+      "title": "完整审计日志 + GDPR/PIPL/CCPA 合规",
+      "requirement": [
+        "all"
+      ],
+      "description": "所有 PII 读写强制审计,GDPR Art. 30 处理活动记录,PIPL 数据出境声明",
+      "deliverables": [
+        "supabase/migrations/047_audit_v2.sql: audit_log_v2 + data_processing_register + data_subject_requests + data_breaches",
+        "backend/services/platform/audit_v2.py: 100% 覆盖 PII 访问 + 法律依据记录",
+        "backend/services/platform/consent.py 升级: 细粒度 consent + withdrawal + PIPL 数据出境",
+        "backend/api/gdpr_v2.py: 增强 forget/export/rectify + 30 天 SLA",
+        "前端: 隐私偏好中心",
+        "tests/test_audit_v2.py 50+ + test_gdpr_v2.py"
+      ],
+      "depends_on": [
+        "T2601"
+      ],
       "estimate_days": 5
     },
     {
-      "id": "T2103",
+      "id": "T2604",
       "phase": "P0",
       "priority": "P0",
-      "title": "Feature Flag 系统",
-      "requirement": ["all"],
-      "description": "按 user / org / 百分比灰度发布功能,无需发版",
+      "title": "SLA 99.9% + 状态页 + 客户支持",
+      "requirement": [
+        "all"
+      ],
+      "description": "实测 SLA + 公开状态页 + 集成客户支持工单",
       "deliverables": [
-        "supabase/migrations/035_feature_flags.sql (flags 表: name / description / rules jsonb / rollout_percent / created_at)",
-        "backend/services/platform/feature_flag.py: is_enabled(name, user_id, org_id) + 哈希分桶 + 强制白/黑名单",
-        "改造关键路径: 走 feature_flag.is_enabled() 判断",
-        "前端: frontend/app/admin/feature-flags/page.tsx (创建/编辑/灰度比例/白名单)",
-        "前端: frontend/hooks/use-feature-flag.ts (React Hook 灰度)",
-        "tests/test_feature_flag.py"
+        "backend/services/platform/sla_monitor.py: 7/30/90 天 SLA 计算 + 异常自动告警",
+        "状态页 status.waibao.cn: 公开所有服务状态 + 90 天 uptime + 计划维护",
+        "客户支持: 集成 Intercom / Zendesk,一键创建支持工单",
+        "docs/SLA.md: 99.9% 保证 + 责任边界",
+        "tests/test_sla_monitor.py"
       ],
       "depends_on": [],
       "estimate_days": 4
     },
     {
-      "id": "T2104",
-      "phase": "P0",
-      "priority": "P0",
-      "title": "Plugin SDK — 第三方开发者贡献 Agent/Service",
-      "requirement": ["all"],
-      "description": "让第三方开发者写新 Agent / Service / Provider,通过 plugin manifest 自动注册",
-      "deliverables": [
-        "backend/plugins/sdk/ (新模块): Plugin ABC + Manifest 规范 + Loader + Registry",
-        "plugins/ 目录约定: 第三方 plugin 放这里,每个 plugin 有 plugin.yaml + main.py",
-        "Plugin manifest schema: name / version / author / type (agent/service/provider) / entry_point / permissions / config_schema",
-        "backend/api/admin_plugins.py: install / uninstall / list / enable / disable / run 沙箱",
-        "安全: 沙箱执行 (用 RestrictedPython / Pyodide / subprocess 限制权限)",
-        "文档: docs/PLUGIN_SDK.md + 3 个示例 plugin",
-        "tests/test_plugins.py"
-      ],
-      "depends_on": [],
-      "estimate_days": 8
-    },
-    {
-      "id": "T2105",
-      "phase": "P0",
-      "priority": "P0",
-      "title": "Agent Composition — 可视化编排",
-      "requirement": ["all"],
-      "description": "非技术人员拖拽配置 agent 流程: 当 A 完成 → 触发 B + 传参",
-      "deliverables": [
-        "supabase/migrations/036_agent_workflows.sql (workflows 表: name / definition jsonb / version)",
-        "backend/services/platform/workflow_engine.py: 执行 workflow definition (DAG)",
-        "backend/api/workflows.py: CRUD + run + 调试 + 模板",
-        "前端: frontend/app/admin/workflows/page.tsx (React Flow 拖拽编辑器)",
-        "frontend/components/workflow/WorkflowCanvas.tsx (节点: trigger / agent / condition / action)",
-        "frontend/components/workflow/NodePalette.tsx (16 agent + 8 trigger + 4 action 节点)",
-        "内置 5 个 workflow 模板 (新员工 onboarding / 面试流程 / 简历评分 / 偏见审查 / 工单 SLA)",
-        "tests/test_workflow_engine.py"
-      ],
-      "depends_on": ["T2101"],
-      "estimate_days": 8
-    },
-    {
-      "_section": "P1 — 差异化能力 (Realtime + AI 面试官 + 视频简历)",
+      "_section": "P1 — AI 能力深化 (RAG + Memory + Multi-Agent)",
       "_comment_marker": 2,
-      "id": "T2201",
+      "id": "T2701",
       "phase": "P1",
       "priority": "P0",
-      "title": "GPT-4o Realtime 实时语音对话",
-      "requirement": ["1.3", "1.4"],
-      "description": "用 GPT-4o Realtime API 实现真正低延迟(< 500ms)语音对话,替换 WebSocket + mock 流式",
+      "title": "完整 RAG 系统 (文档解析/分块/检索/重排/citation)",
+      "requirement": [
+        "all"
+      ],
+      "description": "文档上传→ 解析(支持 PDF/Word/MD/HTML)→ 分块 → 嵌入 → 混合检索(BM25 + 向量)→ 重排 → 生成带引用",
       "deliverables": [
-        "backend/providers/llm/openai_realtime.py — OpenAI Realtime Provider (WebSocket, audio in/out)",
-        "backend/services/platform/realtime_session.py — Realtime 会话管理 (per user per conversation)",
-        "backend/api/realtime_v2.py: POST /api/realtime/sessions + WebSocket /api/realtime/ws/{session_id}",
-        "前端: frontend/components/RealtimeVoice.tsx (MediaRecorder + AudioContext + WebSocket)",
-        "frontend/app/(jobseeker)/realtime/page.tsx (语音对话主页面,显示 3D 头像 + 波形)",
-        "前端 hooks: useRealtimeSession()",
-        "tests/test_realtime.py + 1 个真实 GPT-4o Realtime 集成测试"
+        "supabase/migrations/048_rag.sql: documents + chunks + collections",
+        "backend/services/rag/: document_parser + chunker + embedder + retriever + reranker + generator + citation",
+        "backend/api/rag.py: 上传 + 查询 + 详情 + stream",
+        "前端: DocumentUpload + ChatWithCitations (聊天 + 高亮引用) + /knowledge 页",
+        "tests/test_rag.py 60+: 检索准确度 > 85%"
       ],
       "depends_on": [],
+      "estimate_days": 10
+    },
+    {
+      "id": "T2702",
+      "phase": "P1",
+      "priority": "P0",
+      "title": "Agent 统一记忆库 (向量 + 图谱)",
+      "requirement": [
+        "1.5",
+        "all"
+      ],
+      "description": "16 Agent 共享统一记忆库,跨会话/跨 Agent 持续学习",
+      "deliverables": [
+        "supabase/migrations/049_agent_memory_v2.sql: memories + memory_links",
+        "backend/services/memory/: MemoryStore ABC + PostgresStore + VectorStore + GraphStore (Neo4j)",
+        "add/query/link/decay/forget",
+        "改造 16 Agent: 调用 memory_store.query() 而非 working memory",
+        "集成 EventBus: profile.updated -> 自动写入记忆",
+        "GraphStore: Neo4j 关系 + 实体抽取"
+      ],
+      "depends_on": [
+        "T2701"
+      ],
       "estimate_days": 8
     },
     {
-      "id": "T2202",
+      "id": "T2703",
       "phase": "P1",
       "priority": "P0",
-      "title": "AI 模拟面试官 — 完整端到端",
-      "requirement": ["1.4", "1.6", "3"],
-      "description": "AI 扮演面试官: 自我介绍 → 行为面试 → 技术面试 → 反问 → 评分报告;支持 Realtime 语音 + 视频",
-      "deliverables": [
-        "backend/services/jobseeker/ai_interviewer_v2.py (重写): 集成 Realtime API + 5 阶段流程 (intro/behavioral/technical/reverse_q/closing)",
-        "backend/services/jobseeker/interview_personas.py: 5 种面试官人格 (友好/严谨/挑战/资深/技术专家)",
-        "backend/services/jobseeker/interview_prober.py: 智能追问 (根据回答深度决定继续/换题)",
-        "backend/services/jobseeker/interview_report.py: 5 维度评分 (技术/沟通/思维/潜力/文化匹配) + 自然语言评语",
-        "backend/api/ai_interview_v2.py + supabase/migrations/037_interview_v2.sql",
-        "前端: frontend/app/(jobseeker)/interview/ai/[id]/page.tsx (LiveKit 视频面试 UI + Realtime 语音)",
-        "frontend/components/interview/InterviewPersonaPicker.tsx",
-        "frontend/components/interview/LiveTranscript.tsx (实时转写显示)",
-        "tests/test_ai_interviewer_v2.py (含 Realtime mock)"
+      "title": "Multi-Agent 协作框架 (角色 + 投票 + 共识)",
+      "requirement": [
+        "all"
       ],
-      "depends_on": ["T2201"],
-      "estimate_days": 12
+      "description": "多 Agent 协同调度,角色分工,投票/共识机制,长任务编排",
+      "deliverables": [
+        "backend/services/multiagent/: Role + AgentRoleRegistry + ConsensusStrategy + CollaborationPattern",
+        "orchestrator.py: orchestrate(goal, roles, pattern, max_rounds) -> Result",
+        "4 个场景用 Multi-Agent: 简历评分(3 agent 投票) / 偏见审查(Reviewer 检查 Writer) / Offer 谈判 / 战略解码",
+        "集成 EventBus + Memory",
+        "tests/test_multiagent.py 40+"
+      ],
+      "depends_on": [
+        "T2702"
+      ],
+      "estimate_days": 6
     },
     {
-      "id": "T2203",
+      "id": "T2704",
       "phase": "P1",
       "priority": "P0",
-      "title": "视频简历理解 (GPT-4V 看 30 秒自我介绍)",
-      "requirement": ["1.1"],
-      "description": "求职者上传 30-60 秒视频自我介绍,AI 提取沟通能力/性格/专业度,合并到画像",
-      "deliverables": [
-        "backend/services/platform/video_processor.py (升级): 转码 + 关键帧提取 + GPT-4V 分析",
-        "backend/services/jobseeker/video_resume_analyzer.py: GPT-4V 多帧分析 → 沟通/表达/专业度评分",
-        "改造 profile_agent.py: 集成视频简历分析,合并到画像",
-        "前端: frontend/components/VideoResumeRecorder.tsx (30-60 秒倒计时)",
-        "前端: frontend/components/VideoResumePlayer.tsx (播放 + AI 评分叠加)",
-        "tests/test_video_resume.py (含 mock GPT-4V)"
+      "title": "Prompt 版本化 + A/B + 自动评估",
+      "requirement": [
+        "all"
       ],
-      "depends_on": [],
-      "estimate_days": 8
-    },
-    {
-      "id": "T2204",
-      "phase": "P1",
-      "priority": "P0",
-      "title": "LiveKit 视频通话集成 (Realtime 面试用)",
-      "requirement": ["1.3", "1.4"],
-      "description": "用 LiveKit 替代 Zoom 用于内建 AI 面试视频通话,免账号",
+      "description": "所有 Agent prompt 版本化,自动 A/B 测试,LLM-as-judge 自动评估",
       "deliverables": [
-        "infra/livekit/docker-compose.yml (LiveKit server 自托管)",
-        "backend/providers/video_interview/livekit.py — LiveKitProvider (token 生成 + room 管理)",
-        "backend/api/livekit.py: 创建 room / 签发 token / 录制",
-        "前端: 集成 livekit-client SDK, video/audio 双向流",
-        "测试: 1 个真实 LiveKit 房间 + Realtime 集成",
-        "docs/LIVEKIT_SETUP.md"
+        "supabase/migrations/050_prompt_v2.sql: prompt_versions + prompt_metrics",
+        "backend/services/platform/prompt_v2.py: get_active_prompt + create_version + traffic_pct 滚动",
+        "backend/services/platform/evaluator.py: LLM-as-judge (准确性/流畅/安全/偏见)",
+        "集成 ConfigCenter: admin UI prompt editor + A/B",
+        "tests/test_prompt_v2.py 40+ + test_evaluator.py"
       ],
       "depends_on": [],
       "estimate_days": 6
     },
     {
-      "_section": "P2 — 用户体验提升",
+      "_section": "P2 — 数据仓库 + BI + 预测分析",
       "_comment_marker": 3,
-      "id": "T2301",
+      "id": "T2801",
       "phase": "P2",
       "priority": "P1",
-      "title": "候选人/岗位对比视图",
-      "requirement": ["3"],
-      "description": "多候选人/岗位并排对比,雷达图 + 详细表格 + 差异点高亮",
+      "title": "ClickHouse 数据仓库 + ETL",
+      "requirement": [
+        "all"
+      ],
+      "description": "业务数据 ETL 到 ClickHouse,支持深度分析",
       "deliverables": [
-        "frontend/app/match/compare/page.tsx (候选人对比) + frontend/app/mothership/roles/compare/page.tsx (岗位对比)",
-        "frontend/components/compare/CompareTable.tsx (表格对比)",
-        "frontend/components/compare/CompareRadar.tsx (雷达图,5 维度)",
-        "frontend/components/compare/CompareDiff.tsx (差异高亮)",
-        "API: GET /api/match/compare?ids=c1,c2,c3 → 返回对比数据",
-        "tests/test_compare.py"
+        "infra/clickhouse/docker-compose.yml: ClickHouse + Zookeeper + 3 副本 + 分片 + 1 年保留 + S3 备份",
+        "backend/services/warehouse/: ETL pipeline (Supabase → ClickHouse) + 维度建模",
+        "backend/services/warehouse/etl_scheduler.py: 定时同步",
+        "backend/api/analytics_v2.py: ClickHouse 查询,毫秒级,多维度下钻",
+        "tests/test_warehouse.py + test_etl.py"
       ],
       "depends_on": [],
+      "estimate_days": 7
+    },
+    {
+      "id": "T2802",
+      "phase": "P2",
+      "priority": "P1",
+      "title": "自定义 BI 报表 + 数据探索",
+      "requirement": [
+        "all"
+      ],
+      "description": "用户自定义报表 + 拖拽可视化 + 数据导出",
+      "deliverables": [
+        "frontend/app/admin/bi/page.tsx: 拖拽式报表构建器 + 20+ 图表 + 保存为 dashboard",
+        "backend/api/bi.py: 报表 CRUD + 数据查询",
+        "用 Cube.js 集成",
+        "内置 5 个示例 dashboard: HR 漏斗/招聘效率/渠道 ROI/Agent 性能/客户成功",
+        "tests/test_bi.py"
+      ],
+      "depends_on": [
+        "T2801"
+      ],
+      "estimate_days": 6
+    },
+    {
+      "id": "T2803",
+      "phase": "P2",
+      "priority": "P1",
+      "title": "预测性分析 (流失/招聘成功)",
+      "requirement": [
+        "all"
+      ],
+      "description": "ML 模型预测员工流失 + 招聘成功率",
+      "deliverables": [
+        "backend/services/platform/predictive.py: AttritionModel (LightGBM) + HireSuccessModel",
+        "自动训练: 每月跑一次,在线推理 100ms",
+        "backend/api/predictive.py: attrition/{user_id} + hire-success/{candidate_id} + model-metrics",
+        "前端: PredictionCard 显示预测分数 + 关键因素 + 干预建议"
+      ],
+      "depends_on": [
+        "T2801"
+      ],
       "estimate_days": 5
     },
     {
-      "id": "T2302",
-      "phase": "P2",
-      "priority": "P1",
-      "title": "批量操作 (候选人/工单/岗位)",
-      "requirement": ["3"],
-      "description": "HR 选 50 个候选人,一键批量发 offer / 邀请面试 / 移动到下个阶段",
-      "deliverables": [
-        "backend/api/batch.py: POST /api/batch/candidates/{action} (bulk_update / bulk_email / bulk_offer)",
-        "backend/services/platform/batch_processor.py: Celery 异步批量任务 + 进度跟踪",
-        "前端: frontend/components/batch/BulkActionBar.tsx (复选框 + 操作菜单)",
-        "前端: frontend/components/batch/BulkProgress.tsx (进度条 + 失败重试)",
-        "前端: frontend/app/(employer)/candidates/bulk/page.tsx",
-        "tests/test_batch.py"
-      ],
-      "depends_on": [],
-      "estimate_days": 5
-    },
-    {
-      "id": "T2303",
-      "phase": "P2",
-      "priority": "P1",
-      "title": "文档导出 (Word/PPT/PDF)",
-      "requirement": ["all"],
-      "description": "候选人报告、漏斗分析、工单 SLA 报告可导出 Word/PPT/PDF 给老板/上级",
-      "deliverables": [
-        "backend/services/platform/document_generator.py (用 python-docx + python-pptx + reportlab)",
-        "backend/api/exports.py: GET /api/exports/{type}?format=docx|pptx|pdf",
-        "前端: 导出按钮 + 格式选择器",
-        "模板: 候选人报告 / 漏斗分析 / 工单 SLA / 招聘周报 / 招聘月报",
-        "tests/test_document_generator.py"
-      ],
-      "depends_on": [],
-      "estimate_days": 5
-    },
-    {
-      "id": "T2304",
-      "phase": "P2",
-      "priority": "P1",
-      "title": "智能通知偏好",
-      "requirement": ["all"],
-      "description": "按类型/优先级/时间段过滤通知,避免轰炸",
-      "deliverables": [
-        "supabase/migrations/038_notification_prefs.sql (user_id, category, priority, channel, frequency, quiet_hours)",
-        "改造 dispatcher 用 user prefs 过滤",
-        "前端: frontend/app/(jobseeker)/account/notifications/page.tsx (细粒度配置)",
-        "智能学习: 7 天后 LLM 推荐优化建议",
-        "tests/test_notification_prefs.py"
-      ],
-      "depends_on": [],
-      "estimate_days": 4
-    },
-    {
-      "_section": "P3 — 业务深化",
+      "_section": "P3 — 合规 + 生态 (SSO/开放平台/应用市场)",
       "_comment_marker": 4,
-      "id": "T2401",
+      "id": "T2901",
       "phase": "P3",
       "priority": "P1",
-      "title": "公司评价集成 (看准网 / Glassdoor)",
-      "requirement": ["1.6", "2.3"],
-      "description": "求职者搜索公司时,显示看准网/Glassdoor 评价、面试经验、薪资中位数",
+      "title": "SSO/SAML 企业级登录",
+      "requirement": [
+        "all"
+      ],
+      "description": "SAML 2.0 + OIDC 接入 Okta/Azure AD/钉钉/飞书/企微",
       "deliverables": [
-        "backend/providers/company_review/ (新维度): base.py + 看准网/Glassdoor/脉脉 + mock",
-        "backend/services/platform/company_review.py: 聚合 + 缓存 7 天",
-        "前端: frontend/app/(jobseeker)/company/[id]/page.tsx (公司详情:评分/面试经验/评价/对比)",
-        "前端组件: CompanyRating, CompanyReviewList, InterviewExperienceList",
-        "tests/test_company_review.py"
+        "backend/services/auth/sso.py: SAML 2.0 IdP (python3-saml) + OIDC (authlib) + Just-In-Time provisioning",
+        "backend/api/auth_sso.py: login + callback + providers",
+        "支持: Okta / Azure AD / Google Workspace / DingTalk / Feishu / WeCom",
+        "Session 管理: JWT 短期 + refresh token 长期",
+        "前端: SSOCallback page + SSOButton",
+        "tests/test_sso.py 30+ - mock SAML responses"
       ],
       "depends_on": [],
       "estimate_days": 6
     },
     {
-      "id": "T2402",
+      "id": "T2902",
       "phase": "P3",
       "priority": "P1",
-      "title": "行业薪资报告 (实时市场数据)",
-      "requirement": ["1.6", "3"],
-      "description": "基于 v3.0 招聘市场数据,生成行业/城市/职级 薪资分位报告",
+      "title": "开放 API 平台 + Developer Portal",
+      "requirement": [
+        "all"
+      ],
+      "description": "第三方开发者可注册 API Key,自助文档,Sandbox 环境",
       "deliverables": [
-        "backend/services/platform/salary_report.py: compute percentiles (P10/P25/P50/P75/P90) 按 role/city/seniority",
-        "前端: frontend/app/(jobseeker)/salary-insights/page.tsx (薪资分位图 + 个人定位)",
-        "前端: frontend/app/mothership/analytics/salary-report/page.tsx (HR 视角)",
-        "frontend/components/salary/SalaryDistributionChart.tsx (箱线图)",
-        "tests/test_salary_report.py"
+        "backend/services/platform/developer_portal.py: App 注册 + API Key 签发 + OAuth 2.0 + Webhook 自助",
+        "frontend/app/(public)/developers/page.tsx: 公开 API 文档 (Swagger UI) + API Key + Sandbox + 教程",
+        "SDK 自动生成: openapi-generator (Python / TypeScript / Go)",
+        "tests/test_developer_portal.py"
       ],
       "depends_on": [],
-      "estimate_days": 4
+      "estimate_days": 5
     },
     {
-      "id": "T2403",
+      "id": "T2903",
       "phase": "P3",
       "priority": "P1",
-      "title": "离职预测模型",
-      "requirement": ["1.4", "1.5"],
-      "description": "从情绪时间线 + 工作状态变化 + 工单模式预测员工/求职者离职风险",
-      "deliverables": [
-        "backend/services/platform/attrition_model.py: 用情绪 + journal + 互动频次训练预测模型 (LightGBM 或 LLM few-shot)",
-        "backend/api/attrition.py: GET /api/attrition/risk/{user_id}",
-        "前端: frontend/components/attrition/AttritionRiskCard.tsx (低/中/高 风险可视化)",
-        "前端: frontend/app/mothership/analytics/attrition/page.tsx (HR 视角: 团队离职风险地图)",
-        "tests/test_attrition_model.py"
+      "title": "第三方应用市场",
+      "requirement": [
+        "all"
       ],
-      "depends_on": [],
+      "description": "v6.0 Plugin SDK 升级为应用市场,发布/发现/计费",
+      "deliverables": [
+        "supabase/migrations/051_marketplace.sql: marketplace_plugins + plugin_releases + plugin_purchases",
+        "backend/services/marketplace/: publish (审核) + install (复用 v6.0 Plugin SDK) + review + billing (分成)",
+        "frontend/app/(public)/marketplace/page.tsx: 浏览 + 搜索 + 分类 + 一键安装 + 评论",
+        "admin 审核: frontend/app/admin/marketplace/page.tsx",
+        "tests/test_marketplace.py 30+"
+      ],
+      "depends_on": [
+        "T2902"
+      ],
       "estimate_days": 6
     },
     {
-      "id": "T2404",
+      "id": "T2904",
       "phase": "P3",
       "priority": "P1",
-      "title": "试用期跟踪 (3/6 月评估)",
-      "requirement": ["2.9"],
-      "description": "新员工入职后 30/90/180 天自动评估,HR 收到反馈请求,记录到员工档案",
+      "title": "API 版本化 (/v1/ /v2/ 平滑过渡)",
+      "requirement": [
+        "all"
+      ],
+      "description": "API 加版本前缀,旧版本 deprecation 流程",
       "deliverables": [
-        "supabase/migrations/039_probation.sql (probation_reviews 表)",
-        "backend/services/employer/probation_service.py: 定时任务 + 评估模板",
-        "前端: frontend/app/(employer)/probation/page.tsx (跟踪 + 评估)",
-        "前端: frontend/components/probation/ReviewForm.tsx (5 维度评估)",
-        "tests/test_probation.py"
+        "backend/api/v1/ + backend/api/v2/ 分目录",
+        "旧 endpoint 保留在 v1/ + 新功能在 v2/",
+        "Deprecation 头: X-API-Deprecated + Sunset date",
+        "自动迁移: /api/x -> /api/v1/x (老 client 兼容)",
+        "docs/API_VERSIONING.md",
+        "前端 lib/api/ 按版本组织",
+        "tests/test_api_versioning.py"
       ],
       "depends_on": [],
-      "estimate_days": 5
+      "estimate_days": 3
     },
     {
-      "id": "T2405",
-      "phase": "P3",
-      "priority": "P1",
-      "title": "内部推荐系统 (Referrals)",
-      "requirement": ["2.7", "3"],
-      "description": "在职员工推荐候选人,推荐人 + 候选人双奖励 (奖金/积分)",
-      "deliverables": [
-        "supabase/migrations/040_referrals.sql (referrals 表 + 积分表)",
-        "backend/services/employer/referral_service.py: 推荐流 + 积分/奖金",
-        "前端: frontend/app/(employer)/referrals/page.tsx (HR 视角)",
-        "前端: frontend/app/(jobseeker)/refer/page.tsx (员工推荐候选人)",
-        "tests/test_referral.py"
-      ],
-      "depends_on": [],
-      "estimate_days": 5
-    },
-    {
-      "id": "T2406",
-      "phase": "P3",
-      "priority": "P1",
-      "title": "候选人 Rediscovery (沉睡激活)",
-      "requirement": ["3"],
-      "description": "6 个月没动的候选人,新职位匹配时主动激活",
-      "deliverables": [
-        "backend/services/integrations/candidate_rediscovery.py: 扫描沉睡库 + LLM 评估是否值得激活",
-        "backend/api/rediscovery.py: GET /api/rediscovery/candidates",
-        "前端: frontend/app/mothership/rediscovery/page.tsx (HR 主动激活面板)",
-        "前端组件: SleepyCandidateCard + ActivationPreview",
-        "tests/test_rediscovery.py"
-      ],
-      "depends_on": [],
-      "estimate_days": 4
-    },
-    {
-      "_section": "P4 — AI 高级能力 + Release",
+      "_section": "P4 — AI 高级 + 商业化 + v7.0 Release",
       "_comment_marker": 5,
-      "id": "T2501",
+      "id": "T3001",
       "phase": "P4",
       "priority": "P2",
-      "title": "多模态语义搜索 (文本+图片+视频)",
-      "requirement": ["all"],
-      "description": "搜索框支持图片/视频/语音查询,跨候选人/岗位/工单/政策",
+      "title": "Fine-tuning (LoRA) 定制模型",
+      "requirement": [
+        "all"
+      ],
+      "description": "为特定任务训练 LoRA 适配器(简历评分/偏见审查/HRBP 摘要)",
       "deliverables": [
-        "backend/services/matching/multimodal_search.py: CLIP embedding + pgvector",
-        "改造 global_search.py 加图片/视频通道",
-        "前端: frontend/components/GlobalSearchPalette.tsx (支持图片/语音输入)",
-        "tests/test_multimodal_search.py"
+        "infra/training/docker-compose.yml: GPU 训练环境 (Axolotl / LLaMA-Factory)",
+        "backend/services/training/: 数据集准备 + 训练任务 (QLoRA) + 评估 + 部署 (vLLM)",
+        "backend/providers/llm/custom_lora.py: 加载 LoRA adapter + 推理",
+        "训练 3 个 LoRA: 简历评分 / 偏见审查 / HRBP 摘要",
+        "tests/test_training.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 8
+    },
+    {
+      "id": "T3002",
+      "phase": "P4",
+      "priority": "P2",
+      "title": "AI 主动 Sourcing (Outbound)",
+      "requirement": [
+        "3"
+      ],
+      "description": "AI 主动发掘候选人(从 GitHub/LinkedIn/脉脉/微博/小红书)",
+      "deliverables": [
+        "backend/providers/sourcing/: base.py SourcingProvider ABC + github + linkedin + maimai + weibo_xiaohongshu",
+        "backend/services/platform/sourcing_agent.py: 输入岗位画像 输出 100 候选人",
+        "前端: frontend/app/(employer)/sourcing/page.tsx 一键启动 + 候选人列表 + 一键邀请",
+        "tests/test_sourcing.py"
       ],
       "depends_on": [],
       "estimate_days": 6
     },
     {
-      "id": "T2502",
+      "id": "T3003",
       "phase": "P4",
       "priority": "P2",
-      "title": "AI 自动生成 JD",
-      "requirement": ["2.5"],
-      "description": "HR 一句话描述岗位,AI 生成完整 JD (含职责/要求/福利/文化)",
-      "deliverables": [
-        "backend/services/employer/jd_generator.py: 用 LLM 从一句话 → 完整 JD",
-        "改造 JobSpec Agent: 先调 jd_generator 再让 HR 编辑",
-        "前端: frontend/app/(employer)/roles/new/ai/page.tsx (AI 生成向导)",
-        "tests/test_jd_generator.py"
+      "title": "白标 + 私有化部署",
+      "requirement": [
+        "all"
       ],
-      "depends_on": [],
-      "estimate_days": 4
-    },
-    {
-      "id": "T2503",
-      "phase": "P4",
-      "priority": "P2",
-      "title": "面试准备助手",
-      "requirement": ["1.6"],
-      "description": "求职者针对目标 JD 准备 10 道题,模拟练习 + AI 反馈",
+      "description": "支持客户自有品牌 (白标) + 私有化 (K8s 一键部署)",
       "deliverables": [
-        "backend/services/jobseeker/interview_prep.py: 基于 JD 生成 10 题 + LLM 评分用户答案",
-        "前端: frontend/app/(jobseeker)/interview-prep/[role_id]/page.tsx",
-        "tests/test_interview_prep.py"
+        "前端: 主题系统 (logo/颜色/域名可配置) + 多租户 CSS 变量",
+        "backend: 主题配置 API + 邮件模板白标",
+        "infra/private-deployment/: docker-compose 一键启动 + K8s Helm chart + Terraform 模板",
+        "docs/PRIVATE_DEPLOYMENT.md",
+        "tests/test_whitelabel.py"
       ],
       "depends_on": [],
       "estimate_days": 5
     },
     {
-      "id": "T2504",
+      "id": "T3004",
       "phase": "P4",
       "priority": "P2",
-      "title": "薪资谈判模拟 (AI 反向施压)",
-      "requirement": ["1.6"],
-      "description": "求职者练习薪资谈判,AI 扮演 HR 角色反向施压,提升谈判技巧",
-      "deliverables": [
-        "backend/services/jobseeker/negotiation_simulator.py: 5 角色 HR 谈判风格 (硬/软/混合/数据派/关系派)",
-        "前端: frontend/app/(jobseeker)/offers/negotiate-simulate/page.tsx",
-        "frontend/components/negotiation/ChatSimulator.tsx",
-        "tests/test_negotiation_simulator.py"
+      "title": "v7.0.0 Release",
+      "requirement": [
+        "all"
       ],
-      "depends_on": [],
-      "estimate_days": 4
-    },
-    {
-      "id": "T2505",
-      "phase": "P4",
-      "priority": "P2",
-      "title": "v6.0.0 Release",
-      "requirement": ["all"],
       "description": "集成 + 测试 + 文档 + Release",
       "deliverables": [
-        "集成测试 1800+ pass",
+        "集成测试 2500+ pass",
         "release notes",
-        "v6.0.0 tag + release",
+        "v7.0.0 tag + release",
         "GitHub Pages 更新",
-        "公告给 Pilot 客户"
+        "v7.0 公告给所有客户"
       ],
       "depends_on": [],
       "estimate_days": 3
     }
   ],
-
   "milestones": [
     {
-      "id": "M21",
-      "title": "v6.1 — 架构扩展性",
+      "id": "M26",
+      "title": "v7.1 — Enterprise SaaS",
       "target_date": "2026-09-15",
-      "tasks": ["T2101", "T2102", "T2103", "T2104", "T2105"],
-      "deliverable": "Event Bus + 配置中心 + Feature Flag + Plugin SDK + Agent Composition,加新功能 1 天搞定"
+      "tasks": [
+        "T2601",
+        "T2602",
+        "T2603",
+        "T2604"
+      ],
+      "deliverable": "严格多租户 + 配额 + Rate Limiting + 审计 + GDPR/PIPL/CCPA + SLA 99.9% + 状态页,可正式商业化"
     },
     {
-      "id": "M22",
-      "title": "v6.2 — 差异化能力",
+      "id": "M27",
+      "title": "v7.2 — AI Deep",
       "target_date": "2026-11-15",
-      "tasks": ["T2201", "T2202", "T2203", "T2204"],
-      "deliverable": "GPT-4o Realtime 实时对话 + AI 模拟面试官 + 视频简历 + LiveKit,跳出传统招聘赛道"
+      "tasks": [
+        "T2701",
+        "T2702",
+        "T2703",
+        "T2704"
+      ],
+      "deliverable": "完整 RAG (准确度 > 85%) + Agent 统一记忆库 + Multi-Agent 协作 + Prompt 版本化 + 自动评估"
     },
     {
-      "id": "M23",
-      "title": "v6.3 — UX 提升",
+      "id": "M28",
+      "title": "v7.3 — 数据/BI",
       "target_date": "2026-12-31",
-      "tasks": ["T2301", "T2302", "T2303", "T2304"],
-      "deliverable": "对比视图 + 批量操作 + 文档导出 + 通知偏好,HR 效率提升 50%"
+      "tasks": [
+        "T2801",
+        "T2802",
+        "T2803"
+      ],
+      "deliverable": "ClickHouse 数据仓库 + 自定义 BI + 预测性分析"
     },
     {
-      "id": "M24",
-      "title": "v6.4 — 业务深化",
+      "id": "M29",
+      "title": "v7.4 — 合规 + 生态",
       "target_date": "2027-02-28",
-      "tasks": ["T2401", "T2402", "T2403", "T2404", "T2405", "T2406"],
-      "deliverable": "公司评价 + 薪资报告 + 离职预测 + 试用期 + 内部推荐 + 候选人激活"
+      "tasks": [
+        "T2901",
+        "T2902",
+        "T2903",
+        "T2904"
+      ],
+      "deliverable": "SSO/SAML + 开放 API 平台 + 第三方应用市场 + API 版本化"
     },
     {
-      "id": "M25",
-      "title": "v6.5 — AI 高级 + Release",
+      "id": "M30",
+      "title": "v7.5 — AI 高级 + Release",
       "target_date": "2027-04-30",
-      "tasks": ["T2501", "T2502", "T2503", "T2504", "T2505"],
-      "deliverable": "多模态搜索 + AI 生成 JD + 面试准备 + 谈判模拟 + v6.0.0 Release"
+      "tasks": [
+        "T3001",
+        "T3002",
+        "T3003",
+        "T3004"
+      ],
+      "deliverable": "LoRA Fine-tuning + AI 主动 Sourcing + 白标/私有化 + v7.0.0 Release"
     }
   ],
-
   "success_metrics": {
-    "extensibility": [
-      "Event Bus 支持 30+ 事件类型",
-      "配置中心 admin UI 改配置实时生效",
-      "Feature Flag 5+ 灰度中",
-      "Plugin SDK 文档完整 + 2 个示例 plugin",
-      "Agent Composition 5 个 workflow 模板"
+    "saas": [
+      "多租户隔离 100% 严格 (60+ 测试)",
+      "Rate Limiting 统一",
+      "配额 3 档",
+      "审计日志 100% 覆盖 PII 访问",
+      "GDPR/PIPL/CCPA 完整合规",
+      "SLA 99.9% 实测 30 天",
+      "状态页公开"
     ],
-    "differentiation": [
-      "Realtime 语音对话延迟 < 500ms",
-      "AI 模拟面试官 5 人格 + 5 阶段",
-      "视频简历理解准确度 > 80%",
-      "LiveKit 自托管视频通话跑通"
+    "ai_deep": [
+      "RAG 检索准确度 > 85%",
+      "Agent 统一记忆库 16 agent 共享",
+      "Multi-Agent 任务成功率 > 80%",
+      "Prompt 版本化 + A/B + 自动评估"
     ],
-    "ux": [
-      "对比视图支持 ≥ 5 个对象",
-      "批量操作支持 ≥ 50 个",
-      "文档导出 3 种格式 (Word/PPT/PDF)",
-      "通知偏好细粒度配置"
+    "data": [
+      "ClickHouse 仓库 1 年保留",
+      "BI 自定义报表 50+ 用户",
+      "预测准确度 AUC > 0.80"
     ],
-    "business": [
-      "公司评价集成 (看准网/Glassdoor/脉脉)",
-      "薪资报告 10 个行业",
-      "离职预测模型 AUC > 0.75",
-      "试用期跟踪自动 30/90/180 天",
-      "内部推荐流",
-      "沉睡候选人激活"
+    "ecosystem": [
+      "SSO 支持 5+ 企业 IdP",
+      "开放 API 平台 100+ 开发者",
+      "应用市场 10+ 第三方插件",
+      "API 版本化 /v1/ /v2/"
     ],
-    "ai": [
-      "多模态搜索 3 种输入 (文本/图片/语音)",
-      "AI 生成 JD 1 句话 → 完整 JD",
-      "面试准备 10 道题 + 评分",
-      "谈判模拟 5 角色"
+    "commercialization": [
+      "2027 Q4 真实 ARR ≥ 1000 万 RMB",
+      "NPS ≥ 65",
+      "3+ LoRA 定制模型",
+      "白标客户 1+ 家"
     ]
   },
-
   "risks": [
     {
-      "risk": "Event Bus 引入破坏现有 agent 调用",
-      "mitigation": "保留旧调用方式,event bus 渐进迁移,加 feature flag 切换"
+      "risk": "多租户 RLS 改造可能破坏现有功能",
+      "mitigation": "分阶段迁移,每步 100% 测试覆盖"
     },
     {
-      "risk": "Plugin SDK 沙箱安全",
-      "mitigation": "用 RestrictedPython + 资源限制 + 白名单权限,先内测后开放"
+      "risk": "RAG 准确度难达标 85%",
+      "mitigation": "用领域数据训练 LoRA 提升重排"
     },
     {
-      "risk": "GPT-4o Realtime 成本高",
-      "mitigation": "限制并发数 + 用 gpt-4o-mini-realtime 降低成本 + 缓存常见回复"
+      "risk": "ClickHouse 运维成本高",
+      "mitigation": "用 ClickHouse Cloud 托管"
     },
     {
-      "risk": "LiveKit 自托管运维",
-      "mitigation": "先用 LiveKit Cloud 托管,稳定后切自托管"
+      "risk": "SSO 集成多 IdP 复杂",
+      "mitigation": "先支持 2 个,其他后补"
+    },
+    {
+      "risk": "LoRA 训练需要 GPU 成本",
+      "mitigation": "用 AutoTrain / HuggingFace 托管"
     }
   ]
 }
