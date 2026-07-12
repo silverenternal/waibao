@@ -183,6 +183,7 @@ class MatchingEngine:
                 role_seniority=role_seniority,
                 semantic_similarity=similarity,
                 ab_variant=ab_variant,
+                assessment_score=candidate_data.get("assessment_score"),
             )
 
             confidence = score_result["confidence"]

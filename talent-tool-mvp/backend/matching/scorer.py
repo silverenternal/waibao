@@ -6,10 +6,13 @@ from contracts.shared import (
     SkillMatch,
 )
 
-# Scoring weights
+# Scoring weights (T805 + T1306): 三因子 + 测评加权 (0.15)
+# 测评分数为 None 时,自动回退到三因子(总分归一不变).
 WEIGHT_SKILL_OVERLAP = 0.40
 WEIGHT_SEMANTIC_SIMILARITY = 0.35
 WEIGHT_EXPERIENCE_FIT = 0.25
+# T1306: 测评权重,当候选人存在 assessment_score 时启用
+WEIGHT_ASSESSMENT = 0.15
 
 # A/B 实验动态权重 (T805): variant -> {skill, semantic, experience}
 AB_WEIGHT_VARIANTS: dict[str, dict[str, float]] = {
@@ -55,8 +58,13 @@ class CompositeScorer:
         semantic_similarity: float,
         weights: dict[str, float] | None = None,
         ab_variant: str | None = None,
+        assessment_score: float | None = None,
     ) -> dict:
         """Compute composite score and return full breakdown.
+
+        T1306: assessment_score 可选 (0-100); 若存在则折算为 0-1 并按权重
+        WEIGHT_ASSESSMENT 加入总分, 三因子权重按比例归一化;
+        若为 None 则继续使用三因子权重,总分不受影响(向后兼容).
 
         weights: 显式权重覆盖;ab_variant: 从 A/B 实验拿 (会查 ab_test.AB_WEIGHT_VARIANTS).
         两者都不传则用全局常量 (生产 control).
@@ -74,18 +82,35 @@ class CompositeScorer:
             candidate_seniority, role_seniority, candidate_experience_months
         )
 
-        # 4. Choose weights (control / 显式 / A/B 决议)
-        resolved_weights = self._resolve_weights(weights=weights, ab_variant=ab_variant)
+        # 4. 测评分数 (T1306) 折算为 0-1
+        assessment_normalized: float | None = None
+        if assessment_score is not None:
+            try:
+                assessment_normalized = max(
+                    0.0,
+                    min(1.0, float(assessment_score) / 100.0),
+                )
+            except (TypeError, ValueError):
+                assessment_normalized = None
 
-        # 5. Composite
+        # 5. Choose weights (control / 显式 / A/B 决议)
+        resolved_weights = self._resolve_weights(
+            weights=weights,
+            ab_variant=ab_variant,
+            assessment_enabled=assessment_normalized is not None,
+        )
+
+        # 6. Composite
         overall = (
             resolved_weights["skill"] * skill_score
             + resolved_weights["semantic"] * semantic_score
             + resolved_weights["experience"] * experience_score
+            + resolved_weights.get("assessment", 0.0)
+            * (assessment_normalized or 0.0)
         )
         overall = round(overall, 4)
 
-        # 6. Confidence bucket
+        # 7. Confidence bucket
         confidence = self._bucket_confidence(overall)
 
         return {
@@ -93,6 +118,10 @@ class CompositeScorer:
             "structured_score": round(skill_score, 4),
             "semantic_score": round(semantic_score, 4),
             "experience_score": round(experience_score, 4),
+            "assessment_score": (
+                round(assessment_normalized, 4)
+                if assessment_normalized is not None else None
+            ),
             "skill_overlap": skill_overlap,
             "confidence": confidence,
             "ab_variant": ab_variant or "control",
@@ -101,11 +130,16 @@ class CompositeScorer:
                     "skill_overlap": resolved_weights["skill"],
                     "semantic_similarity": resolved_weights["semantic"],
                     "experience_fit": resolved_weights["experience"],
+                    "assessment": resolved_weights.get("assessment", 0.0),
                 },
                 "components": {
                     "skill_overlap_raw": round(skill_score, 4),
                     "semantic_similarity_raw": round(semantic_score, 4),
                     "experience_fit_raw": round(experience_score, 4),
+                    "assessment_raw": (
+                        round(assessment_normalized, 4)
+                        if assessment_normalized is not None else None
+                    ),
                 },
                 "weighted_components": {
                     "skill_overlap_weighted": round(
@@ -117,6 +151,10 @@ class CompositeScorer:
                     "experience_fit_weighted": round(
                         resolved_weights["experience"] * experience_score, 4
                     ),
+                    "assessment_weighted": round(
+                        resolved_weights.get("assessment", 0.0)
+                        * (assessment_normalized or 0.0), 4
+                    ),
                 },
                 "overall_score": overall,
             },
@@ -126,20 +164,52 @@ class CompositeScorer:
     def _resolve_weights(
         weights: dict[str, float] | None,
         ab_variant: str | None,
+        assessment_enabled: bool = False,
     ) -> dict[str, float]:
-        """Pick the active weight set. 优先级: weights 参数 > ab_variant 查表 > control 常量."""
+        """Pick the active weight set. 优先级: weights 参数 > ab_variant 查表 > control 常量.
+
+        T1306: assessment_enabled=True 时,把 WEIGHT_ASSESSMENT 加进来,
+        并对三因子做 (1 - 0.15) 归一化处理,保证总分归一.
+        """
         if weights is not None:
             s = float(weights.get("skill", WEIGHT_SKILL_OVERLAP))
             sem = float(weights.get("semantic", WEIGHT_SEMANTIC_SIMILARITY))
             exp = float(weights.get("experience", WEIGHT_EXPERIENCE_FIT))
-            total = s + sem + exp or 1.0
-            return {"skill": s / total, "semantic": sem / total, "experience": exp / total}
+            ass = float(weights.get("assessment", 0.0))
+            if ass <= 0:
+                ass = WEIGHT_ASSESSMENT if assessment_enabled else 0.0
+            total = s + sem + exp + ass or 1.0
+            return {
+                "skill": s / total,
+                "semantic": sem / total,
+                "experience": exp / total,
+                "assessment": ass / total,
+            }
         if ab_variant and ab_variant in AB_WEIGHT_VARIANTS:
-            return AB_WEIGHT_VARIANTS[ab_variant]
+            base = AB_WEIGHT_VARIANTS[ab_variant]
+            if assessment_enabled:
+                # 抽成 (1 - 0.15) = 0.85 的份额给三因子
+                scale = 1.0 - WEIGHT_ASSESSMENT
+                return {
+                    "skill": base["skill"] * scale,
+                    "semantic": base["semantic"] * scale,
+                    "experience": base["experience"] * scale,
+                    "assessment": WEIGHT_ASSESSMENT,
+                }
+            return {**base, "assessment": 0.0}
+        if assessment_enabled:
+            base_scale = 1.0 - WEIGHT_ASSESSMENT
+            return {
+                "skill": WEIGHT_SKILL_OVERLAP * base_scale,
+                "semantic": WEIGHT_SEMANTIC_SIMILARITY * base_scale,
+                "experience": WEIGHT_EXPERIENCE_FIT * base_scale,
+                "assessment": WEIGHT_ASSESSMENT,
+            }
         return {
             "skill": WEIGHT_SKILL_OVERLAP,
             "semantic": WEIGHT_SEMANTIC_SIMILARITY,
             "experience": WEIGHT_EXPERIENCE_FIT,
+            "assessment": 0.0,
         }
 
     def _compute_skill_overlap(

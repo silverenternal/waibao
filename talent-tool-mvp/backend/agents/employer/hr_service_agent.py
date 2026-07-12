@@ -254,9 +254,93 @@ class HRServiceAgent(BaseAgent):
                     "value": True,
                 })
 
+        # 6. T1307: Offer 前自动发起背景调查 (HR flow / BackgroundCheck service)
+        # 当阶段为 recruiting / offer 且文中提到 offer / 录用, 自动触发.
+        # 失败/已有 running 检查时,不阻塞主流程.
+        try:
+            await _maybe_trigger_pre_offer_background_check(
+                text=text,
+                stage=result.get("stage", stage),
+                ctx=ctx,
+                hr_user_id=user_id,
+                result=result,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("hr_service_agent.bg_check_hook err=%s", exc)
+
         return AgentOutput(
             agent_name=self.name,
             text=result.get("answer", "我在,有什么需要帮助?"),
             artifacts=result,
             memory_writes=memory_writes,
         )
+
+
+async def _maybe_trigger_pre_offer_background_check(
+    *,
+    text: str,
+    stage: str,
+    ctx: dict,
+    hr_user_id: str,
+    result: dict,
+) -> None:
+    """T1307: HR 进入 offer 阶段时,自动 background check.
+
+    触发条件:
+      - stage ∈ {recruiting} 且 LLM 在 action_items 提到 offer/发 offer/录用
+      - 或者显式 ctx["trigger_bg_check"] = True
+    """
+    # 显式强制触发 (v3.1 hr 工单打通后由 offers API 在发送 offer 前调用)
+    if ctx.get("trigger_bg_check"):
+        pass
+    else:
+        offer_keywords = [
+            "发offer", "发 offer", "发送offer", "发出offer",
+            "录用", "准备发offer", "背调",
+        ]
+        if stage != "recruiting":
+            return
+        lowered = (text or "").lower()
+        if not any(kw.lower() in lowered for kw in offer_keywords):
+            return
+
+    supabase = ctx.get("supabase")
+    if supabase is None:
+        return
+
+    candidate_id = (
+        ctx.get("candidate_id")
+        or ctx.get("offer_candidate_id")
+        or hr_user_id  # 用户作为候选人时回退
+    )
+    if not candidate_id:
+        return
+
+    # 延迟 import 避免循环依赖
+    from services.background_check_service import BackgroundCheckService
+
+    svc = BackgroundCheckService(supabase=supabase)
+    out = await svc.trigger_pre_offer(
+        candidate_id=str(candidate_id),
+        candidate_email=ctx.get("candidate_email"),
+        candidate_name=ctx.get("candidate_name"),
+        offer_id=ctx.get("offer_id"),
+        job_id=ctx.get("job_id"),
+    )
+    if out.get("skipped"):
+        result["background_check"] = {
+            "status": "skipped",
+            "reason": out.get("reason"),
+            "existing": out.get("data"),
+        }
+    else:
+        bc = out.get("data") or {}
+        result["background_check"] = {
+            "status": "initiated",
+            "check_id": bc.get("check_id"),
+            "provider": bc.get("provider"),
+            "bg_check_url": (
+                f"/background-checks/{bc.get('check_id')}"
+                if bc.get("check_id") else None
+            ),
+        }

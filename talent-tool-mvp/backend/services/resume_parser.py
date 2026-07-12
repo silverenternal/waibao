@@ -135,7 +135,10 @@ _RESUME_SCHEMA_HINT = """
 
 
 async def _post_process(structured: dict) -> dict:
-    """轻微清洗 — 规范化 email / phone / years."""
+    """轻微清洗 — 规范化 email / phone / years.
+
+    T1202 — basic 字段(name/email/phone/location)走 PII 字段加密.
+    """
     email_re = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
     phone_re = re.compile(r"(\+?\d[\d\s\-]{8,}\d)")
 
@@ -156,6 +159,17 @@ async def _post_process(structured: dict) -> dict:
             m = phone_re.search(json.dumps(structured, ensure_ascii=False))
             if m:
                 basic["phone"] = m.group(1).strip()
+        # T1202: 加密 PII 字段(name/email/phone)
+        try:
+            from services.pii_field_encryption import get_pii_field_service
+
+            pii_svc = get_pii_field_service()
+            basic = pii_svc.encrypt_pii_fields(
+                basic,
+                fields=["full_name", "email", "phone"],
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"pii_encrypt_in_resume_failed: {e}")
         structured["basic"] = basic
 
     # experience durations

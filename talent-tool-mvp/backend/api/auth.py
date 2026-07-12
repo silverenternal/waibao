@@ -52,32 +52,67 @@ def decode_supabase_jwt(token: str) -> dict:
         )
 
 
+def decode_mobile_jwt(token: str) -> dict:
+    """Decode a JWT minted by the mini-program (mobile) login flow.
+
+    Tokens are signed with `mobile_jwt_secret` if configured, otherwise fall
+    back to `supabase_jwt_secret` for dev. Issued by
+    `api.miniprogram_auth._mint_mobile_jwt`.
+    """
+    secret = settings.mobile_jwt_secret or SUPABASE_JWT_SECRET
+    try:
+        return jwt.decode(
+            token,
+            secret,
+            algorithms=[ALGORITHM],
+            options={"verify_aud": False},
+        )
+    except JWTError as e:
+        logger.warning(f"mobile JWT decode failed: {e}")
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+
+def _payload_to_user(payload: dict) -> "CurrentUser":
+    user_id = payload.get("sub")
+    email = payload.get("email", "")
+    user_metadata = payload.get("user_metadata", {}) or {}
+    role_str = user_metadata.get("role", "talent_partner")
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token: missing user ID")
+    try:
+        role = UserRole(role_str)
+    except ValueError:
+        raise HTTPException(status_code=401, detail=f"Invalid role: {role_str}")
+    return CurrentUser(id=UUID(user_id), email=email, role=role)
+
+
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Security(security),
 ) -> CurrentUser:
     """FastAPI dependency: extract and validate current user from JWT.
 
-    Usage in routes:
-        @router.get("/something")
-        async def something(user: CurrentUser = Depends(get_current_user)):
-            ...
+    Accepts both Supabase web JWTs and mini-program (mobile) JWTs. Mobile
+    tokens are tagged with `iss=waibao-miniprogram` and signed with
+    `mobile_jwt_secret` (falling back to the Supabase secret in dev).
     """
-    payload = decode_supabase_jwt(credentials.credentials)
+    token = credentials.credentials
 
-    user_id = payload.get("sub")
-    email = payload.get("email", "")
-    user_metadata = payload.get("user_metadata", {})
-    role_str = user_metadata.get("role", "talent_partner")
-
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid token: missing user ID")
-
+    # 1) Mobile tokens are explicitly tagged with `iss=waibao-miniprogram`.
+    #    Only an explicit tag routes to the mobile decoder — never fall back
+    #    to mobile based on token shape alone (that's how web/mobile paths
+    #    got crossed previously and broke the test suite).
     try:
-        role = UserRole(role_str)
-    except ValueError:
-        raise HTTPException(status_code=401, detail=f"Invalid role: {role_str}")
+        unverified = jwt.get_unverified_claims(token)
+    except JWTError:
+        unverified = {}
 
-    return CurrentUser(id=UUID(user_id), email=email, role=role)
+    if unverified.get("iss") == "waibao-miniprogram":
+        payload = decode_mobile_jwt(token)
+    else:
+        payload = decode_supabase_jwt(token)
+
+    return _payload_to_user(payload)
 
 
 def require_role(*allowed_roles: UserRole):

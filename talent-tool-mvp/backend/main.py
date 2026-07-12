@@ -270,6 +270,10 @@ app.include_router(
 )
 app.include_router(gdpr_router, prefix="/api/gdpr", tags=["compliance"])
 
+# T1201: Legal / Cookie / Privacy 文档 API
+from api.legal import router as legal_router
+app.include_router(legal_router, prefix="/api", tags=["legal"])
+
 # T104: admin notify (channel configuration + user prefs)
 from api.admin_notify import router as admin_notify_router
 app.include_router(admin_notify_router, prefix="/api/admin/notify", tags=["admin-notify"])
@@ -320,3 +324,68 @@ app.include_router(admin_cost_router, prefix="/api/admin/cost", tags=["admin-cos
 from api.admin_audit import router as admin_audit_router
 
 app.include_router(admin_audit_router, prefix="/api/admin/audit", tags=["admin-audit"])
+
+# T1106: Pilot program + invitation + feedback collection
+from api.pilot import router as pilot_router
+from api.feedback import router as feedback_router
+
+app.include_router(pilot_router, tags=["pilot"])
+app.include_router(feedback_router, tags=["feedback"])
+
+# T1203: WeChat mini-program authentication
+from api.miniprogram_auth import router as miniprogram_auth_router
+
+app.include_router(miniprogram_auth_router)
+
+# T1204: Third-party corp integrations (DingTalk / Feishu)
+from api.corp_integrations import router as corp_integrations_router, event_router as corp_event_router
+from api.dingtalk_sync import router as dingtalk_sync_router
+from api.feishu_sync import router as feishu_sync_router
+
+app.include_router(corp_integrations_router)
+app.include_router(corp_event_router)
+app.include_router(dingtalk_sync_router)
+app.include_router(feishu_sync_router)
+
+# T1301: AI 自动面试 (GPT-4V + Whisper + LLM)
+from api.ai_interview import router as ai_interview_router
+
+app.include_router(ai_interview_router, prefix="/api/ai-interview", tags=["ai-interview"])
+
+# T1302: Offer 比较器 + 薪资谈判
+from api.offers import router as offers_router
+
+app.include_router(offers_router, prefix="/api/offers", tags=["offers"])
+
+# T1303: Recruitment funnel + channel ROI analytics
+from api.analytics import router as analytics_router
+
+app.include_router(analytics_router, prefix="/api/analytics", tags=["analytics"])
+
+# T1304: Job subscriptions + candidate recommendations
+from api.subscriptions import router as subscriptions_router
+from api.recommendations import router as recommendations_router
+
+app.include_router(
+    subscriptions_router, prefix="/api/subscriptions", tags=["subscriptions"]
+)
+app.include_router(
+    recommendations_router,
+    prefix="/api/recommendations",
+    tags=["recommendations"],
+)
+
+# T1305: Video interview (Zoom + Tencent Meeting)
+from api.video_interview import router as video_interview_router
+
+app.include_router(video_interview_router)
+
+# T1306: Assessment (北森 Beisen)
+from api.assessments import router as assessments_router
+
+app.include_router(assessments_router)
+
+# T1307: Background check (Checkr)
+from api.background_check import router as background_check_router
+
+app.include_router(background_check_router)

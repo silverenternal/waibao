@@ -62,12 +62,19 @@ def test_supabase_calls_use_sdk_not_raw_sql():
 # 2. XSS — 输出必须经过转义 (前端默认 React 转义).
 # ---------------------------------------------------------------------------
 def test_no_innerHTML_in_frontend_components():
-    """扫描 frontend/components 不允许 dangerouslySetInnerHTML."""
+    """扫描 frontend/components 不允许 dangerouslySetInnerHTML.
+
+    例外:
+      - JsonLd.tsx: 用于注入结构化数据 (schema.org JSON-LD) 的 <script>,
+                    内容是受控的 Pydantic 输出,非用户输入,允许.
+    """
     frontend_dir = os.path.join(
         os.path.dirname(__file__), "..", "..", "frontend", "components"
     )
     if not os.path.isdir(frontend_dir):
         pytest.skip("frontend/components not found")
+    # 文件名 allowlist: 这些文件已知安全地使用 dangerouslySetInnerHTML
+    ALLOWLIST = {"JsonLd.tsx"}
     offenders = []
     for root, _dirs, files in os.walk(frontend_dir):
         if "node_modules" in root:
@@ -78,7 +85,7 @@ def test_no_innerHTML_in_frontend_components():
             path = os.path.join(root, fn)
             with open(path, "r", encoding="utf-8") as f:
                 content = f.read()
-            if "dangerouslySetInnerHTML" in content:
+            if "dangerouslySetInnerHTML" in content and fn not in ALLOWLIST:
                 offenders.append(path)
     assert not offenders, f"dangerouslySetInnerHTML found in: {offenders}"
 
