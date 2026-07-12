@@ -3,7 +3,33 @@ from __future__ import annotations
 
 from .calibration import compute_metrics, compute_bucket_distribution, compute_segment_metrics, suggest_weight_adjustment  # noqa: F401,F403
 from .feedback_loop import MIN_WEIGHT, MAX_WEIGHT, MAX_DELTA_PER_RUN, Metrics, WeightAdjustment, aggregate_outcomes, compute_weight_adjustment, apply_adjustment, get_current_weights, daily_scheduler, main  # noqa: F401,F403
-from .global_search import SearchResult, ScoredCandidate, rank_candidates, score_one, ts_query_sql, trigram_sql, semantic_sql, build_snippet  # noqa: F401,F403
+from .global_search import (  # noqa: F401,F403
+    SearchResult,
+    ScoredCandidate,
+    rank_candidates,
+    score_one,
+    ts_query_sql,
+    trigram_sql,
+    semantic_sql,
+    build_snippet,
+    MultimodalChannelInput,
+    MultimodalChannelResult,
+    run_multimodal_channels,
+)
+from .multimodal_search import (  # noqa: F401,F403
+    MultimodalHit,
+    MultimodalResult,
+    MediaIndex,
+    IndexedItem,
+    ChannelWeights,
+    DEFAULT_WEIGHTS,
+    multimodal_search,
+    build_index_from_rows,
+    embed_image,
+    embed_video,
+    embed_text,
+    transcribe_audio,
+)
 
 __all__: list[str] = [
     "compute_metrics",
@@ -29,4 +55,19 @@ __all__: list[str] = [
     "trigram_sql",
     "semantic_sql",
     "build_snippet",
+    "MultimodalChannelInput",
+    "MultimodalChannelResult",
+    "run_multimodal_channels",
+    "MultimodalHit",
+    "MultimodalResult",
+    "MediaIndex",
+    "IndexedItem",
+    "ChannelWeights",
+    "DEFAULT_WEIGHTS",
+    "multimodal_search",
+    "build_index_from_rows",
+    "embed_image",
+    "embed_video",
+    "embed_text",
+    "transcribe_audio",
 ]

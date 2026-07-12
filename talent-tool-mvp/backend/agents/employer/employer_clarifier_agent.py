@@ -11,6 +11,7 @@ from uuid import uuid4
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
 from agents.toolkit import llm_call
+from eventbus import emit
 
 logger = logging.getLogger("recruittech.agents.employer.clarifier")
 
@@ -111,6 +112,17 @@ class EmployerClarifierAgent(BaseAgent):
                 ).execute()
             except Exception as e:
                 logger.warning(f"failed to persist: {e}")
+
+            # v6.0 EventBus — publish role.image.updated
+            try:
+                emit("role.image.updated", {
+                    "employer_id": agent_input.user_id,
+                    "role_id": ctx.get("role_id"),
+                    "traits": [t.get("value") for t in result.get("talent_image", {}).get("explicit_traits", [])][:5],
+                    "must_haves": result.get("real_needs", {}).get("must_haves", []),
+                }, source="agent.employer_clarifier")
+            except Exception as _e:
+                logger.debug("eventbus publish failed: %s", _e)
 
         return AgentOutput(
             agent_name=self.name,

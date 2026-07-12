@@ -1,0 +1,79 @@
+version: "3.8"
+
+# T2204 - LiveKit self-hosted (开发 + 单机部署)
+#
+# 启动:
+#   docker compose -f infra/livekit/docker-compose.yml up -d
+#
+# 服务:
+#   - livekit: LiveKit SFU (TURN/STUN + 信令 + 录制)
+#   - redis:  用于 LiveKit 内部状态 (multi-node 部署必需)
+#
+# API key 必须与 backend/providers/video_interview/livekit.py 一致.
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: livekit-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - livekit-redis-data:/data
+    networks:
+      - livekit-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: livekit-server
+    restart: unless-stopped
+    # 暴露端口:
+    #   - 7880: HTTP/WebSocket 信令 + TURN over TCP
+    #   - 7881: TURN over UDP (TCP/UDP 同时启用保证 NAT 穿透)
+    #   - 7882: TURN over TLS (生产环境推荐)
+    ports:
+      - "7880:7880"
+      - "7881:7881/udp"
+      - "7882:7882"
+    environment:
+      # === 必须与 backend LiveKitProvider 共享 ===
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:-APIwXkjY8N7qGRtVzmHp9DTr4cKLbn}:${LIVEKIT_API_SECRET:-secret_2jKp7QvRmH4N8cLsW3yF6tB9xZ1aE5uD}"
+      LIVEKIT_REDIS: "redis://redis:6379"
+      LIVEKIT_BIND_ADDRESSES: "0.0.0.0"
+      # === 房间 / 中继 ===
+      LIVEKIT_ROOM_LIMIT: "1000"
+      LIVEKIT_MAX_PARTICIPANTS: "50"
+      LIVEKIT_NODE_IP: "${LIVEKIT_NODE_IP:-127.0.0.1}"
+      LIVEKIT_RTC_TCP_PORT: "7881"
+      LIVEKIT_TURN_PORT: "3478"
+      # === 录制 (S3 兼容 / 本地) ===
+      LIVEKIT_RECORDING_ENABLED: "true"
+      LIVEKIT_RECORDING_OUTPUT: "${LIVEKIT_RECORDING_OUTPUT:-/recordings}"
+      # === TURN 配置 (生产应使用 coturn) ===
+      LIVEKIT_TURN_ENABLED: "true"
+    volumes:
+      - livekit-recordings:/recordings
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    command: ["--config", "/etc/livekit.yaml", "--node-ip", "${LIVEKIT_NODE_IP:-127.0.0.1}"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - livekit-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7880/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+networks:
+  livekit-net:
+    driver: bridge
+
+volumes:
+  livekit-redis-data:
+  livekit-recordings:

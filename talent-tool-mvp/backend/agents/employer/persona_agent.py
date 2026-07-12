@@ -14,6 +14,7 @@ import logging
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
 from agents.toolkit import llm_call
+from eventbus import emit
 from services.persona_memory import (
     render_prefs_for_prompt,
     get_prefs,
@@ -115,6 +116,19 @@ class PersonaAgent(BaseAgent):
                 f"\n\n---\n我已为你创建一个保密工单 (#{tid}),"
                 "HR/HRBP 会在工作时间内联系你。"
             )
+
+        # v6.0 EventBus — publish ticket.created on escalation
+        try:
+            if escalation and escalation.get("ticket_id"):
+                emit("ticket.created", {
+                    "ticket_id": str(escalation["ticket_id"]),
+                    "employer_id": user_id,
+                    "severity": "high",
+                    "category": "persona_escalation",
+                    "summary": escalation.get("reason", "persona agent escalation"),
+                }, source="agent.persona")
+        except Exception as _e:
+            logger.debug("eventbus publish failed: %s", _e)
 
         return AgentOutput(
             agent_name=self.name,

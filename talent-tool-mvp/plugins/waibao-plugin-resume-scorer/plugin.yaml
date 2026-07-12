@@ -1,0 +1,25 @@
+name: resume-scorer
+version: 1.0.0
+author: waibao-labs
+description: Custom resume scoring with weighted skill / experience / education signals
+entry_point: main:ResumeScorerPlugin
+type: agent
+permissions:
+  - db:read
+  - llm:call
+  - events:emit
+  - metrics:emit
+config_schema:
+  skill_weight:
+    type: number
+    default: 0.5
+  experience_weight:
+    type: number
+    default: 0.3
+  education_weight:
+    type: number
+    default: 0.2
+  min_experience_years:
+    type: number
+    default: 0
+dependencies: []

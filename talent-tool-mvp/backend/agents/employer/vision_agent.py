@@ -11,6 +11,7 @@ from uuid import uuid4
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
 from agents.toolkit import llm_call
+from eventbus import emit
 
 logger = logging.getLogger("recruittech.agents.employer.vision")
 
@@ -99,6 +100,17 @@ class VisionAgent(BaseAgent):
                         parent_id = resp.data[0]["id"]
         except Exception as e:
             logger.warning(f"failed to persist strategy: {e}")
+
+        # v6.0 EventBus — publish strategy.updated
+        try:
+            emit("strategy.updated", {
+                "employer_id": agent_input.user_id,
+                "vision_id": parent_id,
+                "themes": [t.get("statement") for t in result.get("strategy", {}).get("themes", [])][:5],
+                "horizon_months": 12,
+            }, source="agent.vision")
+        except Exception as _e:
+            logger.debug("eventbus publish failed: %s", _e)
 
         return AgentOutput(
             agent_name=self.name,

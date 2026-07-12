@@ -1,0 +1,26 @@
+name: interview-bot
+version: 1.2.0
+author: waibao-labs
+description: Conversational interview bot with templated question generator
+entry_point: main:InterviewBotPlugin
+type: service
+permissions:
+  - llm:call
+  - events:emit
+  - metrics:emit
+config_schema:
+  max_questions:
+    type: number
+    default: 5
+  difficulty:
+    type: string
+    default: medium
+  question_pool:
+    type: array
+    default:
+      - tell_me_about_yourself
+      - why_this_role
+      - biggest_achievement
+      - conflict_resolution
+      - system_design_basics
+dependencies: []

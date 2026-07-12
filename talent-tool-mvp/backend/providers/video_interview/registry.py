@@ -58,9 +58,24 @@ def get_video_interview_provider() -> VideoInterviewProvider:
             except ProviderError:
                 _video = MockVideoInterviewProvider()
             return _video
+        if name in ("livekit", "livekit_self_hosted"):
+            from .livekit import LiveKitProvider
+            try:
+                _video = LiveKitProvider()
+                if not _video._configured():  # type: ignore[attr-defined]
+                    raise InvalidRequestError(
+                        "LiveKit credentials missing",
+                        details={"env": [
+                            "LIVEKIT_API_KEY",
+                            "LIVEKIT_API_SECRET",
+                        ]},
+                    )
+            except ProviderError:
+                _video = MockVideoInterviewProvider()
+            return _video
         raise InvalidRequestError(
             f"unknown VIDEO_PROVIDER={name}",
-            details={"supported": ["zoom", "tencent_meeting", "mock"]},
+            details={"supported": ["zoom", "tencent_meeting", "livekit", "mock"]},
         )
 
 

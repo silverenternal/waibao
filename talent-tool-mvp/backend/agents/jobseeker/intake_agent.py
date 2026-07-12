@@ -10,6 +10,7 @@ import logging
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
 from agents.toolkit import llm_call
 from services.profile_extractor import extract_profile_from_text, extract_profile_from_url
+from eventbus import emit
 
 logger = logging.getLogger("recruittech.agents.jobseeker.intake")
 
@@ -63,6 +64,16 @@ class IntakeAgent(BaseAgent):
             result = json.loads(raw)
         except json.JSONDecodeError:
             result = {"stage": "education", "prompt": raw, "expected_input": ""}
+
+        # v6.0 EventBus — publish profile.created on first intake
+        try:
+            emit("profile.created", {
+                "user_id": agent_input.user_id,
+                "candidate_id": ctx.get("candidate_id"),
+                "initial_fields": list(extracted.keys()) if isinstance(extracted, dict) else [],
+            }, source="agent.intake")
+        except Exception as _e:
+            logger.debug("eventbus publish failed: %s", _e)
 
         return AgentOutput(
             agent_name=self.name,

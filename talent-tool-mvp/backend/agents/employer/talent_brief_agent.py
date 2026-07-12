@@ -63,6 +63,7 @@ class TalentBriefAgent(BaseAgent):
 }
 """
         from agents.toolkit import llm_call
+        from eventbus import emit
         try:
             raw = await llm_call(
                 self.llm or LLMClient(),
@@ -93,6 +94,17 @@ class TalentBriefAgent(BaseAgent):
                 "\n我不是指责,而是想帮您扩大候选人池。"
                 "研究表明,无明确标准的偏好会显著降低招聘质量。"
             )
+
+        # v6.0 EventBus — publish role.image.updated (from talent brief)
+        try:
+            emit("role.image.updated", {
+                "employer_id": agent_input.user_id,
+                "role_id": ctx.get("role_id"),
+                "traits": [c.get("value") for c in result.get("hard_constraints", [])][:5],
+                "must_haves": [c.get("value") for c in result.get("hard_constraints", [])][:5],
+            }, source="agent.talent_brief")
+        except Exception as _e:
+            logger.debug("eventbus publish failed: %s", _e)
 
         return AgentOutput(
             agent_name=self.name,

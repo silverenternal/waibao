@@ -1,4 +1,4 @@
-"""Agent 启动引导 — 注册全部 16 个 Agent."""
+"""Agent 启动引导 — 注册全部 16 个 Agent + EventBus 订阅者."""
 from __future__ import annotations
 
 import logging
@@ -6,6 +6,7 @@ import logging
 from agents.registry import registry
 from agents.runtime import LLMClient
 from agents.memory import CompositeMemory
+from eventbus.subscribers import register_all_subscribers
 
 logger = logging.getLogger("recruittech.agents.boot")
 
@@ -13,8 +14,14 @@ logger = logging.getLogger("recruittech.agents.boot")
 def init_all_agents(supabase=None):
     """注册所有 Agent 到全局 registry.
 
+    同时挂载 EventBus 订阅者 (~15 个 cross-cutter handlers).
+
     在 main.py lifespan 中调用.
     """
+    # v6.0: 启动时把所有 cross-cutter subscribers 挂上
+    n_subs = register_all_subscribers()
+    logger.info("📡 EventBus: %d cross-cutting subscribers registered", n_subs)
+
     llm = LLMClient()
     memory = CompositeMemory(supabase=supabase)
 

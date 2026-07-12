@@ -15,6 +15,7 @@ from typing import Any
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
 from agents.toolkit import llm_call
+from eventbus import emit
 
 logger = logging.getLogger("recruittech.agents.employer.hr_service")
 
@@ -267,6 +268,27 @@ class HRServiceAgent(BaseAgent):
             )
         except Exception as exc:  # noqa: BLE001
             logger.debug("hr_service_agent.bg_check_hook err=%s", exc)
+
+        # v6.0 EventBus — publish ticket.created / ticket.escalated
+        try:
+            ticket = result.get("ticket") or {}
+            if ticket.get("id"):
+                emit("ticket.created", {
+                    "ticket_id": ticket["id"],
+                    "employer_id": user_id,
+                    "severity": ticket.get("severity", "normal"),
+                    "category": ticket.get("category", "general"),
+                    "summary": ticket.get("summary", "")[:200],
+                }, source="agent.hr_service")
+            if result.get("escalated"):
+                emit("ticket.escalated", {
+                    "ticket_id": ticket.get("id"),
+                    "from_level": "L1",
+                    "to_level": "L2",
+                    "reason": result.get("escalation_reason", "unknown"),
+                }, source="agent.hr_service")
+        except Exception as _e:
+            logger.debug("eventbus publish failed: %s", _e)
 
         return AgentOutput(
             agent_name=self.name,

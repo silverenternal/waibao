@@ -88,6 +88,13 @@ class DispatchOutcome:
 PreferencesLookup = Callable[[str, str], Awaitable[bool]]
 
 
+# 类型: T2304 偏好决策回调
+# (user_id, category, priority, channel) -> PrefDecision-like
+PrefsDecisionFn = Callable[
+    [str, str, str, str], Awaitable[Any]
+]
+
+
 async def _default_preferences_lookup(user_id: str, channel: str) -> bool:
     """默认实现:不做过滤,所有通道都允许.
 
@@ -109,13 +116,19 @@ class NotifyDispatcher:
         *,
         preferences_lookup: PreferencesLookup | None = None,
         provider_factory: Callable[[str], Any] | None = None,
+        prefs_decision_fn: PrefsDecisionFn | None = None,
+        log_sender: Callable[..., Awaitable[None]] | None = None,
     ) -> None:
         """初始化调度器.
 
         Args:
-            preferences_lookup: 用户偏好查询回调; ``None`` 表示允许全部.
+            preferences_lookup: 用户偏好查询回调 (旧版 bool); ``None`` 表示允许全部.
             provider_factory: provider 工厂 (默认走 ``get_notify_provider``);
                 仅测试时注入.
+            prefs_decision_fn: T2304 细粒度偏好决策回调, 返回 ``PrefDecision``.
+                比 ``preferences_lookup`` 更细, 支持静默时间 / 降噪 / 频率.
+            log_sender: 异步日志回调 (user_id, category, priority, channel,
+                *, throttled, quiet_hours_hit). 用于写入 notification_log.
         """
         self._preferences_lookup: PreferencesLookup = (
             preferences_lookup or _default_preferences_lookup
@@ -123,6 +136,8 @@ class NotifyDispatcher:
         self._provider_factory: Callable[[str], Any] = (
             provider_factory or get_notify_provider
         )
+        self._prefs_decision_fn = prefs_decision_fn
+        self._log_sender = log_sender
 
     # ---- 公共 API ----
 
@@ -374,6 +389,128 @@ class NotifyDispatcher:
             message_id=result.message_id,
         )
 
+    # ---- T2304 增强: 细粒度 prefs + 降噪 + 静默 ----
+
+    async def dispatch_with_prefs(
+        self,
+        *,
+        category: str,
+        priority: str,
+        channels: Iterable[str],
+        user_id: str,
+        title: str,
+        content: str,
+        payload: dict[str, Any] | None = None,
+        recipients: list[str] | None = None,
+    ) -> DispatchOutcome:
+        """T2304 智能发送: 通过 prefs_decision_fn 决定每个 channel 是否发送.
+
+        Args:
+            category: 业务类别 (matching/ticket/emotion/system/recruiting).
+            priority: 优先级 (high/medium/low).
+            channels: 候选通道列表.
+            其他参数同 :meth:`dispatch_multi`.
+
+        Returns:
+            :class:`DispatchOutcome` —— 被静默 / 降噪的 channel 标记为 skipped (含 reason).
+        """
+        unique_channels = [c for c in dict.fromkeys(channels) if c]
+        if not unique_channels:
+            return DispatchOutcome(channels=[])
+
+        results: list[ChannelResult] = []
+        for ch in unique_channels:
+            decision = await self._decide(user_id, category, priority, ch)
+            if not decision.should_send:
+                logger.info(
+                    "[notify-dispatcher] T2304 skipped user=%s cat=%s pri=%s ch=%s reason=%s",
+                    user_id, category, priority, ch, decision.reason,
+                )
+                results.append(
+                    ChannelResult(
+                        channel=ch,
+                        success=False,
+                        skipped=True,
+                        error=decision.reason,
+                    )
+                )
+                # 写日志: 标记降噪 / 静默命中, 便于 suggester 分析
+                if self._log_sender is not None:
+                    try:
+                        await self._log_sender(
+                            user_id=user_id,
+                            category=category,
+                            priority=priority,
+                            channel=ch,
+                            throttled=decision.throttled,
+                            quiet_hours_hit=decision.quiet_hours_hit,
+                        )
+                    except Exception as exc:  # pragma: no cover
+                        logger.warning("log_sender failed: %s", exc)
+                continue
+
+            # 通过决策后, 走老流程 (provider.send)
+            res = await self._dispatch_one(
+                channel=ch,
+                user_id=user_id,
+                subject=title,
+                body=content,
+                payload=payload,
+                recipients=recipients,
+            )
+            results.append(res)
+
+            # 写成功日志
+            if self._log_sender is not None and res.success:
+                try:
+                    await self._log_sender(
+                        user_id=user_id,
+                        category=category,
+                        priority=priority,
+                        channel=ch,
+                        throttled=False,
+                        quiet_hours_hit=False,
+                    )
+                except Exception as exc:  # pragma: no cover
+                    logger.warning("log_sender failed: %s", exc)
+
+        return DispatchOutcome(results=results, channels=list(unique_channels))
+
+    async def _decide(
+        self,
+        user_id: str,
+        category: str,
+        priority: str,
+        channel: str,
+    ) -> Any:
+        """T2304 偏好决策: 优先 prefs_decision_fn, 降级到 preferences_lookup."""
+        if self._prefs_decision_fn is not None:
+            try:
+                return await self._prefs_decision_fn(
+                    user_id, category, priority, channel
+                )
+            except Exception as exc:
+                logger.warning(
+                    "[notify-dispatcher] prefs_decision_fn failed: %s; fallback to lookup",
+                    exc,
+                )
+        # 兜底: 老的 boolean preferences_lookup
+        allowed = await self._preferences_lookup(user_id, channel)
+        if not allowed:
+            return _BoolDecision(should_send=False, reason="preference_off")
+        return _BoolDecision(should_send=True, reason="ok")
+
+
+@dataclass(slots=True)
+class _BoolDecision:
+    """bool 偏好降级返回的对象 (兼容 PrefDecision 字段)."""
+
+    should_send: bool
+    reason: str
+    frequency: str = "realtime"
+    quiet_hours_hit: bool = False
+    throttled: bool = False
+
 
 # ---------------------------------------------------------------------------
 # 模块级单例 + 便捷函数
@@ -447,6 +584,7 @@ __all__ = [
     "DispatchOutcome",
     "NotifyDispatcher",
     "PreferencesLookup",
+    "PrefsDecisionFn",
     "dispatch",
     "dispatch_multi",
     "get_dispatcher",

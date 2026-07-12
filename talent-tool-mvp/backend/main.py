@@ -115,6 +115,10 @@ app.include_router(admin_router, prefix="/api/admin", tags=["admin"])
 
 # 智能体扩展路由
 app.include_router(realtime_router, prefix="/api/realtime", tags=["agents-realtime"])
+
+# T2201: GPT-4o Realtime v2 (voice session over WebSocket)
+from api.realtime_v2 import router as realtime_v2_router
+app.include_router(realtime_v2_router, prefix="/api/realtime-v2", tags=["agents-realtime-v2"])
 app.include_router(journal_router, prefix="/api/journal", tags=["agents-journal"])
 app.include_router(emotion_router, prefix="/api/emotion", tags=["agents-emotion"])
 app.include_router(vision_router, prefix="/api/vision", tags=["agents-vision"])
@@ -136,6 +140,10 @@ app.include_router(plan_tracker_router, prefix="/api/plan", tags=["agents-plan-t
 app.include_router(clarification_router, prefix="/api/clarification", tags=["agents-clarify"])
 app.include_router(uploads_router, prefix="/api/uploads", tags=["uploads"])
 
+# T2204: LiveKit video interview provider (self-hosted)
+from api.livekit import router as livekit_router
+app.include_router(livekit_router, prefix="/api/livekit", tags=["livekit"])
+
 # Production wiring: replace uploads' placeholder auth dep with the real one
 from api.auth import get_current_user as _auth_get_current_user
 
@@ -155,6 +163,27 @@ app.include_router(match_eval_router, prefix="/api/match/eval", tags=["matching-
 from api.admin_weights import router as admin_weights_router
 from api.admin_matching_quality import router as admin_matching_quality_router
 app.include_router(admin_weights_router, prefix="/api/admin/weights", tags=["admin-weights"])
+
+# v6.0: EventBus SSE stream (browser subscription)
+from api.events_stream import router as events_stream_router
+app.include_router(events_stream_router, tags=["events-stream"])
+
+# v6.0 T2102: admin Config Center CRUD
+from api.admin_config import router as admin_config_router
+app.include_router(admin_config_router, tags=["admin-config"])
+
+# v6.0 T2103: admin Feature Flag CRUD
+from api.admin_feature_flags import router as admin_feature_flags_router
+app.include_router(admin_feature_flags_router, tags=["admin-feature-flags"])
+
+# v6.0 T2104: admin Plugin SDK (install / enable / disable / run)
+from api.admin_plugins import router as admin_plugins_router
+app.include_router(admin_plugins_router, tags=["admin-plugins"])
+
+# v6.0 T2105: Agent Composition (workflows CRUD / run / validate)
+from api.workflows import router as workflows_router
+app.include_router(workflows_router, tags=["workflows"])
+
 app.include_router(
     admin_matching_quality_router,
     prefix="/api/admin/matching-quality",
@@ -169,6 +198,10 @@ app.include_router(legal_router, prefix="/api", tags=["legal"])
 # T104: admin notify (channel configuration + user prefs)
 from api.admin_notify import router as admin_notify_router
 app.include_router(admin_notify_router, prefix="/api/admin/notify", tags=["admin-notify"])
+
+# T2304: smart notification prefs (user-facing)
+from api.notification_prefs import router as notification_prefs_router
+app.include_router(notification_prefs_router, prefix="/api/notifications", tags=["notifications"])
 
 # T207: HR ticket system
 from api.tickets import router as tickets_router
@@ -244,6 +277,10 @@ from api.ai_interview import router as ai_interview_router
 
 app.include_router(ai_interview_router, prefix="/api/ai-interview", tags=["ai-interview"])
 
+# T2202: AI 模拟面试官 v2 (5 阶段, 5 人格, 智能追问)
+from api.ai_interview_v2 import router as ai_interview_v2_router
+app.include_router(ai_interview_v2_router, prefix="/api/ai-interview-v2", tags=["ai-interview-v2"])
+
 # T1302: Offer 比较器 + 薪资谈判
 from api.offers import router as offers_router
 
@@ -288,3 +325,37 @@ app.include_router(assessments_router)
 from api.background_check import router as background_check_router
 
 app.include_router(background_check_router)
+
+# T2301: Candidate/Role comparison
+from api.match_compare import match_compare_router, roles_compare_router
+
+app.include_router(match_compare_router)
+app.include_router(roles_compare_router)
+
+# T2302: Batch operations
+from api.batch import router as batch_router
+
+app.include_router(batch_router)
+
+# T2303: Document exports
+from api.exports import router as exports_router
+
+app.include_router(exports_router)
+
+# T2401: Company Review (3 源聚合 + 7 天缓存)
+from api.company_review import router as company_review_router
+app.include_router(company_review_router, prefix="/api/company-review", tags=["company-review"])
+
+# T2402: Salary Insights & Reports
+try:
+    from api.salary import router as salary_router
+    app.include_router(salary_router, prefix="/api/salary", tags=["salary"])
+except ImportError:
+    pass
+
+# T2403: Attrition Prediction
+try:
+    from api.attrition import router as attrition_router
+    app.include_router(attrition_router, prefix="/api/attrition", tags=["attrition"])
+except ImportError:
+    pass

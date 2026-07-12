@@ -11,6 +11,7 @@ from uuid import uuid4
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
 from agents.toolkit import llm_call
+from eventbus import emit
 
 logger = logging.getLogger("recruittech.agents.employer.policy")
 
@@ -109,6 +110,18 @@ class PolicyAgent(BaseAgent):
             ),
             system="你是企业制度助手,回答要引用具体制度条款。",
         )
+
+        # v6.0 EventBus — best-effort audit trail
+        try:
+            emit("audit.recorded", {
+                "actor_id": agent_input.user_id,
+                "action": "policy_lookup",
+                "resource": "policy_doc",
+                "before": None,
+                "after": {"candidates": [c.get("title") for c in candidates][:3]},
+            }, source="agent.policy")
+        except Exception as _e:
+            logger.debug("eventbus publish failed: %s", _e)
 
         return AgentOutput(
             agent_name=self.name,

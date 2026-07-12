@@ -9,6 +9,7 @@ import logging
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
 from agents.toolkit import llm_call
+from eventbus import emit
 
 logger = logging.getLogger("recruittech.agents.employer.job_spec")
 
@@ -91,6 +92,17 @@ class JobSpecAgent(BaseAgent):
         warning = ""
         if over_spec:
             warning = "\n\n⚠️ 检测到过度要求:\n" + "\n".join(f"  - {x}" for x in over_spec)
+
+        # v6.0 EventBus — publish role.image.updated (JD produced)
+        try:
+            emit("role.image.updated", {
+                "employer_id": agent_input.user_id,
+                "role_id": ctx.get("role_id"),
+                "traits": [c.get("value") for c in result.get("hard_requirements", [])][:5],
+                "must_haves": [c.get("value") for c in result.get("hard_requirements", [])][:5],
+            }, source="agent.job_spec")
+        except Exception as _e:
+            logger.debug("eventbus publish failed: %s", _e)
 
         return AgentOutput(
             agent_name=self.name,

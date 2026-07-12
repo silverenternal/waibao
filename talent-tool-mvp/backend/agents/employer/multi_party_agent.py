@@ -9,6 +9,7 @@ import logging
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
 from agents.toolkit import llm_call
+from eventbus import emit
 
 logger = logging.getLogger("recruittech.agents.employer.multi_party")
 
@@ -56,6 +57,17 @@ class MultiPartyAgent(BaseAgent):
                 "proposed_resolution": "请各方补充意见。",
                 "decision_summary": "尚未达成共识",
             }
+
+        # v6.0 EventBus — publish strategy.updated (multi-party decision)
+        try:
+            emit("strategy.updated", {
+                "employer_id": agent_input.user_id,
+                "vision_id": ctx.get("vision_id"),
+                "themes": [s.get("name") for s in result.get("stakeholders", [])][:5],
+                "horizon_months": 6,
+            }, source="agent.multi_party")
+        except Exception as _e:
+            logger.debug("eventbus publish failed: %s", _e)
 
         return AgentOutput(
             agent_name=self.name,

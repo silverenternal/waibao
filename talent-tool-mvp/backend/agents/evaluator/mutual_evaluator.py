@@ -11,6 +11,7 @@ from uuid import uuid4
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
 from agents.toolkit import llm_call
+from eventbus import emit
 
 logger = logging.getLogger("recruittech.agents.evaluator")
 
@@ -100,6 +101,24 @@ class MutualEvaluatorAgent(BaseAgent):
                 }).eq("candidate_id", str(candidate_id)).eq("role_id", str(role_id)).execute()
             except Exception as e:
                 logger.warning(f"persist eval failed: {e}")
+
+        # v6.0 EventBus — publish funnel.stage_changed on screening outcome
+        try:
+            from uuid import uuid4 as _uuid
+            emit("funnel.stage_changed", {
+                "candidate_id": str(candidate_id) if candidate_id else None,
+                "from_stage": "interview",
+                "to_stage": "mutual_eval",
+                "ts": None,
+            }, source="agent.mutual_evaluator")
+            emit("match.shortlisted", {
+                "candidate_id": str(candidate_id) if candidate_id else None,
+                "job_id": str(role_id) if role_id else None,
+                "partner_id": None,
+                "rank": None,
+            }, source="agent.mutual_evaluator")
+        except Exception as _e:
+            logger.debug("eventbus publish failed: %s", _e)
 
         return AgentOutput(
             agent_name=self.name,

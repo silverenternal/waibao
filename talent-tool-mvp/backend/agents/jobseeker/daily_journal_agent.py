@@ -11,6 +11,7 @@ from uuid import UUID, uuid4
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient, MemoryScope
 from agents.toolkit import llm_call
+from eventbus import emit
 
 logger = logging.getLogger("recruittech.agents.jobseeker.journal")
 
@@ -81,6 +82,18 @@ class DailyJournalAgent(BaseAgent):
             ).execute()
         except Exception as e:
             logger.warning(f"failed to persist journal: {e}")
+
+        # v6.0 EventBus — publish journal.submitted
+        try:
+            emit("journal.submitted", {
+                "user_id": agent_input.user_id,
+                "journal_id": journal_record["id"],
+                "mood": result.get("mood_score"),
+                "summary": result.get("advice"),
+                "ts": journal_record.get("journal_date"),
+            }, source="agent.daily_journal")
+        except Exception as _e:
+            logger.debug("eventbus publish failed: %s", _e)
 
         return AgentOutput(
             agent_name=self.name,

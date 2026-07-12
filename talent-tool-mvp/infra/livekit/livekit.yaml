@@ -1,0 +1,47 @@
+# T2204 - LiveKit Server config
+#
+# Reference: https://docs.livekit.io/reference/config/
+#
+# 本文件由 docker-compose 挂载到 /etc/livekit.yaml.
+# 注意: 真实部署应使用 secrets manager 注入 API key.
+
+port: 7880
+bind_addresses:
+  - "0.0.0.0"
+
+# RTC TCP / UDP
+rtc:
+  tcp_port: 7881
+  udp_port: 7880
+  use_external_ip: false
+
+# TURN
+turn:
+  enabled: true
+  udp_port: 3478
+  tls_port: 5349
+
+# 录制 (开发模式: 输出到本地 /recordings 目录)
+room:
+  auto_create: true
+  max_participants: 50
+  empty_timeout: 300          # 5 分钟无人后销毁
+  departure_timeout: 20
+
+# 录制服务
+egress:
+  enabled: true
+  s3:
+    # 留空使用本地磁盘
+    bucket: ""
+    region: ""
+    access_key: ""
+    secret_key: ""
+
+# Logging
+logging:
+  level: info
+  json: false
+
+# 节点 ID (多节点时必须不同)
+node_ip: "127.0.0.1"

@@ -17,6 +17,7 @@ from uuid import uuid4
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
 from agents.toolkit import llm_call, search_web
+from eventbus import emit
 
 logger = logging.getLogger("recruittech.agents.jobseeker.career_planner")
 
@@ -304,6 +305,24 @@ class CareerPlannerAgent(BaseAgent):
 
         # 4c. 初始化 plan_tracker (供后续 checkin / adjust 使用)
         _init_plan_tracker(agent_input.user_id, plan)
+
+        # v6.0 EventBus — publish plan/market events
+        try:
+            emit("plan.generated", {
+                "user_id": agent_input.user_id,
+                "candidate_id": ctx.get("candidate_id"),
+                "plan_id": record["id"],
+                "milestones": [m.get("title") for m in plan.get("short_term", [])][:5],
+                "horizon_months": 12,
+            }, source="agent.career_planner")
+            emit("market.updated", {
+                "region": ctx.get("region", "global"),
+                "jobs_count": market.get("jobs_count", 0),
+                "delta_pct": market.get("delta_pct", 0),
+                "top_skills": market.get("top_skills", [])[:5],
+            }, source="agent.career_planner")
+        except Exception as _e:
+            logger.debug("eventbus publish failed: %s", _e)
 
         # 5. 文本回复
         st = plan.get("short_term", [])

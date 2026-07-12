@@ -5,16 +5,19 @@ Provides a hybrid ranker combining:
   1. PostgreSQL tsvector full-text match (lexical)
   2. pgvector cosine distance (semantic)
   3. trigram fuzzy fallback (typo / partial-word)
-The three scores are merged with a Reciprocal Rank Fusion (RRF) weighting,
-chosen for its robustness to heterogeneous score distributions.
+  4. T2501 — multimodal channels (image / video / voice)
+The three text scores are merged with a Reciprocal Rank Fusion (RRF)
+weighting, chosen for its robustness to heterogeneous score distributions.
+When a multimodal query is provided (image / video / voice), the result
+list is enriched via the multimodal_search fusion engine.
 
 Hard latency target: p95 < 500ms for queries of length ≤64 chars.
 """
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
-from typing import Iterable
+from dataclasses import dataclass, field
+from typing import Iterable, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -151,4 +154,82 @@ def build_snippet(field: str, ts_alias: str = "search_tsv") -> str:
     """
     return (
         f"substring(coalesce({field},'') from 1 for 240)"
+    )
+
+
+# ---------------------------------------------------------------------------
+# T2501 — multimodal channels (image / video / voice)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class MultimodalChannelInput:
+    """Optional input for a single multimodal channel."""
+
+    enabled: bool = False
+    image_bytes: Optional[bytes] = None
+    image_filename: str = ""
+    video_bytes: Optional[bytes] = None
+    video_filename: str = ""
+    audio_bytes: Optional[bytes] = None
+    audio_filename: str = ""
+
+
+@dataclass
+class MultimodalChannelResult:
+    """Result from a multimodal channel — channel-specific signal."""
+
+    channel: str  # image | video | voice
+    matched_ids: list[str] = field(default_factory=list)
+    transcript: str = ""
+    extra: dict = field(default_factory=dict)
+
+
+def run_multimodal_channels(
+    text_query: str,
+    channel: MultimodalChannelInput,
+    *,
+    candidate_ids: Optional[Iterable[str]] = None,
+) -> MultimodalChannelResult:
+    """T2501 — run image / video / voice channels on top of a text query.
+
+    The multimodal_search fusion engine is fully self-contained (it owns
+    its in-memory MediaIndex), so this function delegates to it and
+    optionally filters the matched ids down to a candidate id set so the
+    caller can re-rank its own text results.
+    """
+    try:
+        from .multimodal_search import multimodal_search
+    except ImportError:  # pragma: no cover - module always present
+        return MultimodalChannelResult(channel="multimodal")
+
+    result = multimodal_search(
+        query_text=text_query,
+        image_bytes=channel.image_bytes,
+        image_filename=channel.image_filename,
+        video_bytes=channel.video_bytes,
+        video_filename=channel.video_filename,
+        audio_bytes=channel.audio_bytes,
+        audio_filename=channel.audio_filename,
+        limit=50,
+    )
+
+    allowed = set(candidate_ids) if candidate_ids is not None else None
+    matched_ids: list[str] = []
+    channels_seen: dict[str, int] = {"image": 0, "video": 0, "voice": 0}
+    for hit in result.items:
+        if allowed is not None and hit.id not in allowed:
+            continue
+        matched_ids.append(hit.id)
+        for ch in hit.matched_channels:
+            channels_seen[ch] = channels_seen.get(ch, 0) + 1
+    return MultimodalChannelResult(
+        channel="multimodal",
+        matched_ids=matched_ids,
+        transcript=result.query_text,
+        extra={
+            "channels_seen": channels_seen,
+            "total": result.total,
+            "weights": result.channel_weights,
+            "took_ms": result.took_ms,
+        },
     )

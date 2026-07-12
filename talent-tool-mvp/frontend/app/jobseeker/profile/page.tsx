@@ -36,6 +36,7 @@ import {
   type CandidateClarification,
   type FollowUpQuestion,
 } from "@/lib/api-clarification";
+import { useEvent } from "@/hooks/use-event";
 
 type ProfileFieldStatus = "filled" | "empty" | "weak";
 interface ProfileField {
@@ -87,6 +88,23 @@ export default function ProfilePage() {
   React.useEffect(() => {
     load();
   }, [load]);
+
+  // v6.0 EventBus: subscribe to `profile.updated` and auto-refetch.
+  // When clarifier_agent / profile_agent runs server-side, it emits the
+  // event; this hook observes the SSE stream and re-runs `load()` so
+  // the candidate never has to manually refresh.
+  const { event: profileEvent } = useEvent("profile.updated");
+  React.useEffect(() => {
+    if (profileEvent && profileEvent.payload) {
+      const candidate = (profileEvent.payload as { candidate_id?: string }).candidate_id;
+      const meId = me?.id;
+      // refetch if event belongs to this user, or payload is unscoped
+      if (!candidate || candidate === meId) {
+        load();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileEvent?.event_id]);
 
   async function handleResynthesize() {
     setResynthesizing(true);

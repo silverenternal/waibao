@@ -25,6 +25,7 @@ from uuid import uuid4
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
 from agents.toolkit import llm_call
 from services.compliance_service import verify_credential_against_lookup
+from eventbus import emit
 
 logger = logging.getLogger("recruittech.agents.employer.compliance")
 
@@ -171,6 +172,21 @@ class ComplianceAgent(BaseAgent):
             supabase.table("company_credentials").insert(record).execute()
         except Exception as e:
             logger.warning(f"failed to persist credential: {e}")
+
+        # v6.0 EventBus — publish audit.recorded for compliance decision
+        try:
+            emit("audit.recorded", {
+                "actor_id": agent_input.user_id,
+                "action": "credential_review",
+                "resource": "company_credentials",
+                "before": None,
+                "after": {
+                    "trust_score": verdict.get("trust_score"),
+                    "verdict": verdict.get("verdict"),
+                },
+            }, source="agent.compliance")
+        except Exception as _e:
+            logger.debug("eventbus publish failed: %s", _e)
 
         return AgentOutput(
             agent_name=self.name,

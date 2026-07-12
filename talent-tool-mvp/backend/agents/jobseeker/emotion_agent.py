@@ -1,4 +1,8 @@
-"""Emotion Agent - 纯 LLM 实现,删除所有词典/正则."""
+"""Emotion Agent - 纯 LLM 实现,删除所有词典/正则.
+
+v6.0 EventBus: emits `emotion.detected`, `emotion.risk` (when risk
+level >= mild).
+"""
 from __future__ import annotations
 
 import json
@@ -8,6 +12,7 @@ from uuid import uuid4
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
 from agents.llm_extractor import detect_emotion
+from eventbus import emit
 
 logger = logging.getLogger("recruittech.agents.jobseeker.emotion")
 
@@ -88,6 +93,30 @@ class EmotionAgent(BaseAgent):
                 "\n\n💙 我注意到你现在的状态不太好,如果你觉得很难受,建议联系专业心理咨询。"
                 "全国24小时心理援助热线: 400-161-9995。"
             )
+
+        # v6.0 EventBus — publish domain events
+        try:
+            intensity = max(
+                (e.get("intensity", 0) for e in result.get("emotions", [])),
+                default=0.0,
+            )
+            emit("emotion.detected", {
+                "user_id": agent_input.user_id,
+                "primary_emotion": result.get("primary_emotion", "neutral"),
+                "intensity": intensity,
+                "sentiment": self._sentiment_from_emotions(result.get("emotions", [])),
+                "evidence": [e.get("evidence") for e in result.get("emotions", [])][:3],
+            }, source="agent.emotion")
+            if risk in ("mild", "moderate", "severe"):
+                emit("emotion.risk", {
+                    "user_id": agent_input.user_id,
+                    "risk_level": risk,
+                    "primary_emotion": result.get("primary_emotion", "neutral"),
+                    "intensity": intensity,
+                    "recommended_action": "page_hr" if risk in ("moderate", "severe") else "log",
+                }, source="agent.emotion")
+        except Exception as _e:
+            logger.debug("eventbus publish failed: %s", _e)
 
         return AgentOutput(
             agent_name=self.name,

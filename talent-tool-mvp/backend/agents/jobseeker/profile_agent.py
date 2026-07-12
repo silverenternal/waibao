@@ -13,6 +13,7 @@ from typing import Any
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
 from agents.toolkit import llm_call
+from eventbus import emit
 
 logger = logging.getLogger("recruittech.agents.jobseeker.profile")
 
@@ -70,6 +71,70 @@ class ProfileAgent(BaseAgent):
         except Exception as e:  # noqa: BLE001
             logger.warning(f"profile_agent OCR/resume parse failed: {e}")
             return {"_error": str(e), "source_url": file_url}
+
+    async def _maybe_analyze_video_resume(self, ctx: dict[str, Any]) -> dict[str, Any] | None:
+        """T2203: 如果 ctx 带 video_url,调用 video_resume_analyzer.
+
+        返回 VideoResumeAnalysis.to_dict();失败返回 {"_error": ...}.
+        """
+        video_url = ctx.get("video_url") or ctx.get("video_resume_url")
+        if not video_url:
+            return None
+        try:
+            from services.jobseeker.video_resume_analyzer import analyze_video_resume
+            analysis = await analyze_video_resume(
+                video_url,
+                interval_sec=float(ctx.get("video_interval_sec", 5.0)),
+                max_frames=int(ctx.get("video_max_frames", 6)),
+                transcript_excerpt=str(ctx.get("video_transcript", "")),
+                blob_size_bytes=ctx.get("video_size_bytes"),
+            )
+            return analysis.to_dict()
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"profile_agent video resume analysis failed: {e}")
+            return {"_error": str(e), "source_url": video_url}
+
+    def _merge_video_into_profile(self, profile: dict, analysis_dict: dict) -> dict:
+        """T2203: 把视频简历分析合并进 profile.
+
+        使用 video_resume_analyzer.merge_video_into_profile;权重 0.15 (视频) / 0.85 (文本).
+        """
+        try:
+            from services.jobseeker.video_resume_analyzer import (
+                VideoResumeAnalysis,
+                VideoResumeScores,
+                NonVerbalSignals,
+                merge_video_into_profile,
+            )
+            scores_dict = analysis_dict.get("scores") or {}
+            scores = VideoResumeScores(**{k: float(v) for k, v in scores_dict.items() if k != "overall"})
+            scores.overall = float(scores_dict.get("overall", 0.0))
+            nv = analysis_dict.get("non_verbal") or {}
+            non_verbal = NonVerbalSignals(
+                expression=str(nv.get("expression", "")),
+                eye_contact=str(nv.get("eye_contact", "")),
+                body_language=str(nv.get("body_language", "")),
+                notes=list(nv.get("notes") or []),
+            )
+            analysis = VideoResumeAnalysis(
+                source_url=analysis_dict.get("source_url", ""),
+                video_metadata=analysis_dict.get("video_metadata", {}),
+                frames_analyzed=int(analysis_dict.get("frames_analyzed", 0)),
+                scores=scores,
+                non_verbal=non_verbal,
+                strengths=list(analysis_dict.get("strengths") or []),
+                suggestions=list(analysis_dict.get("suggestions") or []),
+                transcript_excerpt=str(analysis_dict.get("transcript_excerpt", "")),
+                tags=list(analysis_dict.get("tags") or []),
+                confidence=float(analysis_dict.get("confidence", 0.0)),
+                model=str(analysis_dict.get("model", "")),
+                provider_chain=list(analysis_dict.get("provider_chain") or []),
+                analyzed_at=str(analysis_dict.get("analyzed_at", "")),
+            )
+            return merge_video_into_profile(profile, analysis)
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"_merge_video_into_profile failed: {e}")
+            return profile
 
     def _merge_resume_into_profile(self, profile: dict, parsed: dict) -> dict:
         """把 LLM 抽取出的 resume 字段 merge 进 profile。
@@ -201,6 +266,14 @@ class ProfileAgent(BaseAgent):
         if resume_parsed and "_error" in resume_parsed:
             ocr_notice = f"\n(注:简历解析失败 — {resume_parsed.get('_error', '未知错误')})"
 
+        # ---- T2203 视频简历理解 ----
+        video_analysis = await self._maybe_analyze_video_resume(ctx)
+        if video_analysis and "_error" not in video_analysis:
+            existing = self._merge_video_into_profile(existing, video_analysis)
+        video_notice = ""
+        if video_analysis and "_error" in video_analysis:
+            video_notice = f"\n(注:视频简历分析失败 — {video_analysis.get('_error', '未知错误')})"
+
         system = PROFILE_INTAKE_PROMPT
         user_msg = f"已有画像: {json.dumps(existing, ensure_ascii=False)}\n用户新输入: {text}{ocr_notice}"
 
@@ -223,6 +296,32 @@ class ProfileAgent(BaseAgent):
         warm = result.get("warm_response", "好的,我记下了。")
         if resume_parsed and "_error" not in resume_parsed:
             warm = f"我从你上传的文件里抽取了关键信息。{warm}"
+        if video_analysis and "_error" not in video_analysis:
+            try:
+                scores = video_analysis.get("scores") or {}
+                overall = int(float(scores.get("overall", 0)) * 100)
+                warm = f"我看了你的视频简历(综合 {overall} 分)。{warm}"
+            except Exception:  # noqa: BLE001
+                pass
+
+        # v6.0 EventBus — publish profile.updated + profile.enriched (when resume parsed)
+        try:
+            emit("profile.updated", {
+                "user_id": agent_input.user_id,
+                "candidate_id": ctx.get("candidate_id"),
+                "fields": [k for k in (updated.keys() if isinstance(updated, dict) else [])][:10],
+                "completeness": result.get("completion", 0.5),
+                "source": "profile_agent",
+            }, source="agent.profile")
+            if resume_parsed and "_error" not in resume_parsed:
+                emit("profile.enriched", {
+                    "user_id": agent_input.user_id,
+                    "candidate_id": ctx.get("candidate_id"),
+                    "new_skills": (resume_parsed.get("skills") or [])[:10],
+                    "source": "resume_parser",
+                }, source="agent.profile")
+        except Exception as _e:
+            logger.debug("eventbus publish failed: %s", _e)
 
         return AgentOutput(
             agent_name=self.name,
@@ -234,6 +333,8 @@ class ProfileAgent(BaseAgent):
                 "ocr_triggered": bool(resume_parsed),
                 "ocr_provider": (resume_parsed or {}).get("ocr_provider"),
                 "resume_extracted": (resume_parsed or {}).get("extracted"),
+                "video_resume_analyzed": bool(video_analysis and "_error" not in video_analysis),
+                "video_resume_scores": (video_analysis or {}).get("scores"),
             },
             memory_writes=[{
                 "scope": "long_term",

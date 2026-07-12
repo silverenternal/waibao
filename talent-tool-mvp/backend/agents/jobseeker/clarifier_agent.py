@@ -1,4 +1,8 @@
-"""Clarifier Agent - 用 LLM 多步推理 + 反思."""
+"""Clarifier Agent - 用 LLM 多步推理 + 反思.
+
+v6.0 EventBus: emits `profile.updated`, `needs.clarified`,
+and `agent.completed` on success / `agent.failed` on error.
+"""
 from __future__ import annotations
 
 import json
@@ -8,11 +12,18 @@ from uuid import uuid4
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
 from agents.toolkit import llm_call
+from eventbus import emit
 
 logger = logging.getLogger("recruittech.agents.jobseeker.clarifier")
 
 
-REFLECTIVE_SYSTEM = """你是求职者画像综合专家。
+def _load_reflective_system() -> str:
+    """Load reflective system prompt. Falls back to default if config is absent."""
+    from services.platform.config_service import get_prompt
+    return get_prompt("clarifier", "system", default=REFLECTIVE_SYSTEM_DEFAULT)
+
+
+REFLECTIVE_SYSTEM_DEFAULT = """你是求职者画像综合专家。
 
 你的任务: 综合求职者所有来源的信息(画像/日记/对话/情绪),产出最准确的画像和需求。
 
@@ -62,7 +73,7 @@ async def _llm_synthesize(llm: LLMClient, all_data: dict) -> dict:
     return await llm_call(
         llm,
         json.dumps(all_data, ensure_ascii=False)[:8000],
-        system=REFLECTIVE_SYSTEM + "\n\nSchema:\n" + schema_hint,
+        system=_load_reflective_system() + "\n\nSchema:\n" + schema_hint,
         json_mode=True,
     )
 
@@ -101,6 +112,10 @@ class ClarifierAgent(BaseAgent):
 
     async def _handle(self, agent_input: AgentInput) -> AgentOutput:
         ctx = agent_input.context or {}
+        run_id = str(uuid4())
+        emit("agent.started", {"agent_name": self.name, "user_id": agent_input.user_id,
+                               "run_id": run_id, "input_keys": list(ctx.keys())},
+             source="agent.clarifier")
 
         # 1. 收集所有数据源
         all_data = {
@@ -109,6 +124,33 @@ class ClarifierAgent(BaseAgent):
             "conversations": (ctx.get("conversations") or [])[-20:],
             "emotion_history": (ctx.get("emotion_history") or [])[-30:],
         }
+
+        # T2203: 把视频简历评分注入 context (如果有)
+        video_summary = None
+        profile_video = (all_data["profile"] or {}).get("video_resume_feedback") or {}
+        scores_video = (all_data["profile"] or {}).get("_video_resume_scores") or {}
+        if scores_video or profile_video:
+            try:
+                from services.jobseeker.video_resume_analyzer import (
+                    VideoResumeAnalysis, VideoResumeScores, NonVerbalSignals,
+                    summarize_for_clarifier,
+                )
+                analysis = VideoResumeAnalysis(
+                    source_url=profile_video.get("source_url", ""),
+                    video_metadata={},
+                    frames_analyzed=int(profile_video.get("frames_analyzed", 0)),
+                    scores=VideoResumeScores(**{k: float(v) for k, v in scores_video.items() if k != "overall"}),
+                    non_verbal=NonVerbalSignals(),
+                    strengths=list(profile_video.get("strengths") or []),
+                    suggestions=list(profile_video.get("suggestions") or []),
+                )
+                if scores_video.get("overall") is not None:
+                    analysis.scores.overall = float(scores_video["overall"])
+                video_summary = summarize_for_clarifier(analysis)
+                all_data["video_resume_summary"] = video_summary
+                all_data["video_resume_scores"] = scores_video
+            except Exception as e:  # noqa: BLE001
+                logger.debug(f"video resume summary skipped: {e}")
 
         # 2. 第一步: 综合
         try:
@@ -173,11 +215,43 @@ class ClarifierAgent(BaseAgent):
             f"✅ 显性需求: {' / '.join(str(n) for n in needs.get('explicit', [])[:3]) or '暂未提取'}\n"
             f"🔍 推断需求: {' / '.join(str(n) for n in needs.get('implicit', [])[:3]) or '暂未提取'}\n"
         )
+        if video_summary:
+            text += f"\n🎥 **视频简历**: {video_summary}\n"
         if draft.get("contradictions"):
             text += f"\n⚠️ 检测到 {len(draft['contradictions'])} 处冲突,请回顾确认。\n"
 
         if reflection:
             text += f"\n🤔 反思置信度: {int(reflection.get('confidence_after_reflection', 0.5) * 100)}%"
+
+        # v6.0 EventBus: publish domain events
+        try:
+            completeness = (
+                draft.get("info_completeness", {}).get("value", 0)
+                if isinstance(draft.get("info_completeness"), dict) else 0
+            )
+            emit("profile.updated", {
+                "user_id": agent_input.user_id,
+                "candidate_id": ctx.get("candidate_id"),
+                "fields": ["profile_synthesis", "explicit_needs", "implicit_needs"],
+                "completeness": completeness,
+                "source": "clarifier_agent",
+            }, source="agent.clarifier", correlation_id=run_id)
+            emit("needs.clarified", {
+                "user_id": agent_input.user_id,
+                "candidate_id": ctx.get("candidate_id"),
+                "must_haves": record.get("must_haves", []),
+                "deal_breakers": record.get("deal_breakers", []),
+                "confidence": record.get("confidence_score", 0.5),
+            }, source="agent.clarifier", correlation_id=run_id)
+        except Exception as _e:
+            logger.debug("eventbus publish failed: %s", _e)
+
+        emit("agent.completed", {
+            "agent_name": self.name,
+            "user_id": agent_input.user_id,
+            "run_id": run_id,
+            "artifacts_count": len(draft),
+        }, source="agent.clarifier", correlation_id=run_id)
 
         return AgentOutput(
             agent_name=self.name,
