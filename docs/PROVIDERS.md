@@ -392,3 +392,89 @@ with span("llm_call", provider="anthropic", model="claude-3"):
 - **v3.0 (2026-07)**: i18n / Webhook / 公开 API / 规则引擎 / A/B / OTel
 - **v2.0 (2026-06)**: 23 个供应商适配器
 - **v1.0 (2026-04)**: 16 个智能体 + 30+ API
+
+---
+
+## v4.0 — 5 个新供应商
+
+| 类别 | 供应商 | Region | 抽象基类 | 实现 |
+|---|---|---|---|---|
+| 支付 (Payment) | Stripe | sg / us | `PaymentProvider` | `providers/payment/stripe.py` |
+| 支付 (Payment) | 微信支付 | cn | `PaymentProvider` | `providers/payment/wechat_pay.py` |
+| 支付 (Payment) | 支付宝 | cn | `PaymentProvider` | `providers/payment/alipay.py` |
+| ATS | Greenhouse | sg / us | `ATSProvider` | `providers/ats/greenhouse.py` |
+| ATS | Lever | sg / us | `ATSProvider` | `providers/ats/lever.py` |
+| 视频面试 (VideoInterview) | Zoom | sg / us | `VideoInterviewProvider` | `providers/video_interview/zoom.py` |
+| 视频面试 (VideoInterview) | 腾讯会议 | cn | `VideoInterviewProvider` | `providers/video_interview/tencent_meeting.py` |
+| 测评 (Assessment) | 北森 (Beisen) | cn | `AssessmentProvider` | `providers/assessment/beisen.py` |
+| 背景调查 (BackgroundCheck) | Checkr | us | `BackgroundCheckProvider` | `providers/background_check/checkr.py` |
+
+### 支付 (Payment) 集成详情
+
+#### Stripe
+- 用途: 海外信用卡订阅 (region-sg / region-us)
+- 环境变量: `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`
+- 关键 API: 创建 checkout session / 处理 webhook / 订阅生命周期
+- 测试卡号: `4242 4242 4242 4242` (Visa), `4000 0027 6000 3184` (3DS)
+
+#### 微信支付
+- 用途: 国内订阅 (region-cn)
+- 环境变量: `WECHAT_PAY_APP_ID` / `WECHAT_PAY_MCH_ID` / `WECHAT_PAY_API_KEY`
+- 关键 API: JSAPI / Native / H5 下单, 回调验签
+- 注意: 需要 ICP 备案域名
+
+#### 支付宝
+- 用途: 国内订阅 (region-cn, 兜底)
+- 环境变量: `ALIPAY_APP_ID` / `ALIPAY_PRIVATE_KEY` / `ALIPAY_PUBLIC_KEY`
+- 关键 API: 手机网站支付 / 电脑网站支付, 异步通知验签
+
+### ATS 双向同步
+
+#### Greenhouse
+- API 基础: `https://harvest.greenhouse.io/v1/`
+- Auth: Basic auth (api_key: 空字符串)
+- 同步实体: candidates / jobs / applications / stages
+- 同步方向: 双向 (拉取新候选人 → 推送状态变更)
+- 冲突解决: last-write-wins + 手动干预 endpoint
+
+#### Lever
+- API 基础: `https://api.lever.co/v1/`
+- Auth: Basic auth (api_key)
+- 同步实体: candidates / opportunities / postings
+- 同步方向: 双向
+
+### 视频面试
+
+#### Zoom
+- API 基础: `https://api.zoom.us/v2/`
+- Auth: OAuth 或 JWT (推荐用 Server-to-Server OAuth)
+- 关键 API: 创建 meeting / 删除 meeting / 录制列表 / webhook
+- 录制回传: 视频 → OSS / S3 (waibao 私有 bucket)
+
+#### 腾讯会议
+- API 基础: `https://api.meeting.qq.com/v1/`
+- Auth: 应用鉴权 (AppID + Secret + AccessToken)
+- 关键 API: 创建预定会议 / 取消 / 录制查询
+
+### 测评 — 北森 (Beisen)
+
+- API 基础: `https://openapi.beisen.com/`
+- Auth: OAuth 2.0
+- 关键 API: 发送测评邀请 / 查询结果 / 报告 PDF
+- 结果格式: 维度分 + 总分 + 风险标记
+
+### 背调 — Checkr
+
+- API 基础: `https://api.checkr.com/v1/`
+- Auth: API key (header `Authorization: Bearer <key>`)
+- 关键 API: 创建 report / 查询状态 / webhook 回调
+- 注意: 仅 US 区域可用 (受 FCRA 约束)
+
+### 新供应商集成流程
+
+1. 在 `providers/<category>/` 创建 `<vendor>_provider.py`
+2. 继承抽象基类 (`PaymentProvider` / `ATSProvider` 等)
+3. 在 `providers/registry.py` 的 `PAYMENT_PROVIDERS` / `ATS_PROVIDERS` 等映射中注册
+4. 写至少 5 个单元测试 (含 401 / 429 / 网络错误)
+5. 写 1 个真实 API 集成测试 (标记 `real_api`, 默认 skip)
+6. 更新本文件 + `config.example.env`

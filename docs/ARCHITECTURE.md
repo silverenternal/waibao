@@ -373,3 +373,54 @@ pytest tests/test_llm_providers.py -v
 3. 在 `registry.py` mapping 中加入
 4. 写至少 3 个单元测试
 5. 更新 `config.example.env` + 本文档
+---
+
+## v4.0 — 多区域 + 合规 + 多端架构
+
+### 多区域拓扑
+
+```
+alidns (国内)  +  Cloudflare (海外)
+       │                  │
+       ▼                  ▼
+   ┌─────────────┐    ┌─────────────────────────────────────────┐
+   │ region-cn   │    │ region-sg / region-us (AWS)            │
+   │ 阿里云      │    │  ALB → EKS                              │
+   │ SLB → ACK   │    │                                         │
+   │ RDS PG 主   │◀──▶│  Supabase PG 主 + RDS 跨区副本        │
+   │ + OSS       │    │  + S3 (区域隔离)                        │
+   └─────────────┘    └─────────────────────────────────────────┘
+```
+
+每个区域独立部署:
+- **写主库**: 用户主区域
+- **跨区副本**: streaming replication (lag < 5s)
+- **事件总线**: outbox pattern + Pub/Sub (RocketMQ cn / SNS+SG/US)
+- **数据驻留**: `DATA_RESIDENCY` env 强制
+- **DNS**: GeoDNS (alidns 国内 → cn, Cloudflare 海外 → sg/us)
+- **SLA**: 99.9% 月度, RTO ≤ 15 min, RPO ≤ 5 min
+
+### 合规模块
+
+| 模块 | 法规 | 关键实现 |
+|---|---|---|
+| PIPL (中国) | 数据不出境 + 用户授权 | `services/pii_field_encryption.py` (AES-GCM) + `services/region_router.py` |
+| GDPR (EU) | 被遗忘 + 数据可携 + cookie 同意 | `api/gdpr.py` (forget_me / export_my_data / record_consent) |
+| CCPA (CA) | opt-out + 数据导出 | `api/gdpr.py` + DSR endpoint |
+| SOC 2 (US) | 审计 + 访问控制 | audit_log 表 + RLS |
+
+### 多端覆盖
+
+| 端 | 技术 | 用途 |
+|---|---|---|
+| Web | Next.js 16 (响应式 + SSR) | 主端 |
+| 微信小程序 | uni-app (跨端) | 国内移动端 |
+| 钉钉微应用 | 钉钉开放平台 SDK | 企业集成 |
+| 飞书应用 | 飞书开放平台 SDK | 企业集成 |
+| PWA | Service Worker + manifest | 离线 + 安装 |
+
+### 合规文档清单
+
+- [MULTI_REGION.md](./MULTI_REGION.md) — 多区域详细架构
+- [DISASTER_RECOVERY.md](./DISASTER_RECOVERY.md) — 灾备
+- 4 份法律页 (`/legal/privacy`, `/legal/terms`, `/legal/dpa`, `/legal/cookies`)

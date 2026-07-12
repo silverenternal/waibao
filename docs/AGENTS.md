@@ -532,3 +532,55 @@ FEISHU_WEBHOOK=https://open.feishu.cn/open-apis/bot/v2/hook/xxx
 路由:`/api/admin/matching-quality/*`
 
 更多示例见 [`backend/providers/README.md`](../talent-tool-mvp/backend/providers/README.md) 与 [`docs/ARCHITECTURE.md`](./ARCHITECTURE.md) 的 Providers 抽象层章节。
+---
+
+## v4.0 — 新增能力 Agent / Service 集成
+
+v4.0 新增的不再是 Agent (智能体数量仍为 16), 而是 **业务 Service / Provider**, 通过 MCP / REST 与现有 Agent 协作:
+
+### 1. AI 自动面试服务 (`services/ai_interviewer.py`)
+- 启动会话 → 推题 (按 role/level 匹配) → 答题 (视频 / 文本) → LLM 评分 → 生成报告
+- 关联 Agent: HRService Agent (面试流程编排)
+- 关联 Provider: Zoom / 腾讯会议 (视频录制)
+
+### 2. Offer 计算 + 谈判 (`services/offer_calculator.py`, `services/negotiation_advisor.py`)
+- 多 Offer 总包比较 (汇率 / 税 / 折现统一到 CNY)
+- 行业百分位 (market band)
+- LLM 谈判脚本生成
+- 关联 Agent: CareerPlanner Agent (求职者侧) / HRService Agent (雇主侧)
+
+### 3. 招聘漏斗 + 渠道 ROI (`services/recruitment_funnel.py`, `services/channel_attribution.py`)
+- 5 阶段 (applied / screen / onsite / offer / hired) 转化率
+- 渠道 ROI: cost / hire × channel
+- 关联 Agent: HRService Agent
+
+### 4. 候选人订阅 + 推荐 (`services/job_subscription.py`, `services/candidate_recommender.py`)
+- 关键词 + 地点 + 薪资匹配
+- embedding-based 推荐
+- 实时推送 (push_engine)
+- 关联 Agent: Profile Agent / Intake Agent
+
+### 5. 视频面试 (`services/video_interview_service.py`)
+- Zoom / 腾讯会议 自动创建
+- 录制回传 + 转写
+- 关联 Agent: HRService Agent
+
+### 6. 测评 (`services/assessment_service.py`)
+- 北森 测评邀请 + 结果回传
+- 分数加权到匹配引擎
+- 关联 Agent: MutualEvaluator
+
+### 7. 背调 (`services/background_check_service.py`)
+- Checkr 触发 (offer 前)
+- 状态查询 + webhook
+- 关联 Agent: HRService Agent / Compliance Agent
+
+### 8. ATS 双向同步 (`services/ats_sync.py`)
+- Greenhouse / Lever 双向候选人 / 职位同步
+- 冲突解决 (本地 vs remote)
+- 关联 Agent: HRService Agent
+
+### 9. 计费 (`services/billing.py`)
+- Stripe / 微信 / 支付宝 订阅
+- 配额 + 用量
+- 关联: Pilot / 商业化

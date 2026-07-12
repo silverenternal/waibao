@@ -531,3 +531,95 @@ wscat -c "ws://localhost:8000/api/realtime/ws/invoke?token=$JWT"
 | `/api/action-items` | GET/POST | ✅ | 行动项 |
 | `/api/action-items/{id}` | PATCH | ✅ | 标记完成/关闭 |
 | `/api/escalation` | POST | ✅ | 升级到人工 |
+---
+
+## v4.0 新增 API (50+)
+
+### AI 自动面试 (T1301)
+| `/api/ai-interview/start` | POST | ✅ | 启动 AI 面试会话 |
+| `/api/ai-interview/{id}/questions` | GET | ✅ | 获取题目 |
+| `/api/ai-interview/{id}/answer` | POST | ✅ | 提交答案 |
+| `/api/ai-interview/{id}/report` | GET | ✅ | 获取评估报告 |
+
+### Offer 比较 + 谈判 (T1302)
+| `/api/offers/compare` | POST | ✅ | 多 Offer 比较 |
+| `/api/offers/{id}/negotiation` | POST | ✅ | 生成谈判脚本 |
+| `/api/offers/{id}/breakdown` | GET | ✅ | 总包拆分 |
+| `/api/offers/market-band` | GET | ✅ | 行业百分位 |
+
+### 招聘漏斗 + 渠道 ROI (T1303)
+| `/api/funnel` | GET | ✅ | 漏斗视图 |
+| `/api/funnel/conversion` | GET | ✅ | 阶段转化率 |
+| `/api/analytics/channels` | GET | ✅ | 渠道 ROI |
+| `/api/analytics/channels/{channel}/attribution` | GET | ✅ | 渠道归因 |
+| `/api/funnel/events` | POST | ✅ | 记录事件 |
+
+### 订阅 + 推荐 (T1304)
+| `/api/subscriptions` | GET/POST/DELETE | ✅ | 订阅管理 |
+| `/api/subscriptions/match` | POST | ✅ | 匹配运行 |
+| `/api/recommendations/candidates` | GET | ✅ | 推荐候选人 |
+| `/api/recommendations/jobs` | GET | ✅ | 推荐岗位 |
+| `/api/push/subscribe` | POST | ✅ | 推送订阅 |
+| `/api/push/unsubscribe` | POST | ✅ | 取消推送 |
+
+### 视频面试 (T1305)
+| `/api/video-interview/schedule` | POST | ✅ | 排程 (Zoom / 腾讯) |
+| `/api/video-interview/{id}/cancel` | POST | ✅ | 取消 |
+| `/api/video-interview/{id}/recording` | GET | ✅ | 录制链接 |
+| `/api/video-interview/webhook` | POST | — | Zoom webhook |
+
+### 测评 (T1306)
+| `/api/assessments/invite` | POST | ✅ | 发送测评邀请 |
+| `/api/assessments/{invitation_id}` | GET | ✅ | 获取结果 |
+| `/api/assessments/{invitation_id}/apply` | POST | ✅ | 加权到匹配 |
+
+### 背景调查 (T1307)
+| `/api/background-check/trigger` | POST | ✅ | 触发背调 (Checkr) |
+| `/api/background-check/{id}/status` | GET | ✅ | 查询状态 |
+| `/api/background-check/pre-offer` | POST | ✅ | 自动 offer 前触发 |
+| `/api/background-check/webhook` | POST | — | Checkr webhook |
+
+### ATS 双向同步 (T1501)
+| `/api/ats/integrations` | GET/POST | ✅ | 集成管理 |
+| `/api/ats/integrations/{id}/sync` | POST | ✅ | 立即同步 |
+| `/api/ats/integrations/{id}/history` | GET | ✅ | 同步历史 |
+| `/api/ats/conflicts` | GET | ✅ | 冲突列表 |
+| `/api/ats/conflicts/{id}/resolve` | POST | ✅ | 解决冲突 |
+
+### 计费 (T1405)
+| `/api/billing/plans` | GET | — | 价格套餐 |
+| `/api/billing/subscribe` | POST | ✅ | 创建订阅 |
+| `/api/billing/subscriptions` | GET | ✅ | 我的订阅 |
+| `/api/billing/cancel` | POST | ✅ | 取消订阅 |
+| `/api/billing/checkout/stripe` | POST | ✅ | Stripe checkout (海外) |
+| `/api/billing/checkout/wechat` | POST | ✅ | 微信支付 (国内) |
+| `/api/billing/checkout/alipay` | POST | ✅ | 支付宝 (国内) |
+| `/api/billing/webhook/stripe` | POST | — | Stripe webhook |
+| `/api/billing/webhook/wechat` | POST | — | 微信回调 |
+
+### 多端 / 集成 (T1203/T1204)
+| `/api/miniprogram/auth/login` | POST | — | 微信小程序 code2session |
+| `/api/miniprogram/auth/phone` | POST | ✅ | 手机号登录 |
+| `/api/miniprogram/auth/me` | GET | ✅ | 当前用户 |
+| `/api/corp/dingtalk/bind` | POST | ✅ | 钉钉绑定 |
+| `/api/corp/dingtalk/signature` | POST | — | 微应用签名校验 |
+| `/api/corp/feishu/bind` | POST | ✅ | 飞书绑定 |
+| `/api/corp/feishu/signature` | POST | — | 应用签名校验 |
+
+### 合规 / GDPR (T1201/T1202)
+| `/api/gdpr/consent` | POST | ✅ | 记录同意 |
+| `/api/gdpr/consent` | GET | ✅ | 查询同意 |
+| `/api/gdpr/consent/withdraw` | POST | ✅ | 撤回同意 |
+| `/api/gdpr/me/export` | POST | ✅ | 数据导出 (可携权) |
+| `/api/gdpr/me/forget` | POST | ✅ | 被遗忘权 |
+
+### 全局搜索 (T1404)
+| `/api/search` | GET | ✅ | 跨实体全文搜索 |
+| `/api/search/suggestions` | GET | ✅ | 搜索建议 (⌘K) |
+| `/api/search/recent` | GET | ✅ | 最近搜索 |
+
+### Pilot (T1106)
+| `/api/pilot/invite` | POST | ✅(admin) | 邀请试用 |
+| `/api/pilot/programs` | GET | ✅ | 试用项目列表 |
+| `/api/pilot/{id}/feedback` | POST | ✅ | 反馈提交 |
+| `/api/pilot/{id}/survey` | GET | ✅ | 调研问卷 |

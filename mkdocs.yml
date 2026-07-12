@@ -69,8 +69,13 @@ nav:
   - 智能体: AGENTS.md
   - API: API.md
   - Providers & 横切能力: PROVIDERS.md
+  - 多区域部署: MULTI_REGION.md
+  - 灾备: DISASTER_RECOVERY.md
+  - 运维手册: RUNBOOK.md
+  - 性能压测: PERFORMANCE.md
   - i18n 指南: I18N_GUIDE.md
   - 覆盖审计 v3: COVERAGE-AUDIT-v3.md
+  - 覆盖审计 v4: COVERAGE-AUDIT-v4.md
   - 部署: DEPLOYMENT.md
   - 路线图: ROADMAP.md
   - 贡献指南: CONTRIBUTING.md
