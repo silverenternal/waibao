@@ -399,6 +399,46 @@ export const mockApi: ApiClient = {
         },
       };
     },
+    funnelWithCosts: async (days = 30) => {
+      await delay();
+      const f = await mockApi.analytics.funnel(days);
+      // Add mock cost data per stage
+      return {
+        ...f,
+        stages: f.stages.map((s: any, i: number) => ({
+          ...s,
+          total_cost_cents: 10000 * (i + 1),
+          avg_cost_cents: 10000,
+        })),
+      };
+    },
+    funnelTrend: async (weeks = 12) => {
+      await delay();
+      const trend = Array.from({ length: weeks }, (_, i) => {
+        const start = new Date(Date.now() - (weeks - i) * 7 * 86400000);
+        const end = new Date(Date.now() - (weeks - i - 1) * 7 * 86400000);
+        return {
+          week_start: start.toISOString(),
+          week_end: end.toISOString(),
+          by_stage: { sourced: 20 + i, applied: 15 + i, screened: 10 + i, interviewed: 6 + i, offered: 3 + i, hired: 1 + i },
+        };
+      });
+      return { weeks, trend };
+    },
+    recordFunnelEvents: async (
+      events: Array<{
+        candidate_id: string;
+        stage: string;
+        source?: string;
+        role_id?: string;
+        cost_cents?: number;
+        metadata?: Record<string, unknown>;
+        occurred_at?: string;
+      }>,
+    ) => {
+      await delay();
+      return { ok: events.length, total: events.length };
+    },
   },
   subscriptions: {
     list: async () => {

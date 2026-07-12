@@ -1,0 +1,508 @@
+# =============================================================================
+# Waibao v5.0 — Prometheus 告警规则 (T1704)
+# =============================================================================
+# 30+ 规则 / 4 严重度 / 7 业务域
+#
+# 严重度映射 (与 services/observability/alerting.py AlertSeverity 一致):
+#   critical (P0)  — 5 分钟响应, PagerDuty + 钉钉 oncall + 飞书 oncall + Webhook
+#   high     (P1)  — 15 分钟响应, 钉钉 + 飞书 + Webhook
+#   warning  (P2)  — 1 小时响应,  钉钉 + 飞书
+#   info     (P3)  — 仅记录,       飞书
+#
+# AlertManager 路由: 详见 ../alertmanager.yml
+# 业务域 (team 标签):
+#   api      HTTP / 业务 API
+#   llm      LLM 调用 / 成本 / 缓存
+#   db       PostgreSQL / Redis / 连接池
+#   ws       WebSocket / 协同房间
+#   infra    CPU / 内存 / 磁盘 / 文件描述符
+#   job      批处理 / 定时任务
+#   security 安全事件 / WAF
+# =============================================================================
+
+groups:
+  # -----------------------------------------------------------------
+  # 1. HTTP 业务 API (8 rules)
+  # -----------------------------------------------------------------
+  - name: api.rules
+    interval: 30s
+    rules:
+      - alert: HighErrorRate5xx
+        expr: |
+          sum by (service, route) (rate(http_requests_total{status=~"5.."}[5m]))
+            /
+          sum by (service, route) (rate(http_requests_total[5m]))
+            > 0.01
+        for: 2m
+        labels:
+          severity: critical
+          team: api
+          sla: "error_rate<0.5%"
+        annotations:
+          summary: "5xx 错误率 > 1% ({{ $labels.route }})"
+          description: "5xx 在过去 5m 占比 {{ $value | humanizePercentage }} (>1% 持续 2m)"
+          runbook: "https://wiki.waibao/alerting/HighErrorRate5xx"
+
+      - alert: HighErrorRate4xx
+        expr: |
+          sum by (service, route) (rate(http_requests_total{status=~"4.."}[5m]))
+            /
+          sum by (service, route) (rate(http_requests_total[5m]))
+            > 0.10
+        for: 5m
+        labels:
+          severity: warning
+          team: api
+        annotations:
+          summary: "4xx 错误率 > 10% ({{ $labels.route }})"
+          description: "可能是权限/校验/限流问题, 占比 {{ $value | humanizePercentage }}"
+
+      - alert: SlowP95Latency
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le, service, route) (rate(http_request_duration_seconds_bucket[5m]))
+          ) > 1.5
+        for: 5m
+        labels:
+          severity: high
+          team: api
+          sla: "p95<2s"
+        annotations:
+          summary: "P95 延迟 > 1.5s ({{ $labels.route }})"
+          description: "P95 = {{ $value }}s, 目标 < 2s"
+
+      - alert: SlowP99Latency
+        expr: |
+          histogram_quantile(0.99,
+            sum by (le, service, route) (rate(http_request_duration_seconds_bucket[5m]))
+          ) > 3
+        for: 5m
+        labels:
+          severity: critical
+          team: api
+        annotations:
+          summary: "P99 延迟 > 3s ({{ $labels.route }})"
+          description: "P99 = {{ $value }}s, 严重超时"
+
+      - alert: LowRequestThroughput
+        expr: |
+          sum by (service) (rate(http_requests_total[5m])) < 1
+        for: 10m
+        labels:
+          severity: warning
+          team: api
+        annotations:
+          summary: "服务 {{ $labels.service }} 5m RPS < 1"
+          description: "可能是入口挂掉或流量被旁路"
+
+      - alert: HighRequestThroughputSurge
+        expr: |
+          sum by (service) (rate(http_requests_total[2m]))
+            >
+          3 * sum by (service) (rate(http_requests_total[1h] offset 1h))
+        for: 5m
+        labels:
+          severity: warning
+          team: api
+        annotations:
+          summary: "流量突增 3x ({{ $labels.service }})"
+          description: "2m RPS = {{ $value }} 是同时刻昨日的 3x, 准备扩容"
+
+      - alert: EndpointUnavailable
+        expr: |
+          up{job="waibao-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: api
+        annotations:
+          summary: "后端实例 {{ $labels.instance }} 不可达"
+          description: "连续 2m scrape 失败"
+
+      - alert: HealthCheckFailing
+        expr: |
+          probe_success{job="blackbox-health"} == 0
+        for: 3m
+        labels:
+          severity: critical
+          team: api
+        annotations:
+          summary: "/health 探针失败 {{ $labels.instance }}"
+          description: "blackbox_exporter 探测失败"
+
+  # -----------------------------------------------------------------
+  # 2. LLM 调用 / 成本 (7 rules)
+  # -----------------------------------------------------------------
+  - name: llm.rules
+    interval: 30s
+    rules:
+      - alert: LLMBudgetOver80Percent
+        expr: |
+          llm_cost_usd_daily / llm_budget_usd_daily > 0.8
+        for: 5m
+        labels:
+          severity: high
+          team: llm
+        annotations:
+          summary: "LLM 每日成本已用 {{ $value | humanizePercentage }}"
+          description: "达到预算 80%, 准备切到便宜模型 / 收紧 cache TTL"
+
+      - alert: LLMBudgetOver100Percent
+        expr: |
+          llm_cost_usd_daily / llm_budget_usd_daily > 1.0
+        for: 2m
+        labels:
+          severity: critical
+          team: llm
+        annotations:
+          summary: "LLM 每日成本已超预算 ({{ $value | humanizePercentage }})"
+          description: "立即切到 mock provider 或限流"
+
+      - alert: LLMHighErrorRate
+        expr: |
+          sum by (provider, model) (rate(provider_calls_total{status="error"}[5m]))
+            /
+          sum by (provider, model) (rate(provider_calls_total[5m]))
+            > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          team: llm
+        annotations:
+          summary: "LLM 调用错误率 > 5% ({{ $labels.provider }}/{{ $labels.model }})"
+          description: "占比 {{ $value | humanizePercentage }}, 切换 provider"
+
+      - alert: LLMSlowProvider
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le, provider, model) (rate(provider_call_duration_seconds_bucket[10m]))
+          ) > 10
+        for: 5m
+        labels:
+          severity: high
+          team: llm
+        annotations:
+          summary: "LLM P95 > 10s ({{ $labels.provider }}/{{ $labels.model }})"
+          description: "P95 = {{ $value }}s"
+
+      - alert: LLMCacheHitRatioDrop
+        expr: |
+          llm_cache_hit_ratio < 0.20
+        for: 10m
+        labels:
+          severity: warning
+          team: llm
+        annotations:
+          summary: "LLM 缓存命中率 < 20%"
+          description: "命中率 = {{ $value }}, 检查 cache TTL / Redis 连接"
+
+      - alert: LLMRateLimited
+        expr: |
+          sum by (provider) (rate(provider_calls_total{status="rate_limited"}[5m])) > 1
+        for: 5m
+        labels:
+          severity: high
+          team: llm
+        annotations:
+          summary: "LLM Provider 触发限流 ({{ $labels.provider }})"
+          description: "5m 内有 {{ $value }} 次/秒 限流"
+
+      - alert: LLMTokenSpike
+        expr: |
+          sum by (model) (rate(llm_tokens_total[5m]))
+            >
+          2 * sum by (model) (rate(llm_tokens_total[1h] offset 1h))
+        for: 10m
+        labels:
+          severity: warning
+          team: llm
+        annotations:
+          summary: "LLM Token 用量突增 2x ({{ $labels.model }})"
+          description: "5m 速率 = {{ $value }} tokens/s"
+
+  # -----------------------------------------------------------------
+  # 3. 数据库 / Redis (7 rules)
+  # -----------------------------------------------------------------
+  - name: db.rules
+    interval: 30s
+    rules:
+      - alert: PostgresConnectionsHigh
+        expr: |
+          pg_stat_activity_count / pg_settings_max_connections > 0.80
+        for: 5m
+        labels:
+          severity: high
+          team: db
+        annotations:
+          summary: "Postgres 连接使用率 > 80% ({{ $value | humanizePercentage }})"
+          description: "接近 max_connections 上限, 加 pgbouncer / 扩容"
+
+      - alert: PostgresReplicationLag
+        expr: |
+          pg_replication_lag_seconds > 60
+        for: 5m
+        labels:
+          severity: high
+          team: db
+        annotations:
+          summary: "Postgres 主从延迟 > 60s ({{ $labels.instance }})"
+          description: "当前延迟 {{ $value }}s, 目标 ≤ 60s"
+
+      - alert: PostgresSlowQueries
+        expr: |
+          rate(pg_stat_activity_max_tx_duration{state="active"}[5m]) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          team: db
+        annotations:
+          summary: "Postgres 有慢查询 ({{ $labels.instance }})"
+          description: "持续活跃事务 > 10m"
+
+      - alert: PostgresDiskSpaceLow
+        expr: |
+          (pg_disk_usage_bytes / pg_disk_total_bytes) > 0.85
+        for: 5m
+        labels:
+          severity: high
+          team: db
+        annotations:
+          summary: "Postgres 磁盘使用 > 85% ({{ $labels.instance }})"
+          description: "占 {{ $value | humanizePercentage }}, 准备扩容"
+
+      - alert: RedisMemoryHigh
+        expr: |
+          redis_memory_used_bytes / redis_memory_max_bytes > 0.70
+        for: 5m
+        labels:
+          severity: warning
+          team: db
+        annotations:
+          summary: "Redis 内存 > 70% ({{ $labels.instance }})"
+          description: "占 {{ $value | humanizePercentage }}"
+
+      - alert: RedisDown
+        expr: |
+          redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: db
+        annotations:
+          summary: "Redis 实例 {{ $labels.instance }} 不可达"
+          description: "连续 1m 连接失败"
+
+      - alert: RedisEvictionsHigh
+        expr: |
+          rate(redis_evicted_keys_total[5m]) > 100
+        for: 10m
+        labels:
+          severity: warning
+          team: db
+        annotations:
+          summary: "Redis 大量 key 被驱逐 ({{ $labels.instance }})"
+          description: "5m 内 {{ $value }} keys/s 被 evict"
+
+  # -----------------------------------------------------------------
+  # 4. WebSocket (4 rules)
+  # -----------------------------------------------------------------
+  - name: ws.rules
+    interval: 30s
+    rules:
+      - alert: WSConnectionCountHigh
+        expr: ws_connections_active > 4000
+        for: 5m
+        labels:
+          severity: warning
+          team: ws
+        annotations:
+          summary: "WebSocket 在线连接 > 4000"
+          description: "当前 {{ $value }}, 准备扩容 WS 实例"
+
+      - alert: WSMessageLatencyHigh
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le, room) (rate(ws_message_latency_seconds_bucket[5m]))
+          ) > 0.200
+        for: 5m
+        labels:
+          severity: high
+          team: ws
+          sla: "ws_p95<200ms"
+        annotations:
+          summary: "WS 消息延迟 P95 > 200ms ({{ $labels.room }})"
+          description: "P95 = {{ $value }}s"
+
+      - alert: WSHighErrorRate
+        expr: |
+          sum by (room) (rate(ws_messages_total{status="error"}[5m]))
+            /
+          sum by (room) (rate(ws_messages_total[5m]))
+            > 0.01
+        for: 5m
+        labels:
+          severity: high
+          team: ws
+        annotations:
+          summary: "WS 消息错误率 > 1% ({{ $labels.room }})"
+          description: "占比 {{ $value | humanizePercentage }}"
+
+      - alert: WSRedisPubSubBacklog
+        expr: |
+          redis_pubsub_channels > 1000
+        for: 10m
+        labels:
+          severity: warning
+          team: ws
+        annotations:
+          summary: "Redis pub/sub channel > 1000 ({{ $value }})"
+          description: "可能是 channel 没及时清理"
+
+  # -----------------------------------------------------------------
+  # 5. 基础设施 (CPU / 内存 / 磁盘 / FD) (5 rules)
+  # -----------------------------------------------------------------
+  - name: infra.rules
+    interval: 30s
+    rules:
+      - alert: HighCPUUsage
+        expr: |
+          100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 10m
+        labels:
+          severity: high
+          team: infra
+        annotations:
+          summary: "CPU > 80% ({{ $labels.instance }})"
+          description: "当前 {{ $value }}%"
+
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: high
+          team: infra
+        annotations:
+          summary: "内存使用 > 85% ({{ $labels.instance }})"
+          description: "当前 {{ $value }}%"
+
+      - alert: DiskSpaceLow
+        expr: |
+          (1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes)) * 100 > 85
+        for: 10m
+        labels:
+          severity: high
+          team: infra
+        annotations:
+          summary: "磁盘使用 > 85% ({{ $labels.instance }}:{{ $labels.mountpoint }})"
+          description: "当前 {{ $value }}%"
+
+      - alert: DiskSpaceCritical
+        expr: |
+          (1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"} / node_filesystem_size_bytes)) * 100 > 95
+        for: 2m
+        labels:
+          severity: critical
+          team: infra
+        annotations:
+          summary: "磁盘使用 > 95% ({{ $labels.instance }}:{{ $labels.mountpoint }})"
+          description: "立即扩容 / 清理"
+
+      - alert: FileDescriptorExhausted
+        expr: |
+          (node_filefd_allocated / node_filefd_maximum) * 100 > 80
+        for: 5m
+        labels:
+          severity: high
+          team: infra
+        annotations:
+          summary: "文件描述符使用 > 80% ({{ $labels.instance }})"
+          description: "占 {{ $value }}%, 提高 ulimit"
+
+  # -----------------------------------------------------------------
+  # 6. 批处理 / 定时任务 (3 rules)
+  # -----------------------------------------------------------------
+  - name: job.rules
+    interval: 60s
+    rules:
+      - alert: JobStalled
+        expr: |
+          time() - job_last_success_timestamp_seconds > job_expected_interval_seconds * 2
+        for: 5m
+        labels:
+          severity: high
+          team: job
+        annotations:
+          summary: "定时任务 {{ $labels.job }} 卡住"
+          description: "上次成功距今 {{ $value }}s, 间隔的 2x"
+
+      - alert: JobFailureSpike
+        expr: |
+          sum by (job) (rate(job_failures_total[10m])) > 0.1
+        for: 10m
+        labels:
+          severity: high
+          team: job
+        annotations:
+          summary: "定时任务失败率激增 ({{ $labels.job }})"
+          description: "10m 失败率 = {{ $value }} 次/s"
+
+      - alert: JobLongRunning
+        expr: |
+          job_duration_seconds > job_expected_duration_seconds * 1.5
+        for: 5m
+        labels:
+          severity: warning
+          team: job
+        annotations:
+          summary: "任务运行超时 ({{ $labels.job }})"
+          description: "当前 {{ $value }}s, 期望 {{ $labels.job_expected_duration_seconds }}s"
+
+  # -----------------------------------------------------------------
+  # 7. 安全 (3 rules)
+  # -----------------------------------------------------------------
+  - name: security.rules
+    interval: 30s
+    rules:
+      - alert: AuthFailureSpike
+        expr: |
+          sum by (service) (rate(http_requests_total{status="401"}[5m])) > 10
+        for: 5m
+        labels:
+          severity: high
+          team: security
+        annotations:
+          summary: "401 失败激增 ({{ $labels.service }})"
+          description: "5m 速率 = {{ $value }} 次/s, 可能有暴力破解"
+
+      - alert: SuspiciousAPICall
+        expr: |
+          sum by (src_ip, route) (rate(http_requests_total{status=~"4.."}[5m])) > 50
+        for: 2m
+        labels:
+          severity: warning
+          team: security
+        annotations:
+          summary: "单 IP 短时间高频 4xx ({{ $labels.src_ip }} on {{ $labels.route }})"
+          description: "5m 速率 = {{ $value }} 次/s"
+
+      - alert: SentryNewIssue
+        expr: |
+          increase(sentry_issues_total{level="error"}[10m]) > 0
+        for: 1m
+        labels:
+          severity: high
+          team: security
+        annotations:
+          summary: "Sentry 新错误 ({{ $labels.issue_id }})"
+          description: "10m 内首次出现 {{ $value }} 次"
+
+      - alert: PilotNPSBelowThreshold
+        expr: pilot_nps_score < 40
+        for: 24h
+        labels:
+          severity: info
+          team: security
+        annotations:
+          summary: "Pilot NPS < 40 持续 24h"
+          description: "NPS = {{ $value }}, 阈值 40"

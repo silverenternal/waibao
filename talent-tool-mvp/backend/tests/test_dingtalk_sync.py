@@ -169,8 +169,8 @@ class TestCorpSyncServiceAccuracy:
             def fetch_users(self, dept_id=None):
                 return [u for u in users if u.external_user_id not in self.fail_ids]
 
-        # Patch supabase client
-        import services.corp_sync as cs_mod
+        # Patch supabase client — get_supabase_admin is imported from api.deps inside corp_sync
+        import services.employer.corp_sync as cs_mod
 
         original = cs_mod.get_supabase_admin
         cs_mod.get_supabase_admin = lambda: sb

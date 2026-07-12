@@ -8,6 +8,23 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+
+// T1802 - 埋点 helper
+function track(event: string, props?: Record<string, any>) {
+  if (typeof window === "undefined") return;
+  try {
+    (window as any).dataLayer = (window as any).dataLayer || [];
+    (window as any).dataLayer.push({ event, ts: Date.now(), ...(props || {}) });
+    fetch("/api/signals/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("sb_token") || ""}` },
+      body: JSON.stringify({ event, props: props || {} }),
+      keepalive: true,
+    }).catch(() => undefined);
+  } catch {
+    // ignore
+  }
+}
 import { useEffect, useState } from "react";
 import { OfferBreakdown } from "@/components/OfferBreakdown";
 import { OfferComparisonTable } from "@/components/OfferComparisonTable";
@@ -70,6 +87,7 @@ export default function ComparePage() {
       router.push("/offers");
       return;
     }
+    track("compare_page_view", { offer_ids: ids, count: ids.length });
     (async () => {
       try {
         // 先拉取每个 offer 的标题(因 compare 只返回 total)

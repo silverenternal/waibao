@@ -1,0 +1,19 @@
+{
+  "name": "waibao-feishu",
+  "appid": "__UNI__WBFEISHU1",
+  "description": "waibao 招聘智能体 — 飞书应用",
+  "versionName": "1.0.0",
+  "versionCode": 100,
+  "transformPx": false,
+  "mp-lark": {
+    "appid": "",
+    "setting": { "urlCheck": false, "es6": true, "minified": true },
+    "usingComponents": true
+  },
+  "h5": {
+    "title": "waibao · Feishu",
+    "router": { "mode": "hash", "base": "/" },
+    "devServer": { "port": 5175, "https": false }
+  },
+  "vueVersion": "3"
+}

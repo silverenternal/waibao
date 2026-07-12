@@ -1,0 +1,57 @@
+{
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^wb-(.*)": "@/components/wb-$1/wb-$1.vue"
+    }
+  },
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "waibao · 钉钉工作台",
+        "navigationStyle": "custom",
+        "disableScroll": false,
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/tickets/index",
+      "style": {
+        "navigationBarTitleText": "工单看板"
+      }
+    },
+    {
+      "path": "pages/strategy/index",
+      "style": {
+        "navigationBarTitleText": "战略地图"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "waibao · 钉钉",
+    "navigationBarBackgroundColor": "#1772F6",
+    "backgroundColor": "#F7F8FA"
+  },
+  "tabBar": {
+    "color": "#8A8E99",
+    "selectedColor": "#1772F6",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/tickets/index",
+        "text": "工单"
+      },
+      {
+        "pagePath": "pages/strategy/index",
+        "text": "战略"
+      }
+    ]
+  }
+}

@@ -1,4 +1,4 @@
-"""T1501 — Lever 真实 API Provider.
+"""T1501 + T1806 — Lever 真实 API Provider.
 
 Lever ATS API:
 - Base URL: https://api.lever.co/v1
@@ -16,6 +16,7 @@ Lever ATS API:
 - 候选人按 email 唯一键合并
 - postings.status: published / internal / closed / draft
 - 阶段 (stage): 'new', 'screen', 'interview', 'offer', 'hired', 'rejected'
+- T1806: 注入 OAuth2TokenManager 后用 Bearer 头
 """
 from __future__ import annotations
 
@@ -34,6 +35,7 @@ from ..exceptions import (
     UpstreamUnavailableError,
 )
 from .base import ATSProvider
+from .oauth2 import OAuth2TokenManager
 from .types import Candidate, ExternalId, Job
 
 logger = logging.getLogger(__name__)
@@ -61,14 +63,25 @@ class LeverProvider(ATSProvider):
         *,
         timeout: float = 30.0,
         client: httpx.AsyncClient | None = None,
+        oauth2_manager: OAuth2TokenManager | None = None,
+        oauth2_tenant: str | None = None,
+        oauth2_client_id: str | None = None,
+        oauth2_client_secret: str | None = None,
+        oauth2_token_url: str | None = None,
     ) -> None:
-        if not api_key:
-            raise InvalidRequestError("lever.api_key required")
+        # T1806: OAuth2 多租户支持
+        if not api_key and not oauth2_manager:
+            raise InvalidRequestError("lever requires api_key or oauth2_manager")
         self._api_key = api_key
         self._base_url = base_url.rstrip("/")
         self._timeout = timeout
         self._owns_client = client is None
         self._client = client or httpx.AsyncClient(timeout=timeout)
+        self._oauth2_manager = oauth2_manager
+        self._oauth2_tenant = oauth2_tenant
+        self._oauth2_client_id = oauth2_client_id
+        self._oauth2_client_secret = oauth2_client_secret
+        self._oauth2_token_url = oauth2_token_url
 
     async def aclose(self) -> None:
         if self._owns_client:
@@ -79,6 +92,24 @@ class LeverProvider(ATSProvider):
         token = base64.b64encode(f"{self._api_key}:".encode()).decode()
         return {"Authorization": f"Basic {token}"}
 
+    async def _async_auth_header(self) -> dict[str, str]:
+        """T1806: 异步鉴权 — 支持 OAuth2 Bearer."""
+        if self._oauth2_manager and self._oauth2_token_url and self._oauth2_tenant:
+            try:
+                token = await self._oauth2_manager.get_or_refresh(
+                    tenant=self._oauth2_tenant,
+                    client_id=self._oauth2_client_id or "",
+                    client_secret=self._oauth2_client_secret or "",
+                    token_url=self._oauth2_token_url,
+                )
+                return {"Authorization": token.to_header()}
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "lever.oauth2_fallback tenant=%s err=%s",
+                    self._oauth2_tenant, exc,
+                )
+        return self._auth_header()
+
     async def _request(
         self,
         method: str,
@@ -88,7 +119,8 @@ class LeverProvider(ATSProvider):
         json: dict[str, Any] | None = None,
     ) -> Any:
         url = f"{self._base_url}{path}"
-        headers = self._auth_header()
+        # T1806: 异步鉴权 (OAuth2)
+        headers = await self._async_auth_header()
         try:
             resp = await self._client.request(
                 method,

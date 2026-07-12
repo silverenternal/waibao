@@ -1,0 +1,902 @@
+{
+  "task": "T1802 - offer pilot",
+  "generated_at": "2026-07-12T09:10:49.234541Z",
+  "n_offers": 10,
+  "scenarios_tested": [
+    "scenario_a_below_p50",
+    "scenario_b_competing_offer",
+    "scenario_c_signing_bonus",
+    "scenario_d_equity_vesting",
+    "scenario_e_walkaway"
+  ],
+  "results": [
+    {
+      "real_offer_id": "offer_real_01",
+      "candidate_role": "backend_engineer",
+      "location": "CN",
+      "currency": "CNY",
+      "hr_expected_total": 1075000,
+      "actual_monthly_net": 41200,
+      "calculator_result": {
+        "gross": 720000.0,
+        "tax": 153720.0,
+        "social": 194400.0,
+        "net": 503280.0,
+        "monthly_net": 41940.0,
+        "effective_tax_rate": 0.2135,
+        "total_comp": 1130000.0,
+        "total_with_signing": 1130000.0,
+        "equity_pv": 375000.0,
+        "benefits": 35000.0
+      },
+      "market": {
+        "band": [
+          25,
+          35,
+          50,
+          70,
+          100
+        ],
+        "percentile": 76,
+        "value_in_market_unit": 72.0
+      },
+      "scenario": "scenario_a_below_p50",
+      "scenario_meta": {
+        "role_for_market": "backend_engineer",
+        "scenario_name": "Below p50 — 市场分位偏低",
+        "rationale": "候选人当前 offer 在市场 p50 以下,数据驱动的论点:market gap。"
+      },
+      "negotiation": {
+        "current_total": 1130000.0,
+        "target_total": 1236500.0,
+        "walkaway_threshold": 1073500.0,
+        "overall_advice": "当前 offer 在市场 p76 的位置,建议目标总包 CNY 1,236,500.0 (涨 5%),最低走人底线 CNY 1,073,500.0。",
+        "talking_points": [
+          "当前 offer 总包 CNY 1,130,000.0,市场分位 p76",
+          "建议目标 CNY 1,236,500.0,涨幅 5%",
+          "提供 1-2 个具体案例锚定(同类岗位 / 同公司近期 offer)",
+          "把 signing bonus / PTO 作为低成本谈判筹码",
+          "若现金包动不了,把股权前移 / refresh 写入 offer letter"
+        ],
+        "email_template_excerpt": "尊敬的 Alex 老师,\n\n感谢贵司的 offer,整体架构和团队方向非常吸引我。基于一些务实因素(已获其他公司的竞争性 offer / 期望薪资对齐市场 p75 等),\n希望在 base salary, bonus structure等 上做一些调整,期望能再争取到 CNY 1,236,500.0 的总包(年度)。\n\n如果现金包调整空间有限,也欢迎您用 签字费 / 额外年假 / 远程办公 等形式来补偿。\n期待您的回复,方便我们尽快对齐。\n\n谢谢!\nAnonymous Candidate\n+xx-xxx-xxxx-xxxx",
+        "tactics": [
+          {
+            "title": "竞争优势:多 offer / 内部 counter",
+            "expected_uplift_pct": 0.05,
+            "risk": "low"
+          },
+          {
+            "title": "争取 signing bonus",
+            "expected_uplift_pct": 0.02,
+            "risk": "low"
+          }
+        ],
+        "counter_examples": [
+          "HR:今年预算紧张,无法调整\n你:理解预算周期。我可以接受 8-10% 上调 + 签字费,或明年 3 月按绩效重新评估包。",
+          "HR:我们没有先例 / 超出 band\n你:了解。可否给我一个明确的 band 数字?我可以围绕市场 p75 调整期望,而非简单按 fixed 上调。",
+          "HR:需要你点头入职才行\n你:我们都需要确定性。我的底线是 CNY 1,073,500.0,希望能在 48 小时内拿到反馈。"
+        ],
+        "next_steps": [
+          "48 小时内用邮件 / 微信正式发起谈判",
+          "若 7 天无回复 → 主动跟进一次",
+          "如被明确拒,可接受 equity refresh 或 PTO 替代",
+          "到达 walkaway 底线并 5 天无新 offer → 接受或继续看机会"
+        ],
+        "provider": "mock"
+      }
+    },
+    {
+      "real_offer_id": "offer_real_02",
+      "candidate_role": "frontend_engineer",
+      "location": "CN",
+      "currency": "CNY",
+      "hr_expected_total": 745000,
+      "actual_monthly_net": 33400,
+      "calculator_result": {
+        "gross": 552000.0,
+        "tax": 101304.0,
+        "social": 149040.0,
+        "net": 400296.0,
+        "monthly_net": 33358.0,
+        "effective_tax_rate": 0.1835,
+        "total_comp": 777000.0,
+        "total_with_signing": 807000.0,
+        "equity_pv": 200000.0,
+        "benefits": 25000.0
+      },
+      "market": {
+        "band": [
+          22,
+          30,
+          42,
+          58,
+          80
+        ],
+        "percentile": 70,
+        "value_in_market_unit": 55.2
+      },
+      "scenario": "scenario_b_competing_offer",
+      "scenario_meta": {
+        "role_for_market": null,
+        "scenario_name": "Compete — 多家 offer 互 match",
+        "rationale": "候选人有 2-3 家 offer,要求 match 最高。"
+      },
+      "negotiation": {
+        "current_total": 777000.0,
+        "target_total": 889160.0,
+        "walkaway_threshold": 738150.0,
+        "overall_advice": "当前 offer 在市场 p70 的位置,建议目标总包 CNY 889,160.0 (涨 8%),最低走人底线 CNY 738,150.0。",
+        "talking_points": [
+          "当前 offer 总包 CNY 777,000.0,市场分位 p70",
+          "建议目标 CNY 889,160.0,涨幅 8%",
+          "提供 1-2 个具体案例锚定(同类岗位 / 同公司近期 offer)",
+          "把 signing bonus / PTO 作为低成本谈判筹码",
+          "若现金包动不了,把股权前移 / refresh 写入 offer letter"
+        ],
+        "email_template_excerpt": "尊敬的 Alex 老师,\n\n感谢贵司的 offer,整体架构和团队方向非常吸引我。基于一些务实因素(已获其他公司的竞争性 offer / 期望薪资对齐市场 p75 等),\n希望在 base salary, bonus structure等 上做一些调整,期望能再争取到 CNY 889,160.0 的总包(年度)。\n\n如果现金包调整空间有限,也欢迎您用 签字费 / 额外年假 / 远程办公 等形式来补偿。\n期待您的回复,方便我们尽快对齐。\n\n谢谢!\nAnonymous Candidate\n+xx-xxx-xxxx-xxxx",
+        "tactics": [
+          {
+            "title": "竞争优势:多 offer / 内部 counter",
+            "expected_uplift_pct": 0.08,
+            "risk": "low"
+          },
+          {
+            "title": "休假与远程",
+            "expected_uplift_pct": 0.0,
+            "risk": "low"
+          }
+        ],
+        "counter_examples": [
+          "HR:今年预算紧张,无法调整\n你:理解预算周期。我可以接受 8-10% 上调 + 签字费,或明年 3 月按绩效重新评估包。",
+          "HR:我们没有先例 / 超出 band\n你:了解。可否给我一个明确的 band 数字?我可以围绕市场 p75 调整期望,而非简单按 fixed 上调。",
+          "HR:需要你点头入职才行\n你:我们都需要确定性。我的底线是 CNY 738,150.0,希望能在 48 小时内拿到反馈。"
+        ],
+        "next_steps": [
+          "48 小时内用邮件 / 微信正式发起谈判",
+          "若 7 天无回复 → 主动跟进一次",
+          "如被明确拒,可接受 equity refresh 或 PTO 替代",
+          "到达 walkaway 底线并 5 天无新 offer → 接受或继续看机会"
+        ],
+        "provider": "mock"
+      }
+    },
+    {
+      "real_offer_id": "offer_real_03",
+      "candidate_role": "data_scientist",
+      "location": "US",
+      "currency": "USD",
+      "hr_expected_total": null,
+      "actual_monthly_net": null,
+      "calculator_result": {
+        "gross": 224250.0,
+        "tax": 60276.77,
+        "social": 13704.83,
+        "net": 163973.23,
+        "monthly_net": 13664.44,
+        "effective_tax_rate": 0.2688,
+        "total_comp": 352250.0,
+        "total_with_signing": 377250.0,
+        "equity_pv": 100000.0,
+        "benefits": 28000.0
+      },
+      "market": {
+        "band": [
+          120,
+          155,
+          195,
+          240,
+          300
+        ],
+        "percentile": 66,
+        "value_in_market_unit": 224.25
+      },
+      "scenario": "scenario_c_signing_bonus",
+      "scenario_meta": {
+        "role_for_market": null,
+        "scenario_name": "Signing — 争取签字费",
+        "rationale": "无签字费 → 抵消其他 offer 签字费或搬家成本。"
+      },
+      "negotiation": {
+        "current_total": 352250.0,
+        "target_total": 385430.0,
+        "walkaway_threshold": 334638.0,
+        "overall_advice": "当前 offer 在市场 p66 的位置,建议目标总包 USD 385,430.0 (涨 8%),最低走人底线 USD 334,638.0。",
+        "talking_points": [
+          "当前 offer 总包 USD 352,250.0,市场分位 p66",
+          "建议目标 USD 385,430.0,涨幅 8%",
+          "提供 1-2 个具体案例锚定(同类岗位 / 同公司近期 offer)",
+          "把 signing bonus / PTO 作为低成本谈判筹码",
+          "若现金包动不了,把股权前移 / refresh 写入 offer letter"
+        ],
+        "email_template_excerpt": "Hi Alex,\n\nThank you again for the offer — the team, scope and product genuinely excite me.\nI would like to revisit the compensation package based on competing offers and current market data (p75+).\n\nSpecifically, I'd appreciate if we could adjust base salary, bonus structure to bring the all-in tota",
+        "tactics": [
+          {
+            "title": "竞争优势:多 offer / 内部 counter",
+            "expected_uplift_pct": 0.08,
+            "risk": "low"
+          }
+        ],
+        "counter_examples": [
+          "HR:今年预算紧张,无法调整\n你:Understood on the budget cycle. I'd accept a 8-10% bump plus signing bonus, or revisit in March at perf review.",
+          "HR:我们没有先例 / 超出 band\n你:Understood. Could you share the band range so we can discuss in terms of market p75 rather than a fixed number?",
+          "HR:需要你点头入职才行\n你:We both need certainty on this. My floor is USD 334,638.0; I can hold until 48h for feedback."
+        ],
+        "next_steps": [
+          "48 小时内用邮件 / 微信正式发起谈判",
+          "若 7 天无回复 → 主动跟进一次",
+          "如被明确拒,可接受 equity refresh 或 PTO 替代",
+          "到达 walkaway 底线并 5 天无新 offer → 接受或继续看机会"
+        ],
+        "provider": "mock"
+      }
+    },
+    {
+      "real_offer_id": "offer_real_04",
+      "candidate_role": "product_manager",
+      "location": "US",
+      "currency": "USD",
+      "hr_expected_total": null,
+      "actual_monthly_net": null,
+      "calculator_result": {
+        "gross": 258000.0,
+        "tax": 74839.9,
+        "social": 14194.2,
+        "net": 183160.1,
+        "monthly_net": 15263.34,
+        "effective_tax_rate": 0.2901,
+        "total_comp": 438000.0,
+        "total_with_signing": 488000.0,
+        "equity_pv": 150000.0,
+        "benefits": 30000.0
+      },
+      "market": {
+        "band": [
+          120,
+          150,
+          190,
+          240,
+          300
+        ],
+        "percentile": 79,
+        "value_in_market_unit": 258.0
+      },
+      "scenario": "scenario_d_equity_vesting",
+      "scenario_meta": {
+        "role_for_market": null,
+        "scenario_name": "Equity — 调整 vesting/refresh",
+        "rationale": "担心股票风险,争取 front-load 或 refresh。"
+      },
+      "negotiation": {
+        "current_total": 438000.0,
+        "target_total": 464900.0,
+        "walkaway_threshold": 416100.0,
+        "overall_advice": "当前 offer 在市场 p79 的位置,建议目标总包 USD 464,900.0 (涨 5%),最低走人底线 USD 416,100.0。",
+        "talking_points": [
+          "当前 offer 总包 USD 438,000.0,市场分位 p79",
+          "建议目标 USD 464,900.0,涨幅 5%",
+          "提供 1-2 个具体案例锚定(同类岗位 / 同公司近期 offer)",
+          "把 signing bonus / PTO 作为低成本谈判筹码",
+          "若现金包动不了,把股权前移 / refresh 写入 offer letter"
+        ],
+        "email_template_excerpt": "Hi Alex,\n\nThank you again for the offer — the team, scope and product genuinely excite me.\nI would like to revisit the compensation package based on competing offers and current market data (p75+).\n\nSpecifically, I'd appreciate if we could adjust base salary, bonus structure to bring the all-in tota",
+        "tactics": [
+          {
+            "title": "竞争优势:多 offer / 内部 counter",
+            "expected_uplift_pct": 0.05,
+            "risk": "low"
+          }
+        ],
+        "counter_examples": [
+          "HR:今年预算紧张,无法调整\n你:Understood on the budget cycle. I'd accept a 8-10% bump plus signing bonus, or revisit in March at perf review.",
+          "HR:我们没有先例 / 超出 band\n你:Understood. Could you share the band range so we can discuss in terms of market p75 rather than a fixed number?",
+          "HR:需要你点头入职才行\n你:We both need certainty on this. My floor is USD 416,100.0; I can hold until 48h for feedback."
+        ],
+        "next_steps": [
+          "48 小时内用邮件 / 微信正式发起谈判",
+          "若 7 天无回复 → 主动跟进一次",
+          "如被明确拒,可接受 equity refresh 或 PTO 替代",
+          "到达 walkaway 底线并 5 天无新 offer → 接受或继续看机会"
+        ],
+        "provider": "mock"
+      }
+    },
+    {
+      "real_offer_id": "offer_real_05",
+      "candidate_role": "fullstack_engineer",
+      "location": "CN",
+      "currency": "CNY",
+      "hr_expected_total": 580000,
+      "actual_monthly_net": 25200,
+      "calculator_result": {
+        "gross": 396000.0,
+        "tax": 56832.0,
+        "social": 106920.0,
+        "net": 301368.0,
+        "monthly_net": 25114.0,
+        "effective_tax_rate": 0.1435,
+        "total_comp": 561000.0,
+        "total_with_signing": 571000.0,
+        "equity_pv": 150000.0,
+        "benefits": 15000.0
+      },
+      "market": {
+        "band": [
+          25,
+          35,
+          50,
+          70,
+          100
+        ],
+        "percentile": 32,
+        "value_in_market_unit": 39.6
+      },
+      "scenario": "scenario_e_walkaway",
+      "scenario_meta": {
+        "role_for_market": null,
+        "scenario_name": "Walkaway — 走人底线",
+        "rationale": "HR 反复压价,设置 firm floor + 48h 答复。"
+      },
+      "negotiation": {
+        "current_total": 561000.0,
+        "target_total": 695150.0,
+        "walkaway_threshold": 532950.0,
+        "overall_advice": "当前 offer 在市场 p32 的位置,建议目标总包 CNY 695,150.0 (涨 15%),最低走人底线 CNY 532,950.0。",
+        "talking_points": [
+          "当前 offer 总包 CNY 561,000.0,市场分位 p32",
+          "建议目标 CNY 695,150.0,涨幅 15%",
+          "提供 1-2 个具体案例锚定(同类岗位 / 同公司近期 offer)",
+          "把 signing bonus / PTO 作为低成本谈判筹码",
+          "若现金包动不了,把股权前移 / refresh 写入 offer letter"
+        ],
+        "email_template_excerpt": "尊敬的 Alex 老师,\n\n感谢贵司的 offer,整体架构和团队方向非常吸引我。基于一些务实因素(已获其他公司的竞争性 offer / 期望薪资对齐市场 p75 等),\n希望在 base salary, bonus structure等 上做一些调整,期望能再争取到 CNY 695,150.0 的总包(年度)。\n\n如果现金包调整空间有限,也欢迎您用 签字费 / 额外年假 / 远程办公 等形式来补偿。\n期待您的回复,方便我们尽快对齐。\n\n谢谢!\nAnonymous Candidate\n+xx-xxx-xxxx-xxxx",
+        "tactics": [
+          {
+            "title": "强调市场分位偏低",
+            "expected_uplift_pct": 0.15,
+            "risk": "low"
+          },
+          {
+            "title": "竞争优势:多 offer / 内部 counter",
+            "expected_uplift_pct": 0.05,
+            "risk": "low"
+          },
+          {
+            "title": "休假与远程",
+            "expected_uplift_pct": 0.0,
+            "risk": "low"
+          }
+        ],
+        "counter_examples": [
+          "HR:今年预算紧张,无法调整\n你:理解预算周期。我可以接受 8-10% 上调 + 签字费,或明年 3 月按绩效重新评估包。",
+          "HR:我们没有先例 / 超出 band\n你:了解。可否给我一个明确的 band 数字?我可以围绕市场 p75 调整期望,而非简单按 fixed 上调。",
+          "HR:需要你点头入职才行\n你:我们都需要确定性。我的底线是 CNY 532,950.0,希望能在 48 小时内拿到反馈。"
+        ],
+        "next_steps": [
+          "48 小时内用邮件 / 微信正式发起谈判",
+          "若 7 天无回复 → 主动跟进一次",
+          "如被明确拒,可接受 equity refresh 或 PTO 替代",
+          "到达 walkaway 底线并 5 天无新 offer → 接受或继续看机会"
+        ],
+        "provider": "mock"
+      }
+    },
+    {
+      "real_offer_id": "offer_real_06",
+      "candidate_role": "mobile_engineer",
+      "location": "CN",
+      "currency": "CNY",
+      "hr_expected_total": 985000,
+      "actual_monthly_net": 36800,
+      "calculator_result": {
+        "gross": 637200.0,
+        "tax": 127886.4,
+        "social": 172044.0,
+        "net": 452613.6,
+        "monthly_net": 37717.8,
+        "effective_tax_rate": 0.2007,
+        "total_comp": 967200.0,
+        "total_with_signing": 967200.0,
+        "equity_pv": 300000.0,
+        "benefits": 30000.0
+      },
+      "market": {
+        "band": [
+          25,
+          35,
+          50,
+          70,
+          100
+        ],
+        "percentile": 67,
+        "value_in_market_unit": 63.72
+      },
+      "scenario": "scenario_a_below_p50",
+      "scenario_meta": {
+        "role_for_market": "backend_engineer",
+        "scenario_name": "Below p50 — 市场分位偏低",
+        "rationale": "候选人当前 offer 在市场 p50 以下,数据驱动的论点:market gap。"
+      },
+      "negotiation": {
+        "current_total": 967200.0,
+        "target_total": 1094576.0,
+        "walkaway_threshold": 918840.0,
+        "overall_advice": "当前 offer 在市场 p67 的位置,建议目标总包 CNY 1,094,576.0 (涨 8%),最低走人底线 CNY 918,840.0。",
+        "talking_points": [
+          "当前 offer 总包 CNY 967,200.0,市场分位 p67",
+          "建议目标 CNY 1,094,576.0,涨幅 8%",
+          "提供 1-2 个具体案例锚定(同类岗位 / 同公司近期 offer)",
+          "把 signing bonus / PTO 作为低成本谈判筹码",
+          "若现金包动不了,把股权前移 / refresh 写入 offer letter"
+        ],
+        "email_template_excerpt": "尊敬的 Alex 老师,\n\n感谢贵司的 offer,整体架构和团队方向非常吸引我。基于一些务实因素(已获其他公司的竞争性 offer / 期望薪资对齐市场 p75 等),\n希望在 base salary, bonus structure等 上做一些调整,期望能再争取到 CNY 1,094,576.0 的总包(年度)。\n\n如果现金包调整空间有限,也欢迎您用 签字费 / 额外年假 / 远程办公 等形式来补偿。\n期待您的回复,方便我们尽快对齐。\n\n谢谢!\nAnonymous Candidate\n+xx-xxx-xxxx-xxxx",
+        "tactics": [
+          {
+            "title": "竞争优势:多 offer / 内部 counter",
+            "expected_uplift_pct": 0.08,
+            "risk": "low"
+          },
+          {
+            "title": "争取 signing bonus",
+            "expected_uplift_pct": 0.02,
+            "risk": "low"
+          }
+        ],
+        "counter_examples": [
+          "HR:今年预算紧张,无法调整\n你:理解预算周期。我可以接受 8-10% 上调 + 签字费,或明年 3 月按绩效重新评估包。",
+          "HR:我们没有先例 / 超出 band\n你:了解。可否给我一个明确的 band 数字?我可以围绕市场 p75 调整期望,而非简单按 fixed 上调。",
+          "HR:需要你点头入职才行\n你:我们都需要确定性。我的底线是 CNY 918,840.0,希望能在 48 小时内拿到反馈。"
+        ],
+        "next_steps": [
+          "48 小时内用邮件 / 微信正式发起谈判",
+          "若 7 天无回复 → 主动跟进一次",
+          "如被明确拒,可接受 equity refresh 或 PTO 替代",
+          "到达 walkaway 底线并 5 天无新 offer → 接受或继续看机会"
+        ],
+        "provider": "mock"
+      }
+    },
+    {
+      "real_offer_id": "offer_real_07",
+      "candidate_role": "data_engineer",
+      "location": "SG",
+      "currency": "SGD",
+      "hr_expected_total": null,
+      "actual_monthly_net": null,
+      "calculator_result": {
+        "gross": 189750.0,
+        "tax": 19435.75,
+        "social": 32257.5,
+        "net": 151114.25,
+        "monthly_net": 12592.85,
+        "effective_tax_rate": 0.1024,
+        "total_comp": 257750.0,
+        "total_with_signing": 272750.0,
+        "equity_pv": 50000.0,
+        "benefits": 18000.0
+      },
+      "market": {
+        "band": [
+          80,
+          100,
+          130,
+          165,
+          210
+        ],
+        "percentile": 83,
+        "value_in_market_unit": 189.75
+      },
+      "scenario": "scenario_b_competing_offer",
+      "scenario_meta": {
+        "role_for_market": null,
+        "scenario_name": "Compete — 多家 offer 互 match",
+        "rationale": "候选人有 2-3 家 offer,要求 match 最高。"
+      },
+      "negotiation": {
+        "current_total": 257750.0,
+        "target_total": 275638.0,
+        "walkaway_threshold": 244862.0,
+        "overall_advice": "当前 offer 在市场 p83 的位置,建议目标总包 SGD 275,638.0 (涨 5%),最低走人底线 SGD 244,862.0。",
+        "talking_points": [
+          "当前 offer 总包 SGD 257,750.0,市场分位 p83",
+          "建议目标 SGD 275,638.0,涨幅 5%",
+          "提供 1-2 个具体案例锚定(同类岗位 / 同公司近期 offer)",
+          "把 signing bonus / PTO 作为低成本谈判筹码",
+          "若现金包动不了,把股权前移 / refresh 写入 offer letter"
+        ],
+        "email_template_excerpt": "尊敬的 Alex 老师,\n\n感谢贵司的 offer,整体架构和团队方向非常吸引我。基于一些务实因素(已获其他公司的竞争性 offer / 期望薪资对齐市场 p75 等),\n希望在 base salary, bonus structure等 上做一些调整,期望能再争取到 SGD 275,638.0 的总包(年度)。\n\n如果现金包调整空间有限,也欢迎您用 签字费 / 额外年假 / 远程办公 等形式来补偿。\n期待您的回复,方便我们尽快对齐。\n\n谢谢!\nAnonymous Candidate\n+xx-xxx-xxxx-xxxx",
+        "tactics": [
+          {
+            "title": "竞争优势:多 offer / 内部 counter",
+            "expected_uplift_pct": 0.05,
+            "risk": "low"
+          },
+          {
+            "title": "股权补充现金缺口",
+            "expected_uplift_pct": 0.03,
+            "risk": "medium"
+          }
+        ],
+        "counter_examples": [
+          "HR:今年预算紧张,无法调整\n你:理解预算周期。我可以接受 8-10% 上调 + 签字费,或明年 3 月按绩效重新评估包。",
+          "HR:我们没有先例 / 超出 band\n你:了解。可否给我一个明确的 band 数字?我可以围绕市场 p75 调整期望,而非简单按 fixed 上调。",
+          "HR:需要你点头入职才行\n你:我们都需要确定性。我的底线是 SGD 244,862.0,希望能在 48 小时内拿到反馈。"
+        ],
+        "next_steps": [
+          "48 小时内用邮件 / 微信正式发起谈判",
+          "若 7 天无回复 → 主动跟进一次",
+          "如被明确拒,可接受 equity refresh 或 PTO 替代",
+          "到达 walkaway 底线并 5 天无新 offer → 接受或继续看机会"
+        ],
+        "provider": "mock"
+      }
+    },
+    {
+      "real_offer_id": "offer_real_08",
+      "candidate_role": "designer",
+      "location": "CN",
+      "currency": "CNY",
+      "hr_expected_total": 670000,
+      "actual_monthly_net": 29700,
+      "calculator_result": {
+        "gross": 470400.0,
+        "tax": 76324.8,
+        "social": 127008.0,
+        "net": 349975.2,
+        "monthly_net": 29164.6,
+        "effective_tax_rate": 0.1623,
+        "total_comp": 615400.0,
+        "total_with_signing": 615400.0,
+        "equity_pv": 125000.0,
+        "benefits": 20000.0
+      },
+      "market": {
+        "band": [
+          25,
+          35,
+          50,
+          70,
+          100
+        ],
+        "percentile": 45,
+        "value_in_market_unit": 47.04
+      },
+      "scenario": "scenario_c_signing_bonus",
+      "scenario_meta": {
+        "role_for_market": null,
+        "scenario_name": "Signing — 争取签字费",
+        "rationale": "无签字费 → 抵消其他 offer 签字费或搬家成本。"
+      },
+      "negotiation": {
+        "current_total": 615400.0,
+        "target_total": 757710.0,
+        "walkaway_threshold": 584630.0,
+        "overall_advice": "当前 offer 在市场 p45 的位置,建议目标总包 CNY 757,710.0 (涨 15%),最低走人底线 CNY 584,630.0。",
+        "talking_points": [
+          "当前 offer 总包 CNY 615,400.0,市场分位 p45",
+          "建议目标 CNY 757,710.0,涨幅 15%",
+          "提供 1-2 个具体案例锚定(同类岗位 / 同公司近期 offer)",
+          "把 signing bonus / PTO 作为低成本谈判筹码",
+          "若现金包动不了,把股权前移 / refresh 写入 offer letter"
+        ],
+        "email_template_excerpt": "尊敬的 Alex 老师,\n\n感谢贵司的 offer,整体架构和团队方向非常吸引我。基于一些务实因素(已获其他公司的竞争性 offer / 期望薪资对齐市场 p75 等),\n希望在 base salary, bonus structure等 上做一些调整,期望能再争取到 CNY 757,710.0 的总包(年度)。\n\n如果现金包调整空间有限,也欢迎您用 签字费 / 额外年假 / 远程办公 等形式来补偿。\n期待您的回复,方便我们尽快对齐。\n\n谢谢!\nAnonymous Candidate\n+xx-xxx-xxxx-xxxx",
+        "tactics": [
+          {
+            "title": "强调市场分位偏低",
+            "expected_uplift_pct": 0.15,
+            "risk": "low"
+          },
+          {
+            "title": "竞争优势:多 offer / 内部 counter",
+            "expected_uplift_pct": 0.05,
+            "risk": "low"
+          },
+          {
+            "title": "股权补充现金缺口",
+            "expected_uplift_pct": 0.03,
+            "risk": "medium"
+          },
+          {
+            "title": "争取 signing bonus",
+            "expected_uplift_pct": 0.02,
+            "risk": "low"
+          },
+          {
+            "title": "休假与远程",
+            "expected_uplift_pct": 0.0,
+            "risk": "low"
+          }
+        ],
+        "counter_examples": [
+          "HR:今年预算紧张,无法调整\n你:理解预算周期。我可以接受 8-10% 上调 + 签字费,或明年 3 月按绩效重新评估包。",
+          "HR:我们没有先例 / 超出 band\n你:了解。可否给我一个明确的 band 数字?我可以围绕市场 p75 调整期望,而非简单按 fixed 上调。",
+          "HR:需要你点头入职才行\n你:我们都需要确定性。我的底线是 CNY 584,630.0,希望能在 48 小时内拿到反馈。"
+        ],
+        "next_steps": [
+          "48 小时内用邮件 / 微信正式发起谈判",
+          "若 7 天无回复 → 主动跟进一次",
+          "如被明确拒,可接受 equity refresh 或 PTO 替代",
+          "到达 walkaway 底线并 5 天无新 offer → 接受或继续看机会"
+        ],
+        "provider": "mock"
+      }
+    },
+    {
+      "real_offer_id": "offer_real_09",
+      "candidate_role": "marketing",
+      "location": "CN",
+      "currency": "CNY",
+      "hr_expected_total": 660000,
+      "actual_monthly_net": 26800,
+      "calculator_result": {
+        "gross": 456000.0,
+        "tax": 72552.0,
+        "social": 123120.0,
+        "net": 343548.0,
+        "monthly_net": 28629.0,
+        "effective_tax_rate": 0.1591,
+        "total_comp": 528000.0,
+        "total_with_signing": 548000.0,
+        "equity_pv": 50000.0,
+        "benefits": 22000.0
+      },
+      "market": {
+        "band": [
+          25,
+          35,
+          50,
+          70,
+          100
+        ],
+        "percentile": 42,
+        "value_in_market_unit": 45.6
+      },
+      "scenario": "scenario_d_equity_vesting",
+      "scenario_meta": {
+        "role_for_market": null,
+        "scenario_name": "Equity — 调整 vesting/refresh",
+        "rationale": "担心股票风险,争取 front-load 或 refresh。"
+      },
+      "negotiation": {
+        "current_total": 528000.0,
+        "target_total": 657200.0,
+        "walkaway_threshold": 501600.0,
+        "overall_advice": "当前 offer 在市场 p42 的位置,建议目标总包 CNY 657,200.0 (涨 15%),最低走人底线 CNY 501,600.0。",
+        "talking_points": [
+          "当前 offer 总包 CNY 528,000.0,市场分位 p42",
+          "建议目标 CNY 657,200.0,涨幅 15%",
+          "提供 1-2 个具体案例锚定(同类岗位 / 同公司近期 offer)",
+          "把 signing bonus / PTO 作为低成本谈判筹码",
+          "若现金包动不了,把股权前移 / refresh 写入 offer letter"
+        ],
+        "email_template_excerpt": "尊敬的 Alex 老师,\n\n感谢贵司的 offer,整体架构和团队方向非常吸引我。基于一些务实因素(已获其他公司的竞争性 offer / 期望薪资对齐市场 p75 等),\n希望在 base salary, bonus structure等 上做一些调整,期望能再争取到 CNY 657,200.0 的总包(年度)。\n\n如果现金包调整空间有限,也欢迎您用 签字费 / 额外年假 / 远程办公 等形式来补偿。\n期待您的回复,方便我们尽快对齐。\n\n谢谢!\nAnonymous Candidate\n+xx-xxx-xxxx-xxxx",
+        "tactics": [
+          {
+            "title": "强调市场分位偏低",
+            "expected_uplift_pct": 0.15,
+            "risk": "low"
+          },
+          {
+            "title": "竞争优势:多 offer / 内部 counter",
+            "expected_uplift_pct": 0.05,
+            "risk": "low"
+          },
+          {
+            "title": "股权补充现金缺口",
+            "expected_uplift_pct": 0.03,
+            "risk": "medium"
+          },
+          {
+            "title": "休假与远程",
+            "expected_uplift_pct": 0.0,
+            "risk": "low"
+          }
+        ],
+        "counter_examples": [
+          "HR:今年预算紧张,无法调整\n你:理解预算周期。我可以接受 8-10% 上调 + 签字费,或明年 3 月按绩效重新评估包。",
+          "HR:我们没有先例 / 超出 band\n你:了解。可否给我一个明确的 band 数字?我可以围绕市场 p75 调整期望,而非简单按 fixed 上调。",
+          "HR:需要你点头入职才行\n你:我们都需要确定性。我的底线是 CNY 501,600.0,希望能在 48 小时内拿到反馈。"
+        ],
+        "next_steps": [
+          "48 小时内用邮件 / 微信正式发起谈判",
+          "若 7 天无回复 → 主动跟进一次",
+          "如被明确拒,可接受 equity refresh 或 PTO 替代",
+          "到达 walkaway 底线并 5 天无新 offer → 接受或继续看机会"
+        ],
+        "provider": "mock"
+      }
+    },
+    {
+      "real_offer_id": "offer_real_10",
+      "candidate_role": "sales",
+      "location": "CN",
+      "currency": "CNY",
+      "hr_expected_total": 850000,
+      "actual_monthly_net": 22100,
+      "calculator_result": {
+        "gross": 480000.0,
+        "tax": 78840.0,
+        "social": 129600.0,
+        "net": 369660.0,
+        "monthly_net": 30805.0,
+        "effective_tax_rate": 0.1643,
+        "total_comp": 573000.0,
+        "total_with_signing": 623000.0,
+        "equity_pv": 75000.0,
+        "benefits": 18000.0
+      },
+      "market": {
+        "band": [
+          25,
+          35,
+          50,
+          70,
+          100
+        ],
+        "percentile": 46,
+        "value_in_market_unit": 48.0
+      },
+      "scenario": "scenario_e_walkaway",
+      "scenario_meta": {
+        "role_for_market": null,
+        "scenario_name": "Walkaway — 走人底线",
+        "rationale": "HR 反复压价,设置 firm floor + 48h 答复。"
+      },
+      "negotiation": {
+        "current_total": 573000.0,
+        "target_total": 708950.0,
+        "walkaway_threshold": 544350.0,
+        "overall_advice": "当前 offer 在市场 p46 的位置,建议目标总包 CNY 708,950.0 (涨 15%),最低走人底线 CNY 544,350.0。",
+        "talking_points": [
+          "当前 offer 总包 CNY 573,000.0,市场分位 p46",
+          "建议目标 CNY 708,950.0,涨幅 15%",
+          "提供 1-2 个具体案例锚定(同类岗位 / 同公司近期 offer)",
+          "把 signing bonus / PTO 作为低成本谈判筹码",
+          "若现金包动不了,把股权前移 / refresh 写入 offer letter"
+        ],
+        "email_template_excerpt": "尊敬的 Alex 老师,\n\n感谢贵司的 offer,整体架构和团队方向非常吸引我。基于一些务实因素(已获其他公司的竞争性 offer / 期望薪资对齐市场 p75 等),\n希望在 base salary, bonus structure等 上做一些调整,期望能再争取到 CNY 708,950.0 的总包(年度)。\n\n如果现金包调整空间有限,也欢迎您用 签字费 / 额外年假 / 远程办公 等形式来补偿。\n期待您的回复,方便我们尽快对齐。\n\n谢谢!\nAnonymous Candidate\n+xx-xxx-xxxx-xxxx",
+        "tactics": [
+          {
+            "title": "强调市场分位偏低",
+            "expected_uplift_pct": 0.15,
+            "risk": "low"
+          },
+          {
+            "title": "竞争优势:多 offer / 内部 counter",
+            "expected_uplift_pct": 0.05,
+            "risk": "low"
+          },
+          {
+            "title": "股权补充现金缺口",
+            "expected_uplift_pct": 0.03,
+            "risk": "medium"
+          },
+          {
+            "title": "休假与远程",
+            "expected_uplift_pct": 0.0,
+            "risk": "low"
+          }
+        ],
+        "counter_examples": [
+          "HR:今年预算紧张,无法调整\n你:理解预算周期。我可以接受 8-10% 上调 + 签字费,或明年 3 月按绩效重新评估包。",
+          "HR:我们没有先例 / 超出 band\n你:了解。可否给我一个明确的 band 数字?我可以围绕市场 p75 调整期望,而非简单按 fixed 上调。",
+          "HR:需要你点头入职才行\n你:我们都需要确定性。我的底线是 CNY 544,350.0,希望能在 48 小时内拿到反馈。"
+        ],
+        "next_steps": [
+          "48 小时内用邮件 / 微信正式发起谈判",
+          "若 7 天无回复 → 主动跟进一次",
+          "如被明确拒,可接受 equity refresh 或 PTO 替代",
+          "到达 walkaway 底线并 5 天无新 offer → 接受或继续看机会"
+        ],
+        "provider": "mock"
+      }
+    }
+  ],
+  "comparison_top5": {
+    "best_by_total": "Senior Product Manager",
+    "best_by_monthly_net": "Senior Backend Engineer",
+    "rank": [
+      {
+        "rank": 1,
+        "title": "Senior Product Manager",
+        "company": "Company D",
+        "location": "US",
+        "currency": "USD",
+        "total_comp_local": 438000.0,
+        "total_comp_cny_equiv": 3153600.0,
+        "monthly_net_local": 15263.34,
+        "score_cny_equiv": 3153600.0
+      },
+      {
+        "rank": 2,
+        "title": "Senior Data Scientist",
+        "company": "Company C",
+        "location": "US",
+        "currency": "USD",
+        "total_comp_local": 352250.0,
+        "total_comp_cny_equiv": 2536200.0,
+        "monthly_net_local": 13664.44,
+        "score_cny_equiv": 2536200.0
+      },
+      {
+        "rank": 3,
+        "title": "Senior Backend Engineer",
+        "company": "Company A",
+        "location": "CN",
+        "currency": "CNY",
+        "total_comp_local": 1130000.0,
+        "total_comp_cny_equiv": 1130000.0,
+        "monthly_net_local": 41940.0,
+        "score_cny_equiv": 1130000.0
+      },
+      {
+        "rank": 4,
+        "title": "资深前端工程师",
+        "company": "Company B",
+        "location": "CN",
+        "currency": "CNY",
+        "total_comp_local": 777000.0,
+        "total_comp_cny_equiv": 777000.0,
+        "monthly_net_local": 33358.0,
+        "score_cny_equiv": 777000.0
+      },
+      {
+        "rank": 5,
+        "title": "全栈工程师",
+        "company": "Startup E",
+        "location": "CN",
+        "currency": "CNY",
+        "total_comp_local": 561000.0,
+        "total_comp_cny_equiv": 561000.0,
+        "monthly_net_local": 25114.0,
+        "score_cny_equiv": 561000.0
+      }
+    ],
+    "radar": {
+      "base": [
+        38.8,
+        29.7,
+        86.9,
+        100.0,
+        21.3
+      ],
+      "net_monthly": [
+        38.2,
+        30.4,
+        89.5,
+        100.0,
+        22.9
+      ],
+      "equity_pv": [
+        34.7,
+        18.5,
+        66.7,
+        100.0,
+        13.9
+      ],
+      "benefits": [
+        16.2,
+        11.6,
+        93.3,
+        100.0,
+        6.9
+      ],
+      "total_comp": [
+        35.8,
+        24.6,
+        80.4,
+        100.0,
+        17.8
+      ]
+    },
+    "market": {
+      "rate_to_cny": {
+        "CNY": 1.0,
+        "USD": 7.2,
+        "SGD": 5.35,
+        "HKD": 0.92,
+        "EUR": 7.85
+      },
+      "total_offers": 5
+    }
+  }
+}

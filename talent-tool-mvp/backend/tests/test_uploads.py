@@ -58,7 +58,8 @@ class _FakeSupabase:
 @pytest.fixture(autouse=True)
 def _reset_storage(monkeypatch):
     monkeypatch.setenv("STORAGE_DEFAULT_BUCKET", "uploads-test")
-    from services import file_storage as mod
+    # Patch DEFAULT_BUCKET on the underlying module where upload() actually reads it
+    import services.integrations.file_storage as mod
 
     # DEFAULT_BUCKET 是模块级常量,在 import 时一次性读取 os.getenv;
     # 因此除了 setenv 之外,还要把模块上的常量本身改掉,才能让 svc 看到新值。

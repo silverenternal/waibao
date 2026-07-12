@@ -127,7 +127,8 @@ class TestFeishuSyncAccuracy:
                 return users
 
         sb = MagicMock()
-        import services.corp_sync as cs_mod
+        # Patch on the underlying module where get_supabase_admin is imported from api.deps
+        import services.employer.corp_sync as cs_mod
 
         original = cs_mod.get_supabase_admin
         cs_mod.get_supabase_admin = lambda: sb

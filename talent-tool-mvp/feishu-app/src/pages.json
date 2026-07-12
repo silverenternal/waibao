@@ -1,0 +1,37 @@
+{
+  "easycom": { "autoscan": true },
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "waibao · Feishu",
+        "navigationStyle": "custom",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/tickets/index",
+      "style": { "navigationBarTitleText": "Tickets" }
+    },
+    {
+      "path": "pages/strategy/index",
+      "style": { "navigationBarTitleText": "Strategy" }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "waibao · Feishu",
+    "navigationBarBackgroundColor": "#3370FF",
+    "backgroundColor": "#F7F8FA"
+  },
+  "tabBar": {
+    "color": "#8A8E99",
+    "selectedColor": "#3370FF",
+    "backgroundColor": "#FFFFFF",
+    "list": [
+      { "pagePath": "pages/index/index", "text": "Home" },
+      { "pagePath": "pages/tickets/index", "text": "Tickets" },
+      { "pagePath": "pages/strategy/index", "text": "Strategy" }
+    ]
+  }
+}

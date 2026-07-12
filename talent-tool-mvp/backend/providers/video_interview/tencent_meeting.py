@@ -25,7 +25,7 @@ import logging
 import os
 import secrets
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import httpx
@@ -307,6 +307,64 @@ class TencentMeetingProvider(VideoInterviewProvider):
                 ),
             },
         )
+
+    @with_resilience(
+        provider="tencent_meeting",
+        method="create_panel_round",
+        retry=RetryPolicy(max_retries=2),
+    )
+    async def create_panel_round(
+        self,
+        candidate_id: str,
+        topic: str,
+        panelist_userids: list[str],
+        start_time: datetime,
+        duration_min: int = 45,
+        rounds: int = 3,
+        *,
+        host_email: str | None = None,
+        metadata: dict[str, str] | None = None,
+    ) -> list[Meeting]:
+        """T1805: 腾讯会议 variant — 默认 3 轮 (技术面/HR 面/总监面).
+
+        与 Zoom 区别: rounds 默认 3 (国内常用一轮 1.5h, 一天 3 轮).
+        """
+        if rounds <= 0 or rounds > 10:
+            raise InvalidRequestError(
+                f"rounds must be in [1, 10], got {rounds}",
+                provider=self.provider_name,
+            )
+        if not panelist_userids:
+            raise InvalidRequestError("panelist_userids must not be empty")
+
+        slot_minutes = 45  # 国内排得更稀疏
+        meetings: list[Meeting] = []
+        for i in range(rounds):
+            slot_start = start_time + timedelta(minutes=i * slot_minutes)
+            panelist = panelist_userids[i % len(panelist_userids):] + \
+                panelist_userids[:i % len(panelist_userids)]
+            panelist = panelist[:max(1, len(panelist_userids))]
+            participants = [
+                Participant(email=uid_or_email, name=uid_or_email)
+                for uid_or_email in {candidate_id, *panelist}
+            ]
+            if candidate_id not in {p.email for p in participants}:
+                participants.append(Participant(email=candidate_id, name=candidate_id))
+            meeting = await self.create_meeting(
+                topic=f"{topic} - Round {i + 1}/{rounds}",
+                start_time=slot_start,
+                duration_min=duration_min,
+                participants=participants,
+                host_email=host_email,
+                metadata={
+                    **(metadata or {}),
+                    "candidate_id": candidate_id,
+                    "round": str(i + 1),
+                    "total_rounds": str(rounds),
+                },
+            )
+            meetings.append(meeting)
+        return meetings
 
     @with_resilience(
         provider="tencent_meeting",

@@ -3,6 +3,9 @@
 Endpoints:
     GET /api/analytics/funnel                 漏斗汇总
     GET /api/analytics/funnel/stages          各阶段详细 (candidates / events / conversion)
+    GET /api/analytics/funnel/with-costs      漏斗 + 阶段成本 (T1803)
+    GET /api/analytics/funnel/trend           周趋势 (T1803)
+    POST /api/analytics/funnel/events         前端埋点批量上报 (T1803)
     GET /api/analytics/channels               渠道归因(三种模型)
     GET /api/analytics/channels/roi           渠道 ROI 报告
 """
@@ -12,6 +15,7 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel
 
 from api.auth import CurrentUser, get_current_user, require_role
 from api.deps import get_supabase_admin
@@ -82,6 +86,79 @@ async def get_funnel_stages(
         "period_start": result.period_start,
         "period_end": result.period_end,
     }
+
+
+# ---------------------------------------------------------------------------
+# T1803 — 真实数据增强: 阶段成本 + 周趋势
+# ---------------------------------------------------------------------------
+@router.get("/funnel/with-costs", summary="漏斗 + 阶段成本(90 天)")
+async def get_funnel_with_costs(
+    days: int = Query(default=90, ge=1, le=365),
+    org_id: Optional[str] = Query(default=None),
+    user: CurrentUser = Depends(
+        require_role(UserRole.talent_partner, UserRole.admin)
+    ),
+):
+    """T1803 — 漏斗 + 每阶段成本 + cost_per_hire.
+
+    给前端"成本漏斗"叠加视图使用。
+    """
+    tracker = _get_tracker()
+    funnel = RecruitmentFunnel(tracker)
+    return await funnel.compute_funnel_with_costs(org_id=org_id, since_days=days)
+
+
+@router.get("/funnel/trend", summary="漏斗周趋势")
+async def get_funnel_trend(
+    weeks: int = Query(default=13, ge=1, le=52),
+    org_id: Optional[str] = Query(default=None),
+    user: CurrentUser = Depends(
+        require_role(UserRole.talent_partner, UserRole.admin)
+    ),
+):
+    """T1803 — 按周聚合各阶段候选人增量,前端 trend chart 使用."""
+    tracker = _get_tracker()
+    funnel = RecruitmentFunnel(tracker)
+    trend = await funnel.weekly_trend(org_id=org_id, weeks=weeks)
+    return {
+        "weeks": weeks,
+        "trend": trend,
+    }
+
+
+class _FunnelEventIn(BaseModel):
+    candidate_id: str
+    stage: str
+    source: str | None = None
+    role_id: str | None = None
+    cost_cents: int = 0
+    metadata: dict | None = None
+    occurred_at: str | None = None
+
+
+class _FunnelEventsBody(BaseModel):
+    events: list[_FunnelEventIn]
+
+
+@router.post("/funnel/events", summary="前端埋点批量上报")
+async def post_funnel_events(
+    body: _FunnelEventsBody,
+    user: CurrentUser = Depends(get_current_user),
+):
+    """T1803 — 接收前端 SDK 上报的埋点事件。
+
+    允许匿名 candidate_id (前端 sessionStorage UUID),系统会去重。
+    """
+    tracker = _get_tracker()
+    ok = 0
+    for e in body.events:
+        evt = await tracker.record_frontend_event(
+            payload=e.model_dump(),
+            org_id=str(user.id) if user and getattr(user, "id", None) else None,
+        )
+        if evt is not None:
+            ok += 1
+    return {"ok": ok, "total": len(body.events)}
 
 
 # ---------------------------------------------------------------------------

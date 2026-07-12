@@ -25,7 +25,7 @@ import logging
 import os
 import secrets
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import httpx
@@ -282,6 +282,68 @@ class ZoomProvider(VideoInterviewProvider):
                 "uuid": str(data.get("uuid") or ""),
             },
         )
+
+    @with_resilience(
+        provider="zoom",
+        method="create_panel_round",
+        retry=RetryPolicy(max_retries=2),
+    )
+    async def create_panel_round(
+        self,
+        candidate_id: str,
+        topic: str,
+        panelist_emails: list[str],
+        start_time: datetime,
+        duration_min: int = 45,
+        rounds: int = 5,
+        *,
+        host_email: str | None = None,
+        metadata: dict[str, str] | None = None,
+    ) -> list[Meeting]:
+        """T1805: 候选人单轮 panel 5 个会议 (技术/行为/案例/系统设计/CFO 终面).
+
+        每个会议独立传不同 panelist + 不同 start_time (错开 30 分钟).
+        业务上: 一次 panel 流程生成 5 个会议, 不要让 HR 一个个手动配.
+        """
+        if rounds <= 0 or rounds > 10:
+            raise InvalidRequestError(
+                f"rounds must be in [1, 10], got {rounds}",
+                provider=self.provider_name,
+            )
+        if not panelist_emails:
+            raise InvalidRequestError("panelist_emails must not be empty")
+
+        # panel 拆分: 5 个会议 → 错开 30 分钟
+        slot_minutes = 30
+        meetings: list[Meeting] = []
+        for i in range(rounds):
+            slot_start = start_time + timedelta(minutes=i * slot_minutes)
+            # 第 i 轮 panelist: 轮转 + 全部候选人都拉进
+            panelist = panelist_emails[i % len(panelist_emails):] + \
+                panelist_emails[:i % len(panelist_emails)]
+            panelist = panelist[:max(1, len(panelist_emails))]
+            participants = [
+                Participant(email=e, role="panelist")
+                for e in {candidate_id, *panelist}
+                if "@" in e
+            ]
+            if candidate_id not in {p.email for p in participants}:
+                participants.append(Participant(email=candidate_id, role="attendee"))
+            meeting = await self.create_meeting(
+                topic=f"{topic} - Round {i + 1}/{rounds}",
+                start_time=slot_start,
+                duration_min=duration_min,
+                participants=participants,
+                host_email=host_email,
+                metadata={
+                    **(metadata or {}),
+                    "candidate_id": candidate_id,
+                    "round": str(i + 1),
+                    "total_rounds": str(rounds),
+                },
+            )
+            meetings.append(meeting)
+        return meetings
 
     @with_resilience(
         provider="zoom",

@@ -1,0 +1,56 @@
+{
+  "name": "waibao-dingtalk",
+  "appid": "__UNI__WBDING1",
+  "description": "waibao 招聘智能体 — 钉钉微应用 (钉钉小程序)",
+  "versionName": "1.0.0",
+  "versionCode": 100,
+  "transformPx": false,
+  "app-plus": {
+    "usingComponents": true,
+    "nvueStyleCompiler": "uni-app",
+    "compilerVersion": 3,
+    "splashscreen": {
+      "alwaysShowBeforeRender": true,
+      "waiting": true,
+      "autoclose": true,
+      "delay": 0
+    },
+    "modules": {},
+    "distribute": {
+      "android": {
+        "permissions": [
+          "<uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>",
+          "<uses-permission android:name=\"android.permission.INTERNET\"/>"
+        ]
+      },
+      "ios": {},
+      "sdkConfigs": {}
+    }
+  },
+  "quickapp": {},
+  "mp-alipay": {
+    "appid": "",
+    "usingComponents": true,
+    "styleIsolation": "apply-shared",
+    "enableAppxNg": true
+  },
+  "h5": {
+    "title": "waibao · 钉钉微应用",
+    "router": {
+      "mode": "hash",
+      "base": "/"
+    },
+    "devServer": {
+      "port": 5174,
+      "https": false
+    }
+  },
+  "vueVersion": "3",
+  "condition": {
+    "miniprogram": {
+      "list": [
+        { "name": "首页", "path": "pages/index/index", "query": "" }
+      ]
+    }
+  }
+}

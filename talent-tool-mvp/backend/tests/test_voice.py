@@ -43,7 +43,7 @@ class _FakeAliyun(_FakeSTT):
 async def test_transcribe_primary_success():
     from services.transcribe import transcribe_audio
 
-    with patch("services.transcribe._init_specific", return_value=_FakeSTT("hi")):
+    with patch("services.integrations.transcribe._init_specific", return_value=_FakeSTT("hi")):
         res = await transcribe_audio(b"\x00\x00", mime="audio/webm", primary_provider="whisper")
     assert res.text == "hi"
     assert res.provider == "whisper"
@@ -67,7 +67,7 @@ async def test_transcribe_fallback_to_aliyun_on_primary_failure():
             return aliyun
         raise ValueError(name)
 
-    with patch("services.transcribe._init_specific", side_effect=fake_init):
+    with patch("services.integrations.transcribe._init_specific", side_effect=fake_init):
         res = await transcribe_audio(b"\x00\x00", primary_provider="whisper")
     assert res.text == "降级文本"
     assert res.provider == "aliyun_stt"
@@ -85,7 +85,7 @@ async def test_transcribe_all_failed_returns_empty():
     def fake_init(name):
         return primary if name == "whisper" else aliyun
 
-    with patch("services.transcribe._init_specific", side_effect=fake_init):
+    with patch("services.integrations.transcribe._init_specific", side_effect=fake_init):
         res = await transcribe_audio(b"\x00\x00", primary_provider="whisper")
     assert res.text == ""
     assert res.provider == "none"

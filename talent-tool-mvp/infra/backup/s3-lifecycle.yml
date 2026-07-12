@@ -1,0 +1,64 @@
+# T1502 — S3 备份生命周期策略
+#
+# 适用对象: ${BUCKET} = waibao-prod-backups (海外) / waibao-prod-backups-cn (国内)
+# 应用方式:
+#   aws s3api put-bucket-lifecycle-configuration \
+#       --bucket $BUCKET \
+#       --lifecycle-configuration file://infra/backup/s3-lifecycle.yml
+
+Rules:
+  # 近期备份 (0-30天): 标准访问, 可立即恢复
+  - Id: backup_recent_standard
+    Status: Enabled
+    Prefix: postgresql/
+    Transitions:
+      - Days: 0
+        StorageClass: STANDARD
+      - Days: 30
+        StorageClass: STANDARD_IA
+      - Days: 90
+        StorageClass: GLACIER_IR
+
+    # 强制合规审计 — WORM
+    ObjectLockConfiguration:
+      ObjectLockEnabled: Enabled
+      Rule:
+        DefaultRetention:
+          Mode: COMPLIANCE
+          Years: 1
+
+  # 过期清理 — 1 年后彻底归档
+  ExpirationIncompleteMultipartUploads:
+    Days: 7
+
+  # 9 个月后,执行 1 年后过期 — 与 RTO 4h/RPO 1h 目标对齐
+  - Id: backup_archive_glacier
+    Status: Enabled
+    Prefix: archive/
+    Transitions:
+      - Days: 0
+        StorageClass: DEEP_ARCHIVE
+    ExpirationIncompleteMultipartUploads:
+      Days: 7
+
+  # 删除 7 天前的失败 multipart
+  AbortIncompleteMultipartUpload:
+    DaysAfterInitiation: 7
+
+  # 跨区复制 (CRR) — 同 account 不同 region,灾难容忍
+  ReplicationConfiguration:
+    Role: arn:aws:iam::${AWS_ACCOUNT_ID}:role/s3-replication-role
+    Rules:
+      - ID: replicate_to_dr_region
+        Status: Enabled
+        Prefix: postgresql/
+        Destination:
+          Bucket: arn:aws:s3:::waibao-prod-backups-dr
+          StorageClass: STANDARD_IA
+        DeleteMarkerReplication:
+          Status: Disabled
+
+# 监控指标:
+# - NumberOfObjects (版本数) —> Dashboard
+# - BucketSizeBytes 按存储层分类
+# - 4xx 5xx 监控 — Prometheus Blackbox / S3 指标

@@ -1,8 +1,9 @@
-"""T1501 — Greenhouse 真实 API Provider.
+"""T1501 + T1806 — Greenhouse 真实 API Provider.
 
 Greenhouse Harvest API 文档:
 - Base URL: https://harvest.greenhouse.io/v1
-- 认证: Basic Auth (api_key:``) 或 On-Behalf-Of token
+- 认证: Basic Auth (api_key:``) 或 OAuth2 (Bullhorn/Workable 通用, Greenhouse 未来支持)
+       现有 Greenhouse 仍用 Basic Auth + On-Behalf-Of token 代替
 - 速率: 50 req / 10s (custom integrations)
 
 核心资源:
@@ -16,6 +17,7 @@ Greenhouse Harvest API 文档:
 - 推送候选人在 email 重复时返回 409 → 我们捕获后改用 PATCH 更新
 - 按 limit + page 实现分页
 - 自定义字段 (resume_url, tags, source) 通过 metadata 映射到 custom_field 后端
+- OAuth2 支持: 注入 OAuth2TokenManager 后用 Bearer 头 (用于多租户代理 / 未来 Greenhouse OAuth)
 """
 from __future__ import annotations
 
@@ -34,6 +36,7 @@ from ..exceptions import (
     UpstreamUnavailableError,
 )
 from .base import ATSProvider
+from .oauth2 import OAuth2TokenManager
 from .types import Candidate, ExternalId, Job
 
 logger = logging.getLogger(__name__)
@@ -62,15 +65,29 @@ class GreenhouseProvider(ATSProvider):
         on_behalf_of: str | None = None,
         timeout: float = 30.0,
         client: httpx.AsyncClient | None = None,
+        oauth2_manager: OAuth2TokenManager | None = None,
+        oauth2_tenant: str | None = None,
+        oauth2_client_id: str | None = None,
+        oauth2_client_secret: str | None = None,
+        oauth2_token_url: str | None = None,
     ) -> None:
-        if not api_key:
-            raise InvalidRequestError("greenhouse.api_key required")
+        # T1806: 支持 OAuth2 (Bullhorn / Workable 等扩展); Greenhouse 仍以 Basic Auth 为主
+        if not api_key and not oauth2_manager:
+            raise InvalidRequestError(
+                "greenhouse requires api_key or oauth2_manager"
+            )
         self._api_key = api_key
         self._base_url = base_url.rstrip("/")
         self._on_behalf_of = on_behalf_of
         self._timeout = timeout
         self._owns_client = client is None
         self._client = client or httpx.AsyncClient(timeout=timeout)
+        # OAuth2 字段
+        self._oauth2_manager = oauth2_manager
+        self._oauth2_tenant = oauth2_tenant
+        self._oauth2_client_id = oauth2_client_id
+        self._oauth2_client_secret = oauth2_client_secret
+        self._oauth2_token_url = oauth2_token_url
 
     async def aclose(self) -> None:
         if self._owns_client:
@@ -78,6 +95,11 @@ class GreenhouseProvider(ATSProvider):
 
     # ------------------------------------------------------------------ helpers
     def _auth_header(self) -> dict[str, str]:
+        # OAuth2 优先 (T1806 多租户代理)
+        if self._oauth2_manager and self._oauth2_token_url:
+            # 异步获取;调用方需要保证 _auth_header 在协程中
+            # 此处采用懒获取模式 — 在 _request 中替换为 async 版本
+            return {}
         # Basic auth: api_key + ":"  (Greenhouse 规范)
         token = base64.b64encode(f"{self._api_key}:".encode()).decode()
         headers = {"Authorization": f"Basic {token}"}
@@ -85,6 +107,24 @@ class GreenhouseProvider(ATSProvider):
             # 用于 On-Behalf-Of token 代理 (适用分租户)
             headers["On-Behalf-Of"] = self._on_behalf_of
         return headers
+
+    async def _async_auth_header(self) -> dict[str, str]:
+        """异步获取鉴权头 — 包含 OAuth2 token 刷新."""
+        if self._oauth2_manager and self._oauth2_token_url and self._oauth2_tenant:
+            try:
+                token = await self._oauth2_manager.get_or_refresh(
+                    tenant=self._oauth2_tenant,
+                    client_id=self._oauth2_client_id or "",
+                    client_secret=self._oauth2_client_secret or "",
+                    token_url=self._oauth2_token_url,
+                )
+                return {"Authorization": token.to_header()}
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "greenhouse.oauth2_fallback tenant=%s err=%s",
+                    self._oauth2_tenant, exc,
+                )
+        return self._auth_header()
 
     async def _request(
         self,
@@ -95,7 +135,8 @@ class GreenhouseProvider(ATSProvider):
         json: dict[str, Any] | None = None,
     ) -> Any:
         url = f"{self._base_url}{path}"
-        headers = self._auth_header()
+        # T1806: 异步获取鉴权头 (支持 OAuth2)
+        headers = await self._async_auth_header()
         try:
             resp = await self._client.request(
                 method,

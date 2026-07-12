@@ -64,7 +64,7 @@ function AvatarStack({
           const online = onlineUserIds.has(m.user_id);
           return (
             <Tooltip key={m.user_id}>
-              <TooltipTrigger asChild>
+              <TooltipTrigger {...({ asChild: true } as any)}>
                 <div
                   className={cn(
                     "relative h-7 w-7 rounded-full border-2 border-background text-[10px] font-semibold text-white flex items-center justify-center shadow-sm",

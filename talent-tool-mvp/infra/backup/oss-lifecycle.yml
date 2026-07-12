@@ -1,0 +1,36 @@
+# T1502 — 阿里云 OSS 备份生命周期策略 (国内区域)
+#
+# 适用对象: ${BUCKET} = waibao-prod-backups-cn (CN-Hangzhou 区域)
+# 应用方式: aliyun oss lifecycle put --bucket $BUCKET --lifecycle /dev/stdin < infra/backup/oss-lifecycle.yml
+# 参考文档: https://www.alibabacloud.com/help/zh/oss/developer-reference/lifecycle-rules
+
+rules:
+  # 每日 PostgreSQL 逻辑备份
+  - id: postgresql-daily-lifecycle
+    prefix: postgresql/
+    status: enable
+    transitions:
+      - days: 0
+        storage_class: IA          # 30 天后转 IA
+      - days: 30
+        storage_class: Archive     # 90 天后转 Archive
+      - days: 90
+        storage_class: ColdArchive # 180 天后转 ColdArchive
+
+  # 失败 multipart 清理
+  abort_multipart_upload:
+    days: 7
+
+  # 跨区复制(国内-海外)
+  replication:
+    - rule_id: cn-to-overseas
+      prefix: postgresql/
+      destination:
+        bucket: waibao-prod-backups
+        region: ap-southeast-1
+        storage_class: IA
+
+# 监控告警 (与 Prometheus AlertManager 配合)
+#   - 备份失败 → 内部告警群
+#   - OSS bucket 大小 > 1 TB → 容量预警
+#   - last backup 超过 26h → red alert

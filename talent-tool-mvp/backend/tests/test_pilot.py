@@ -132,7 +132,8 @@ def fake_supabase(monkeypatch):
     # 注意: 各模块在 import 时已经把 get_supabase_admin 引用到自己的命名空间,
     # 必须 patch 它们各自命名空间下的引用,而不是只 patch api.deps.
     monkeypatch.setattr("api.deps.get_supabase_admin", lambda: store)
-    monkeypatch.setattr("services.pilot_invitation.get_supabase_admin", lambda: store)
+    monkeypatch.setattr("services.integrations.pilot_invitation.get_supabase_admin", lambda: store)
+    monkeypatch.setattr("services.integrations.pilot_service.get_supabase_admin", lambda: store)
     monkeypatch.setattr("api.pilot.get_supabase_admin", lambda: store)
     monkeypatch.setattr("api.feedback.get_supabase_admin", lambda: store)
     return store

@@ -1,52 +1,19 @@
-from contextlib import asynccontextmanager
 import logging
-import time
-import uuid
 
-from fastapi import Depends, FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi import Depends, FastAPI
 
 from config import settings
+from setup import lifespan, setup_application
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("recruittech")
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Startup and shutdown events."""
-    logger.info("RecruitTech API starting up")
-    from adapters.registry import init_adapters
-    init_adapters()
-
-    # 注册所有 16 个 Agent (P0 基础设施)
-    from api.deps import get_supabase_admin
-    from agents.boot import init_all_agents
-    try:
-        init_all_agents(supabase=get_supabase_admin())
-    except Exception as e:
-        logger.warning(f"init_all_agents failed: {e}")
-
-    yield
-    logger.info("RecruitTech API shutting down")
-
-
 # T1001/T1003: 初始化 OpenTelemetry 与 Sentry (在 app 构造前)
-try:
-    from services.telemetry import init_telemetry
+from setup import init_observability
 
-    init_telemetry(service_name="waibao-backend")
-except Exception as e:  # noqa: BLE001
-    logger.warning(f"init_telemetry skipped: {e}")
-
-try:
-    from services.sentry import init_sentry
-
-    init_sentry()
-except Exception as e:  # noqa: BLE001
-    logger.warning(f"init_sentry skipped: {e}")
+init_observability()
 
 
 app = FastAPI(
@@ -56,83 +23,8 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# T1001: 挂载 OTel FastAPI instrumentation (依赖缺失则静默跳过)
-try:
-    from services.telemetry import instrument_app as _otel_instrument_app
-
-    _otel_instrument_app(app)
-except Exception as e:  # noqa: BLE001
-    logger.warning(f"otel instrument_app skipped: {e}")
-
-# T1002: Prometheus /metrics 端点
-try:
-    from services.metrics import metrics_asgi_app
-
-    _metrics_app = metrics_asgi_app()
-    if _metrics_app is not None:
-        app.mount("/metrics", _metrics_app)
-        logger.info("metrics endpoint mounted at /metrics")
-except Exception as e:  # noqa: BLE001
-    logger.warning(f"metrics mount skipped: {e}")
-
-# CORS — allow frontend origin
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-# ---- Request Logging Middleware ----
-
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    request_id = str(uuid.uuid4())[:8]
-    start_time = time.time()
-
-    logger.info(
-        f"[{request_id}] {request.method} {request.url.path} started"
-    )
-
-    response = await call_next(request)
-
-    duration_ms = (time.time() - start_time) * 1000
-    logger.info(
-        f"[{request_id}] {request.method} {request.url.path} "
-        f"completed {response.status_code} in {duration_ms:.1f}ms"
-    )
-
-    response.headers["X-Request-ID"] = request_id
-    return response
-
-
-# ---- Global Exception Handlers ----
-
-@app.exception_handler(422)
-async def validation_error_handler(request: Request, exc):
-    return JSONResponse(
-        status_code=422,
-        content={"detail": "Validation error", "path": request.url.path},
-    )
-
-
-@app.exception_handler(404)
-async def not_found_handler(request: Request, exc):
-    return JSONResponse(
-        status_code=404,
-        content={"detail": "Resource not found", "path": request.url.path},
-    )
-
-
-@app.exception_handler(500)
-async def internal_error_handler(request: Request, exc):
-    logger.error(f"Internal error on {request.url.path}: {exc}")
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal server error"},
-    )
+# T1606: 集中初始化 middleware / handlers / metrics / OTel instrumentation
+setup_application(app)
 
 
 # ---- Health Check ----
@@ -357,10 +249,12 @@ from api.offers import router as offers_router
 
 app.include_router(offers_router, prefix="/api/offers", tags=["offers"])
 
-# T1303: Recruitment funnel + channel ROI analytics
-from api.analytics import router as analytics_router
+# T1904: Cross-platform DAU/WAU/MAU (4 端统一) — T1303 funnel/ROI 也合并到此 router
+from api.analytics.cross_platform import router as cross_platform_router
 
-app.include_router(analytics_router, prefix="/api/analytics", tags=["analytics"])
+app.include_router(
+    cross_platform_router, prefix="/api/analytics", tags=["analytics-cross-platform"]
+)
 
 # T1304: Job subscriptions + candidate recommendations
 from api.subscriptions import router as subscriptions_router
@@ -374,6 +268,11 @@ app.include_router(
     prefix="/api/recommendations",
     tags=["recommendations"],
 )
+
+# T1804: Push engine + 实时推送
+from api.push import router as push_router
+
+app.include_router(push_router, prefix="/api/push", tags=["push"])
 
 # T1305: Video interview (Zoom + Tencent Meeting)
 from api.video_interview import router as video_interview_router

@@ -12,6 +12,31 @@ import { useEffect, useState } from "react";
 import { NegotiationScript } from "@/components/NegotiationScript";
 import { SalaryChart } from "@/components/SalaryChart";
 
+// T1802 - 埋点 helper + 5 场景标签
+function track(event: string, props?: Record<string, any>) {
+  if (typeof window === "undefined") return;
+  try {
+    (window as any).dataLayer = (window as any).dataLayer || [];
+    (window as any).dataLayer.push({ event, ts: Date.now(), ...(props || {}) });
+    fetch("/api/signals/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("sb_token") || ""}` },
+      body: JSON.stringify({ event, props: props || {} }),
+      keepalive: true,
+    }).catch(() => undefined);
+  } catch {
+    // ignore
+  }
+}
+
+const NEGOTIATION_SCENARIO_LABELS: Record<string, string> = {
+  scenario_a_below_p50: "Below p50 — 市场分位偏低",
+  scenario_b_competing_offer: "Compete — 多家 offer 互 match",
+  scenario_c_signing_bonus: "Signing — 争取签字费",
+  scenario_d_equity_vesting: "Equity — 调整 vesting/refresh",
+  scenario_e_walkaway: "Walkaway — 走人底线",
+};
+
 const MARKET_ROLES = [
   { value: "backend_engineer", label: "后端工程师", unit: "CNY 万 / USD 千 / SGD 千" },
   { value: "frontend_engineer", label: "前端工程师" },
@@ -34,6 +59,7 @@ export default function NegotiatePage() {
 
   useEffect(() => {
     if (!offerId) return;
+    track("negotiate_page_view", { offer_id: offerId });
     (async () => {
       try {
         // 拉取 offer 主体
@@ -63,6 +89,7 @@ export default function NegotiatePage() {
       if (!r.ok) throw new Error(await r.text());
       const data = await r.json();
       setScript(data);
+      track("negotiate_script_loaded", { offer_id: offerId, market_role: role, recommendation: data?.recommendation || "unknown" });
     } catch (e: any) {
       setError(e?.message || "生成谈判脚本失败");
     }

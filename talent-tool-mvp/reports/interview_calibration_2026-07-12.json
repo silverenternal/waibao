@@ -1,0 +1,190 @@
+{
+  "generated_at": "2026-07-12T09:11:01.450219Z",
+  "version": "1.0",
+  "task": "T1801",
+  "summary": {
+    "n": 10,
+    "mae": 14.16,
+    "rmse": 15.22,
+    "bias": -14.16,
+    "pearson_r": 0.207,
+    "quadratic_weighted_kappa": 1.0,
+    "per_band_accuracy": {
+      "weak": null,
+      "fair": 1.0,
+      "good": 0.0,
+      "excellent": 0.0
+    },
+    "hr_avg_disagreement": 1.8,
+    "role_breakdown": {
+      "backend_engineer": {
+        "n": 1,
+        "mae": 15.1,
+        "mean_ai": 65.9,
+        "mean_hr": 81.0
+      },
+      "data_engineer": {
+        "n": 1,
+        "mae": 14.8,
+        "mean_ai": 62.2,
+        "mean_hr": 77.0
+      },
+      "data_scientist": {
+        "n": 1,
+        "mae": 23.4,
+        "mean_ai": 63.6,
+        "mean_hr": 87.0
+      },
+      "designer": {
+        "n": 1,
+        "mae": 6.4,
+        "mean_ai": 62.6,
+        "mean_hr": 69.0
+      },
+      "frontend_engineer": {
+        "n": 1,
+        "mae": 11.4,
+        "mean_ai": 65.6,
+        "mean_hr": 77.0
+      },
+      "fullstack_engineer": {
+        "n": 1,
+        "mae": 11.2,
+        "mean_ai": 59.8,
+        "mean_hr": 71.0
+      },
+      "marketing": {
+        "n": 1,
+        "mae": 10.5,
+        "mean_ai": 61.0,
+        "mean_hr": 71.5
+      },
+      "mobile_engineer": {
+        "n": 1,
+        "mae": 8.2,
+        "mean_ai": 65.8,
+        "mean_hr": 74.0
+      },
+      "product_manager": {
+        "n": 1,
+        "mae": 23.7,
+        "mean_ai": 60.8,
+        "mean_hr": 84.5
+      },
+      "sales": {
+        "n": 1,
+        "mae": 16.9,
+        "mean_ai": 62.1,
+        "mean_hr": 79.0
+      }
+    },
+    "verdict": "needs_improvement",
+    "suggestions": [
+      "AI 整体偏低 HR 14.2 分;考虑在 _recommendation 中按 bias 调整",
+      "整体相关性不足;可能 LLM 评分波动较大,可加 self-consistency (5 次打 median)",
+      "MAE 偏高;在 mock mode 之外增加 rubric 参考分,让 LLM 评分有 baseline"
+    ]
+  },
+  "records": [
+    {
+      "candidate_id": "cand_pilot_01",
+      "role": "backend_engineer",
+      "ai_overall": 65.9,
+      "hr_overall_a": 82,
+      "hr_overall_b": 80,
+      "hr_band": "good",
+      "ai_band": "fair",
+      "notes": "T1801 pilot run"
+    },
+    {
+      "candidate_id": "cand_pilot_02",
+      "role": "frontend_engineer",
+      "ai_overall": 65.6,
+      "hr_overall_a": 78,
+      "hr_overall_b": 76,
+      "hr_band": "good",
+      "ai_band": "fair",
+      "notes": "T1801 pilot run"
+    },
+    {
+      "candidate_id": "cand_pilot_03",
+      "role": "data_scientist",
+      "ai_overall": 63.6,
+      "hr_overall_a": 88,
+      "hr_overall_b": 86,
+      "hr_band": "excellent",
+      "ai_band": "fair",
+      "notes": "T1801 pilot run"
+    },
+    {
+      "candidate_id": "cand_pilot_04",
+      "role": "product_manager",
+      "ai_overall": 60.8,
+      "hr_overall_a": 84,
+      "hr_overall_b": 85,
+      "hr_band": "good",
+      "ai_band": "fair",
+      "notes": "T1801 pilot run"
+    },
+    {
+      "candidate_id": "cand_pilot_05",
+      "role": "fullstack_engineer",
+      "ai_overall": 59.8,
+      "hr_overall_a": 70,
+      "hr_overall_b": 72,
+      "hr_band": "good",
+      "ai_band": "fair",
+      "notes": "T1801 pilot run"
+    },
+    {
+      "candidate_id": "cand_pilot_06",
+      "role": "data_engineer",
+      "ai_overall": 62.2,
+      "hr_overall_a": 76,
+      "hr_overall_b": 78,
+      "hr_band": "good",
+      "ai_band": "fair",
+      "notes": "T1801 pilot run"
+    },
+    {
+      "candidate_id": "cand_pilot_07",
+      "role": "mobile_engineer",
+      "ai_overall": 65.8,
+      "hr_overall_a": 75,
+      "hr_overall_b": 73,
+      "hr_band": "good",
+      "ai_band": "fair",
+      "notes": "T1801 pilot run"
+    },
+    {
+      "candidate_id": "cand_pilot_08",
+      "role": "designer",
+      "ai_overall": 62.6,
+      "hr_overall_a": 68,
+      "hr_overall_b": 70,
+      "hr_band": "fair",
+      "ai_band": "fair",
+      "notes": "T1801 pilot run"
+    },
+    {
+      "candidate_id": "cand_pilot_09",
+      "role": "marketing",
+      "ai_overall": 61.0,
+      "hr_overall_a": 72,
+      "hr_overall_b": 71,
+      "hr_band": "good",
+      "ai_band": "fair",
+      "notes": "T1801 pilot run"
+    },
+    {
+      "candidate_id": "cand_pilot_10",
+      "role": "sales",
+      "ai_overall": 62.1,
+      "hr_overall_a": 80,
+      "hr_overall_b": 78,
+      "hr_band": "good",
+      "ai_band": "fair",
+      "notes": "T1801 pilot run"
+    }
+  ]
+}

@@ -150,7 +150,8 @@ class TestAssessCompany:
     @pytest.mark.asyncio
     async def test_called_with_stub_provider(self, valid_credit_code, fake_lookup_provider):
         """When we monkeypatch resolve_lookup_provider, verify our stub gets called."""
-        import services.compliance_service as svc
+        # Patch on the underlying module where assess_company looks it up
+        import services.employer.compliance_service as svc
 
         # Patch the module-level resolver
         svc._resolve_lookup_provider = lambda: fake_lookup_provider
@@ -376,7 +377,8 @@ class TestErrorHandling:
     async def test_provider_error_does_not_raise(self, valid_credit_code):
         """When lookup provider raises ProviderError, the service should
         gracefully include a warning in the verdict without propagating."""
-        import services.compliance_service as svc
+        # Patch on the underlying module where assess_company looks it up
+        import services.employer.compliance_service as svc
         from providers.exceptions import ProviderError
         from providers.lookup.base import CompanyInfo, CompanyLookupProvider
 

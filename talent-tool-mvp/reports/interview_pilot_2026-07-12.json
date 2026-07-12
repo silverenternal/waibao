@@ -1,0 +1,457 @@
+{
+  "task": "T1801 - interview pilot",
+  "generated_at": "2026-07-12T09:11:01.449037Z",
+  "n_candidates": 10,
+  "candidates": [
+    {
+      "candidate_id": "cand_pilot_01",
+      "role": "backend_engineer",
+      "difficulty": "senior",
+      "hr_overall": 81.0,
+      "hr_overall_a": 82,
+      "hr_overall_b": 80,
+      "ai_overall": 65.9,
+      "ai_band": "fair",
+      "recommendation": "consider",
+      "per_question": [
+        {
+          "question_id": "q_backend_engineer_01",
+          "title": "系统设计:短链生成",
+          "ai_score": 73.2,
+          "ai_band": "good"
+        },
+        {
+          "question_id": "q_backend_engineer_05",
+          "title": "故障排查",
+          "ai_score": 63.0,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_backend_engineer_07",
+          "title": "技术债务",
+          "ai_score": 58.8,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_backend_engineer_10",
+          "title": "安全:越权",
+          "ai_score": 68.5,
+          "ai_band": "fair"
+        }
+      ],
+      "summary_excerpt": "针对 backend_engineer 岗位的整体表现评 65.9 分。候选人有一定潜力,建议结合团队匹配度综合判断。",
+      "provider": "mock"
+    },
+    {
+      "candidate_id": "cand_pilot_02",
+      "role": "frontend_engineer",
+      "difficulty": "senior",
+      "hr_overall": 77.0,
+      "hr_overall_a": 78,
+      "hr_overall_b": 76,
+      "ai_overall": 65.6,
+      "ai_band": "fair",
+      "recommendation": "consider",
+      "per_question": [
+        {
+          "question_id": "q_frontend_engineer_02",
+          "title": "前端架构",
+          "ai_score": 66.0,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_frontend_engineer_04",
+          "title": "性能指标",
+          "ai_score": 66.0,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_frontend_engineer_10",
+          "title": "无障碍 a11y",
+          "ai_score": 64.8,
+          "ai_band": "fair"
+        }
+      ],
+      "summary_excerpt": "针对 frontend_engineer 岗位的整体表现评 65.6 分。候选人有一定潜力,建议结合团队匹配度综合判断。",
+      "provider": "mock"
+    },
+    {
+      "candidate_id": "cand_pilot_03",
+      "role": "data_scientist",
+      "difficulty": "senior",
+      "hr_overall": 87.0,
+      "hr_overall_a": 88,
+      "hr_overall_b": 86,
+      "ai_overall": 63.6,
+      "ai_band": "fair",
+      "recommendation": "consider",
+      "per_question": [
+        {
+          "question_id": "q_data_scientist_01",
+          "title": "建模流程",
+          "ai_score": 63.5,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_data_scientist_02",
+          "title": "指标与因果",
+          "ai_score": 80.5,
+          "ai_band": "good"
+        },
+        {
+          "question_id": "q_data_scientist_03",
+          "title": "推荐冷启动",
+          "ai_score": 58.0,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_data_scientist_06",
+          "title": "评估指标",
+          "ai_score": 61.2,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_data_scientist_10",
+          "title": "失败案例",
+          "ai_score": 55.0,
+          "ai_band": "fair"
+        }
+      ],
+      "summary_excerpt": "针对 data_scientist 岗位的整体表现评 63.6 分。候选人有一定潜力,建议结合团队匹配度综合判断。",
+      "provider": "mock"
+    },
+    {
+      "candidate_id": "cand_pilot_04",
+      "role": "product_manager",
+      "difficulty": "senior",
+      "hr_overall": 84.5,
+      "hr_overall_a": 84,
+      "hr_overall_b": 85,
+      "ai_overall": 60.8,
+      "ai_band": "fair",
+      "recommendation": "consider",
+      "per_question": [
+        {
+          "question_id": "q_product_manager_02",
+          "title": "产品决策",
+          "ai_score": 55.0,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_product_manager_05",
+          "title": "MVP 设计",
+          "ai_score": 59.0,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_product_manager_07",
+          "title": "数据驱动",
+          "ai_score": 64.8,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_product_manager_09",
+          "title": "商业模式",
+          "ai_score": 62.5,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_product_manager_10",
+          "title": "团队协作",
+          "ai_score": 62.5,
+          "ai_band": "fair"
+        }
+      ],
+      "summary_excerpt": "针对 product_manager 岗位的整体表现评 60.8 分。候选人有一定潜力,建议结合团队匹配度综合判断。",
+      "provider": "mock"
+    },
+    {
+      "candidate_id": "cand_pilot_05",
+      "role": "fullstack_engineer",
+      "difficulty": "mid",
+      "hr_overall": 71.0,
+      "hr_overall_a": 70,
+      "hr_overall_b": 72,
+      "ai_overall": 59.8,
+      "ai_band": "fair",
+      "recommendation": "consider",
+      "per_question": [
+        {
+          "question_id": "q_fullstack_engineer_01",
+          "title": "全栈视角",
+          "ai_score": 63.5,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_fullstack_engineer_03",
+          "title": "数据库设计",
+          "ai_score": 62.5,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_fullstack_engineer_06",
+          "title": "代码评审",
+          "ai_score": 58.8,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_fullstack_engineer_07",
+          "title": "前端 ↔ 后端协议",
+          "ai_score": 59.2,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_fullstack_engineer_10",
+          "title": "软技能",
+          "ai_score": 55.0,
+          "ai_band": "fair"
+        }
+      ],
+      "summary_excerpt": "针对 fullstack_engineer 岗位的整体表现评 59.8 分。候选人有一定潜力,建议结合团队匹配度综合判断。",
+      "provider": "mock"
+    },
+    {
+      "candidate_id": "cand_pilot_06",
+      "role": "data_engineer",
+      "difficulty": "senior",
+      "hr_overall": 77.0,
+      "hr_overall_a": 76,
+      "hr_overall_b": 78,
+      "ai_overall": 62.2,
+      "ai_band": "fair",
+      "recommendation": "consider",
+      "per_question": [
+        {
+          "question_id": "q_data_engineer_02",
+          "title": "流批一体",
+          "ai_score": 62.5,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_data_engineer_04",
+          "title": "建模案例",
+          "ai_score": 63.8,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_data_engineer_05",
+          "title": "ETL 排错",
+          "ai_score": 64.5,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_data_engineer_06",
+          "title": "成本优化",
+          "ai_score": 61.2,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_data_engineer_09",
+          "title": "湖仓一体",
+          "ai_score": 58.8,
+          "ai_band": "fair"
+        }
+      ],
+      "summary_excerpt": "针对 data_engineer 岗位的整体表现评 62.2 分。候选人有一定潜力,建议结合团队匹配度综合判断。",
+      "provider": "mock"
+    },
+    {
+      "candidate_id": "cand_pilot_07",
+      "role": "mobile_engineer",
+      "difficulty": "senior",
+      "hr_overall": 74.0,
+      "hr_overall_a": 75,
+      "hr_overall_b": 73,
+      "ai_overall": 65.8,
+      "ai_band": "fair",
+      "recommendation": "consider",
+      "per_question": [
+        {
+          "question_id": "q_mobile_engineer_02",
+          "title": "Android 启动优化",
+          "ai_score": 68.8,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_mobile_engineer_04",
+          "title": "离线优先",
+          "ai_score": 59.8,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_mobile_engineer_05",
+          "title": "性能监控",
+          "ai_score": 68.8,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_mobile_engineer_06",
+          "title": "灰度发布",
+          "ai_score": 62.5,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_mobile_engineer_09",
+          "title": "App 安全",
+          "ai_score": 69.0,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_mobile_engineer_10",
+          "title": "架构演进",
+          "ai_score": 66.0,
+          "ai_band": "fair"
+        }
+      ],
+      "summary_excerpt": "针对 mobile_engineer 岗位的整体表现评 65.8 分。候选人有一定潜力,建议结合团队匹配度综合判断。",
+      "provider": "mock"
+    },
+    {
+      "candidate_id": "cand_pilot_08",
+      "role": "designer",
+      "difficulty": "mid",
+      "hr_overall": 69.0,
+      "hr_overall_a": 68,
+      "hr_overall_b": 70,
+      "ai_overall": 62.6,
+      "ai_band": "fair",
+      "recommendation": "consider",
+      "per_question": [
+        {
+          "question_id": "q_designer_01",
+          "title": "设计取舍",
+          "ai_score": 62.5,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_designer_02",
+          "title": "用户旅程",
+          "ai_score": 62.5,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_designer_04",
+          "title": "可用性",
+          "ai_score": 62.5,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_designer_05",
+          "title": "评审争议",
+          "ai_score": 62.5,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_designer_07",
+          "title": "研究方法",
+          "ai_score": 63.0,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_designer_08",
+          "title": "原型与验证",
+          "ai_score": 62.5,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_designer_10",
+          "title": "可持续学习",
+          "ai_score": 62.5,
+          "ai_band": "fair"
+        }
+      ],
+      "summary_excerpt": "针对 designer 岗位的整体表现评 62.6 分。候选人有一定潜力,建议结合团队匹配度综合判断。",
+      "provider": "mock"
+    },
+    {
+      "candidate_id": "cand_pilot_09",
+      "role": "marketing",
+      "difficulty": "senior",
+      "hr_overall": 71.5,
+      "hr_overall_a": 72,
+      "hr_overall_b": 71,
+      "ai_overall": 61.0,
+      "ai_band": "fair",
+      "recommendation": "consider",
+      "per_question": [
+        {
+          "question_id": "q_marketing_02",
+          "title": "增长案例",
+          "ai_score": 58.8,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_marketing_05",
+          "title": "危机公关",
+          "ai_score": 64.0,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_marketing_06",
+          "title": "数据复盘",
+          "ai_score": 64.5,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_marketing_08",
+          "title": "品牌 vs 效果",
+          "ai_score": 62.5,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_marketing_10",
+          "title": "领导力",
+          "ai_score": 55.0,
+          "ai_band": "fair"
+        }
+      ],
+      "summary_excerpt": "针对 marketing 岗位的整体表现评 61.0 分。候选人有一定潜力,建议结合团队匹配度综合判断。",
+      "provider": "mock"
+    },
+    {
+      "candidate_id": "cand_pilot_10",
+      "role": "sales",
+      "difficulty": "senior",
+      "hr_overall": 79.0,
+      "hr_overall_a": 80,
+      "hr_overall_b": 78,
+      "ai_overall": 62.1,
+      "ai_band": "fair",
+      "recommendation": "consider",
+      "per_question": [
+        {
+          "question_id": "q_sales_03",
+          "title": "大单案例",
+          "ai_score": 57.5,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_sales_06",
+          "title": "团队带教",
+          "ai_score": 62.5,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_sales_08",
+          "title": "多角色决策",
+          "ai_score": 62.5,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_sales_09",
+          "title": "谈判策略",
+          "ai_score": 62.5,
+          "ai_band": "fair"
+        },
+        {
+          "question_id": "q_sales_10",
+          "title": "压力时刻",
+          "ai_score": 65.5,
+          "ai_band": "fair"
+        }
+      ],
+      "summary_excerpt": "针对 sales 岗位的整体表现评 62.1 分。候选人有一定潜力,建议结合团队匹配度综合判断。",
+      "provider": "mock"
+    }
+  ]
+}

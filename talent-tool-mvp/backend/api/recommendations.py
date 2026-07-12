@@ -63,4 +63,79 @@ async def refresh_recommendations(
     }
 
 
+@router.post("/partner", summary="T1804 — 给单个合作方 HR 推荐候选人")
+async def recommend_for_partner(
+    hr_id: str = Query(..., description="HR user_id"),
+    hr_name: str = Query(default="(匿名 HR)"),
+    partner_id: str = Query(..., description="partner org_id"),
+    role_id: str = Query(..., description="role_id to recommend against"),
+    limit: int = Query(default=5, ge=1, le=20),
+    user: CurrentUser = Depends(
+        require_role(UserRole.talent_partner, UserRole.admin)
+    ),
+):
+    """T1804 — 给合作方 HR 推荐 top 5 候选人,返回 PartnerRecommendation 列表."""
+    rec = _get_recommender()
+    recs = await rec.recommend_for_partner(
+        hr_id=hr_id,
+        hr_name=hr_name,
+        partner_id=partner_id,
+        role_id=role_id,
+        limit=limit,
+    )
+    return {
+        "partner_id": partner_id,
+        "hr_id": hr_id,
+        "count": len(recs),
+        "recommendations": [r.to_dict() for r in recs],
+        "stats": rec.partner_recommendation_stats(recs),
+    }
+
+
+@router.get("/partner/stats", summary="T1804 — 合作方推荐统计")
+async def partner_recommendation_stats(
+    partner_id: str | None = Query(default=None),
+    user: CurrentUser = Depends(require_role(UserRole.admin)),
+):
+    """T1804 — 拉取合作方推荐记录的统计 (by confidence, by hr)."""
+    rec = _get_recommender()
+    # 注: 直接从 supabase 拉最近 N 条
+    sb = get_supabase_admin()
+    rows: list = []
+    try:
+        q = sb.table("partner_recommendations").select("*").limit(500)
+        if partner_id:
+            q = q.eq("partner_id", partner_id)
+        rows = q.execute().data or []
+    except Exception:  # noqa: BLE001
+        rows = []
+    # 转对象
+    from services.candidate_recommender import PartnerRecommendation as _PR
+    recs: list[_PR] = []
+    for r in rows:
+        try:
+            recs.append(
+                _PR(
+                    id=str(r["id"]),
+                    partner_id=str(r["partner_id"]),
+                    hr_id=str(r["hr_id"]),
+                    hr_name=str(r.get("hr_name", "")),
+                    candidate_id=str(r["candidate_id"]),
+                    candidate_name=str(r.get("candidate_name", "")),
+                    role_id=str(r["role_id"]),
+                    role_title=str(r.get("role_title", "")),
+                    overall_score=float(r.get("overall_score", 0.0)),
+                    confidence=str(r.get("confidence", "moderate")),
+                    reasons=list(r.get("reasons") or []),
+                    created_at=str(r.get("created_at", "")),
+                )
+            )
+        except Exception:  # noqa: BLE001
+            continue
+    return {
+        "partner_id": partner_id,
+        "stats": rec.partner_recommendation_stats(recs),
+    }
+
+
 __all__ = ["router"]

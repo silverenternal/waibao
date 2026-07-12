@@ -1,0 +1,118 @@
+{
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^wb-(.*)": "@/components/wb-$1/wb-$1.vue"
+    }
+  },
+  "pages": [
+    {
+      "path": "pages/login/index",
+      "style": {
+        "navigationBarTitleText": "登录",
+        "navigationStyle": "custom",
+        "disableScroll": true
+      }
+    },
+    {
+      "path": "pages/jobseeker/index/index",
+      "style": {
+        "navigationBarTitleText": "waibao · 智能助手",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/jobseeker/chat/index",
+      "style": {
+        "navigationBarTitleText": "智能对话"
+      }
+    },
+    {
+      "path": "pages/jobseeker/profile/index",
+      "style": {
+        "navigationBarTitleText": "我的画像"
+      }
+    },
+    {
+      "path": "pages/jobseeker/journal/index",
+      "style": {
+        "navigationBarTitleText": "工作日记"
+      }
+    },
+    {
+      "path": "pages/jobseeker/plan/index",
+      "style": {
+        "navigationBarTitleText": "职业规划"
+      }
+    },
+    {
+      "path": "pages/jobseeker/tickets/index",
+      "style": {
+        "navigationBarTitleText": "我的工单"
+      }
+    },
+    {
+      "path": "pages/employer/index/index",
+      "style": {
+        "navigationBarTitleText": "HR 工作台",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/employer/tickets/index",
+      "style": {
+        "navigationBarTitleText": "工单看板"
+      }
+    },
+    {
+      "path": "pages/employer/strategy/index",
+      "style": {
+        "navigationBarTitleText": "战略地图"
+      }
+    },
+    {
+      "path": "pages/employer/rooms/index",
+      "style": {
+        "navigationBarTitleText": "协同房间"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "waibao",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "backgroundColor": "#F7F8FA"
+  },
+  "tabBar": {
+    "color": "#8A8E99",
+    "selectedColor": "#3A7AFE",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/jobseeker/index/index",
+        "iconPath": "static/tab/jobseeker.png",
+        "selectedIconPath": "static/tab/jobseeker-active.png",
+        "text": "对话"
+      },
+      {
+        "pagePath": "pages/jobseeker/profile/index",
+        "iconPath": "static/tab/profile.png",
+        "selectedIconPath": "static/tab/profile-active.png",
+        "text": "画像"
+      },
+      {
+        "pagePath": "pages/jobseeker/journal/index",
+        "iconPath": "static/tab/journal.png",
+        "selectedIconPath": "static/tab/journal-active.png",
+        "text": "日记"
+      },
+      {
+        "pagePath": "pages/employer/index/index",
+        "iconPath": "static/tab/employer.png",
+        "selectedIconPath": "static/tab/employer-active.png",
+        "text": "工作台"
+      }
+    ]
+  }
+}

@@ -626,7 +626,7 @@ async def test_calendar_sync_disabled_google():
 
 @pytest.mark.asyncio
 async def test_calendar_sync_outlook_create(monkeypatch):
-    from services import calendar_sync as cs
+    import services.employer.calendar_sync as cs
 
     monkeypatch.setenv("OUTLOOK_CALENDAR_ENABLED", "1")
 

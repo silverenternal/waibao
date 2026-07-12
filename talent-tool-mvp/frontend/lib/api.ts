@@ -244,6 +244,19 @@ export const api = {
     },
     funnelStages: (days = 30) =>
       fetchAPI<FunnelStagesResponse>(`/api/analytics/funnel/stages?days=${days}`),
+    // T1803 — cost overlay
+    funnelWithCosts: (days = 90) =>
+      fetchAPI<FunnelResponse>(`/api/analytics/funnel/with-costs?days=${days}`),
+    // T1803 — weekly trend (13 weeks)
+    funnelTrend: (weeks = 13) =>
+      fetchAPI<{
+        weeks: number;
+        trend: Array<{
+          week_start: string;
+          week_end: string;
+          by_stage: Record<string, number>;
+        }>;
+      }>(`/api/analytics/funnel/trend?weeks=${weeks}`),
     channels: (
       days = 30,
       model: "first_touch" | "last_touch" | "multi_touch" = "last_touch",
@@ -253,6 +266,22 @@ export const api = {
       ),
     channelRoi: (days = 30) =>
       fetchAPI<ChannelRoiReport>(`/api/analytics/channels/roi?days=${days}`),
+    // T1803 — 前端埋点批量上报
+    recordFunnelEvents: (
+      events: Array<{
+        candidate_id: string;
+        stage: string;
+        source?: string;
+        role_id?: string;
+        cost_cents?: number;
+        metadata?: Record<string, unknown>;
+        occurred_at?: string;
+      }>,
+    ) =>
+      fetchAPI<{ ok: number; total: number }>("/api/analytics/funnel/events", {
+        method: "POST",
+        body: JSON.stringify({ events }),
+      }),
   },
   // T1304: Job subscriptions + candidate recommendations
   subscriptions: {

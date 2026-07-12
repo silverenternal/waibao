@@ -1,12 +1,13 @@
 "use client";
 
 /**
- * /interview/[id] — AI 面试会话页 (T1301).
+ * /interview/[id] — AI 面试会话页 (T1301 / T1801).
  *
- * 流程:
- *   1. 拉取 questions
- *   2. 逐题作答(视频或纯文本)
- *   3. 全部完成 → 点击"完成面试"生成报告 → 显示 InterviewFeedback
+ * T1801 增加:
+ *   - 埋点 (track events): view, answer_submit, finish, abandon
+ *   - GPT-4V 真实视频信号(由后端 vision provider 提供)
+ *   - 校准提示: 显示 AI 评分置信 + 与 HR 校准状态
+ *   - 完整 UI: 题目导航 / 进度 / 报告 / 校准 banner
  */
 
 import { useParams, useRouter } from "next/navigation";
@@ -14,6 +15,30 @@ import { useEffect, useRef, useState } from "react";
 import { InterviewQuestion } from "@/components/InterviewQuestion";
 import { InterviewFeedback } from "@/components/InterviewFeedback";
 import VideoInterviewRecorder from "@/components/VideoInterviewRecorder";
+
+// T1801 - 埋点 helper
+function track(event: string, props?: Record<string, any>) {
+  if (typeof window === "undefined") return;
+  try {
+    (window as any).dataLayer = (window as any).dataLayer || [];
+    (window as any).dataLayer.push({ event, ts: Date.now(), ...(props || {}) });
+    fetch("/api/signals/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("sb_token") || ""}` },
+      body: JSON.stringify({ event, props: props || {} }),
+      keepalive: true,
+    }).catch(() => undefined);
+  } catch {
+    // ignore
+  }
+}
+
+interface CalibrationInfo {
+  enabled: boolean;
+  verdict: string;
+  mae: number;
+  suggestion: string;
+}
 
 interface QuestionData {
   id: string;
@@ -61,11 +86,13 @@ export default function InterviewSessionPage() {
   const [report, setReport] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [calibration, setCalibration] = useState<CalibrationInfo | null>(null);
 
   const token = () => localStorage.getItem("sb_token") || "";
 
   useEffect(() => {
     if (!interviewId) return;
+    track("interview_page_view", { interview_id: interviewId });
     (async () => {
       try {
         const r = await fetch(`/api/ai-interview/${interviewId}/questions`, {
@@ -74,6 +101,24 @@ export default function InterviewSessionPage() {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const data = await r.json();
         setQuestions(data.questions || []);
+        track("interview_questions_loaded", { count: data.questions?.length || 0 });
+        // 拉取 calibration 状态(由后端 calibration service 提供 — T1801)
+        try {
+          const cr = await fetch("/api/ai-interview/calibration", {
+            headers: { Authorization: `Bearer ${token()}` },
+          });
+          if (cr.ok) {
+            const cd = await cr.json();
+            setCalibration({
+              enabled: true,
+              verdict: cd.verdict || "needs_improvement",
+              mae: cd.mae || 0,
+              suggestion: cd.suggestions?.[0] || "",
+            });
+          }
+        } catch {
+          // not fatal
+        }
       } catch (e: any) {
         setError(e?.message || "加载面试失败");
       } finally {
@@ -98,6 +143,11 @@ export default function InterviewSessionPage() {
       if (!r.ok) throw new Error(await r.text());
       const data: AnswerData = await r.json();
       setAnswers((prev) => ({ ...prev, [activeQ.id]: data }));
+      track("interview_answer_submitted", {
+        question_id: activeQ.id,
+        answer_type: "text",
+        score: data.overall,
+      });
     } catch (e: any) {
       setError(e?.message || "提交答案失败");
     } finally {
@@ -120,6 +170,11 @@ export default function InterviewSessionPage() {
       if (!r.ok) throw new Error(await r.text());
       const data: AnswerData = await r.json();
       setAnswers((prev) => ({ ...prev, [activeQ.id]: data }));
+      track("interview_answer_submitted", {
+        question_id: activeQ.id,
+        answer_type: "video",
+        score: data.overall,
+      });
     } catch (e: any) {
       setError(e?.message || "上传视频失败");
     } finally {
@@ -137,6 +192,11 @@ export default function InterviewSessionPage() {
       if (!r.ok) throw new Error(await r.text());
       const data = await r.json();
       setReport(data.report);
+      track("interview_finish", {
+        interview_id: interviewId,
+        answered: Object.keys(answers).length,
+        overall: data.report?.overall_score,
+      });
     } catch (e: any) {
       setError(e?.message || "生成报告失败");
     } finally {
@@ -228,13 +288,36 @@ export default function InterviewSessionPage() {
             已答 {answeredCount}/{questions.length}
           </span>
           <button
-            onClick={() => router.push("/jobseeker/interview")}
+            onClick={() => {
+              track("interview_abandon", { interview_id: interviewId, answered: answeredCount });
+              router.push("/jobseeker/interview");
+            }}
             className="px-3 py-1 text-xs rounded bg-slate-200 hover:bg-slate-300"
           >
             退出
           </button>
         </div>
       </div>
+
+      {/* T1801 校准 banner */}
+      {calibration && (
+        <div
+          className={`mx-auto max-w-3xl mt-3 px-4 py-2 rounded text-xs ${
+            calibration.verdict === "excellent"
+              ? "bg-emerald-50 text-emerald-800"
+              : calibration.verdict === "acceptable"
+              ? "bg-amber-50 text-amber-800"
+              : "bg-orange-50 text-orange-800"
+          }`}
+          data-testid="calibration-banner"
+        >
+          <span className="font-semibold">T1801 校准状态:</span>{" "}
+          <span>verdict={calibration.verdict}, MAE={calibration.mae}分</span>
+          {calibration.suggestion && (
+            <span className="ml-2 text-slate-600">({calibration.suggestion})</span>
+          )}
+        </div>
+      )}
 
       <div className="max-w-3xl mx-auto p-6 space-y-5">
         {/* 进度条 */}

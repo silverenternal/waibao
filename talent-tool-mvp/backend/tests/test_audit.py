@@ -11,7 +11,9 @@ def test_audit_record_does_not_raise_when_supabase_missing(monkeypatch):
     from services import audit
 
     # 强制 Supabase 不可用
-    monkeypatch.setattr(audit, "_supabase_admin", lambda: None)
+    import importlib
+    audit_mod = importlib.import_module("services.observability.audit")
+    monkeypatch.setattr(audit_mod, "_supabase_admin", lambda: None)
     audit.record(
         actor_user_id="00000000-0000-0000-0000-000000000001",
         action="read",
@@ -24,13 +26,16 @@ def test_audit_record_does_not_raise_when_supabase_missing(monkeypatch):
 async def test_audit_decorator_records(monkeypatch):
     """@audit 装饰器应捕获 actor_user_id + resource_id."""
     from services import audit
+    import importlib
+
+    audit_mod = importlib.import_module("services.observability.audit")
 
     calls: list[dict] = []
 
     def fake_record(**kwargs):
         calls.append(kwargs)
 
-    monkeypatch.setattr(audit, "record", fake_record)
+    monkeypatch.setattr(audit_mod, "record", fake_record)
     # 直接调用装饰后的函数,actor / resource_id 通过 kwargs 传入
 
     @audit.audit("read", "candidate", resource_id_arg="candidate_id")
@@ -65,13 +70,16 @@ async def test_audit_decorator_failure_does_not_break_call(monkeypatch):
 def test_audit_metadata_fn_called(monkeypatch):
     """metadata_fn 应被调用并写入 metadata."""
     from services import audit
+    import importlib
+
+    audit_mod = importlib.import_module("services.observability.audit")
 
     captured: list[dict] = []
 
     def fake_record(**kwargs):
         captured.append(kwargs)
 
-    monkeypatch.setattr(audit, "record", fake_record)
+    monkeypatch.setattr(audit_mod, "record", fake_record)
 
     def meta(args, kwargs, result):
         return {"result_id": result.get("id"), "ok": True}

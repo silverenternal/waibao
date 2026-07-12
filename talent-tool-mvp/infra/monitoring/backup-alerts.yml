@@ -1,0 +1,72 @@
+# T1502 — 备份监控告警规则
+#
+# 配合 Prometheus alerting rules, 接入 AlertManager
+#   kubectl apply -f infra/monitoring/backup-alerts.yml  (ConfigMap)
+#   promtool check rules infra/monitoring/backup-alerts.yml
+
+groups:
+  - name: backup-alerts
+    interval: 60s
+    rules:
+      # 备份未运行超过 26 小时
+      - alert: BackupNotRunning26h
+        expr: (time() - backup_last_success_timestamp_seconds) > 93600
+        for: 5m
+        labels:
+          severity: critical
+          team: sre
+        annotations:
+          summary: "最近一次备份已超过 26 小时"
+          description: |
+            RPO<1h 要求每日一次成功备份. 当前已超时:
+              {{ $value | humanizeDuration }}
+            检查 backup_to_s3.py 与 Supabase PITR 状态.
+
+      # 备份失败
+      - alert: BackupFailed
+        expr: backup_run_status{status="failed"} == 1
+        for: 0m
+        labels:
+          severity: critical
+          team: sre
+        annotations:
+          summary: "最近一次备份失败"
+          description: "请检查 logs (k8s namespace=ops) 与 S3 权限."
+
+      # 备份数据量异常下降
+      - alert: BackupSizeDropped
+        expr: (backup_size_bytes / backup_size_bytes offset 1d) < 0.5
+        for: 0m
+        labels:
+          severity: warning
+          team: sre
+        annotations:
+          summary: "备份大小相对昨日下降超过 50%"
+
+      # RPO 超过 1h 目标
+      - alert: RPOTargetMissed
+        expr: (time() - backup_last_success_timestamp_seconds) > 3600
+        for: 0m
+        labels:
+          severity: warning
+          team: sre
+        annotations:
+          summary: "RPO 超过 1h 目标 (实际 {{ $value | humanizeDuration }})"
+
+      # S3 / OSS 备份 bucket 大小警告
+      - alert: BackupBucketSizeWarning
+        expr: backup_bucket_size_bytes > 5e12  # 5 TB
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "S3 备份 bucket 超过 5 TB,审查 retention 政策"
+
+      # PITR 窗口不足
+      - alert: PITRWindowTooSmall
+        expr: supabase_pitr_window_hours < 168
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PITR 窗口 < 7 天,检查 Supabase Pro 计划配置"
