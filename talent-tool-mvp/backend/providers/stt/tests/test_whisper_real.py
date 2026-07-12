@@ -35,11 +35,16 @@ from backend.providers.stt.whisper_provider import WhisperProvider
 AUDIO_DIR = Path(__file__).resolve().parents[3] / "tests" / "fixtures" / "audio"
 
 
+def _is_real_openai_key() -> bool:
+    k = os.getenv("OPENAI_API_KEY", "")
+    return k.startswith("sk-") and len(k) > 20
+
+
 pytestmark = [
     pytest.mark.real_api,
     pytest.mark.skipif(
-        not os.getenv("OPENAI_API_KEY"),
-        reason="OPENAI_API_KEY 未设置 — 跳过 Whisper 真实 API 测试",
+        not _is_real_openai_key(),
+        reason="OPENAI_API_KEY 缺失或非真实 — 跳过 Whisper 真实 API 测试",
     ),
 ]
 

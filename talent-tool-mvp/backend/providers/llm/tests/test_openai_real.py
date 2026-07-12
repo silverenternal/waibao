@@ -26,11 +26,17 @@ from backend.providers.llm.base import Message, ToolDefinition
 from backend.providers.llm.openai_provider import OpenAIProvider
 
 
+def _is_real_openai_key() -> bool:
+    """要求 key 以 'sk-' 开头且长度 > 20 (排掉 mock/test)."""
+    k = os.getenv("OPENAI_API_KEY", "")
+    return k.startswith("sk-") and len(k) > 20
+
+
 pytestmark = [
     pytest.mark.real_api,
     pytest.mark.skipif(
-        not os.getenv("OPENAI_API_KEY"),
-        reason="OPENAI_API_KEY 未设置 — 跳过 OpenAI 真实 API 测试",
+        not _is_real_openai_key(),
+        reason="OPENAI_API_KEY 缺失或非真实 (需 'sk-' 开头 + 长度 > 20) — 跳过",
     ),
 ]
 

@@ -47,7 +47,7 @@ async def test_extract_text_plain_text(monkeypatch):
     async def fake_fetch(url, *, timeout=30.0):
         return "纯文本简历内容 张三 zhang.san@example.com".encode("utf-8")
 
-    monkeypatch.setattr("services.resume_parser._fetch_bytes", fake_fetch)
+    monkeypatch.setattr("services.jobseeker.resume_parser._fetch_bytes", fake_fetch)
     text = await extract_text_from_url("https://example.com/cv.txt")
     assert "张三" in text
     assert "zhang.san" in text
@@ -56,7 +56,7 @@ async def test_extract_text_plain_text(monkeypatch):
 @pytest.mark.asyncio
 async def test_extract_text_ocr_fallback_to_vision(monkeypatch):
     """OCR provider 抛错 → 走 vision fallback。"""
-    from services import resume_parser as rp
+    from services.jobseeker import resume_parser as rp
 
     async def fake_fetch(url, *, timeout=30.0):
         return b"\x89PNG\r\n\x1a\n FAKE"
@@ -78,7 +78,7 @@ async def test_extract_text_ocr_fallback_to_vision(monkeypatch):
 @pytest.mark.asyncio
 async def test_extract_text_ocr_success(monkeypatch):
     """OCR provider 主路径返回 text。"""
-    from services import resume_parser as rp
+    from services.jobseeker import resume_parser as rp
 
     async def fake_fetch(url, *, timeout=30.0):
         return b"\x89PNG\r\n\x1a\n FAKE"
@@ -95,7 +95,7 @@ async def test_extract_text_ocr_success(monkeypatch):
 @pytest.mark.asyncio
 async def test_extract_text_both_fail(monkeypatch):
     """OCR + Vision 都空 → ProviderError."""
-    from services import resume_parser as rp
+    from services.jobseeker import resume_parser as rp
     from providers.exceptions import ProviderError
 
     async def fake_fetch(url, *, timeout=30.0):
@@ -118,7 +118,7 @@ async def test_extract_text_both_fail(monkeypatch):
 @pytest.mark.asyncio
 async def test_parse_resume_from_url_full(monkeypatch):
     """端到端: 拉 URL → OCR → LLM 抽取 → 清洗。"""
-    from services import resume_parser as rp
+    from services.jobseeker import resume_parser as rp
 
     raw_text = "张三 zhang.san@example.com 13800138000 清华大学 计算机科学 2020 字节跳动 高级工程师"
 

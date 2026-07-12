@@ -16,11 +16,16 @@ import pytest
 from backend.providers.embedding.openai_embedding import OpenAIEmbeddingProvider
 
 
+def _is_real_openai_key() -> bool:
+    k = os.getenv("OPENAI_API_KEY", "")
+    return k.startswith("sk-") and len(k) > 20
+
+
 pytestmark = [
     pytest.mark.real_api,
     pytest.mark.skipif(
-        not os.getenv("OPENAI_API_KEY"),
-        reason="OPENAI_API_KEY 未设置 — 跳过 OpenAI Embedding 真实 API 测试",
+        not _is_real_openai_key(),
+        reason="OPENAI_API_KEY 缺失或非真实 — 跳过 Embedding 真实 API 测试",
     ),
 ]
 
