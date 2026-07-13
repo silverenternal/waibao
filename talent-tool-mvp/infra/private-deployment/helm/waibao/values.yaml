@@ -1,0 +1,149 @@
+# ============================================================
+# v7.0 T3003 Helm values — Waibao private deployment
+# ============================================================
+
+# Number of replicas for stateless components
+replicaCount: 2
+
+image:
+  backend:
+    repository: waibao/backend
+    tag: v7.0.0
+    pullPolicy: IfNotPresent
+  frontend:
+    repository: waibao/frontend
+    tag: v7.0.0
+    pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+# Tenant-level branding — read by WhiteLabelProvider at boot.
+# Override per-deployment by passing --set whitelabel.productName=...
+whitelabel:
+  tenantId: default
+  productName: Waibao Recruitment
+  domain: hire.example.com
+  primaryColor: "#2563EB"
+  secondaryColor: "#0F172A"
+  accentColor: "#F59E0B"
+  fontFamily: Inter
+  supportEmail: support@example.com
+  hidePoweredBy: false
+  locale: zh-CN
+
+backend:
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "4"
+      memory: "8Gi"
+  env:
+    DEPLOYMENT_MODE: private
+    WHITELABEL_ENABLED: "true"
+  service:
+    type: ClusterIP
+    port: 8000
+
+frontend:
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "1"
+      memory: "1Gi"
+  service:
+    type: ClusterIP
+    port: 3000
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "32m"
+  hosts:
+    - host: hire.example.com
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: backend
+        - path: /
+          pathType: Prefix
+          service: frontend
+  tls:
+    - secretName: waibao-tls
+      hosts:
+        - hire.example.com
+
+# Data services (stateful)
+postgresql:
+  enabled: true
+  image: supabase/postgres:15.1.0.117
+  storage: 200Gi
+  storageClass: gp3
+
+clickhouse:
+  enabled: true
+  image: clickhouse/clickhouse-server:24.3
+  storage: 500Gi
+  storageClass: gp3
+
+qdrant:
+  enabled: true
+  image: qdrant/qdrant:v1.7.4
+  storage: 100Gi
+  storageClass: gp3
+
+redis:
+  enabled: true
+  image: redis:7.2-alpine
+  storage: 20Gi
+  storageClass: gp3
+
+# Auto-scaling
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+# Pod disruption budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Resource quotas
+resources:
+  requests:
+    cpu: "1"
+    memory: "2Gi"
+
+# Service monitor (Prometheus Operator)
+serviceMonitor:
+  enabled: true
+  interval: 30s
+
+# Secrets (set create=true only for dev/CI; in prod, pre-create the
+# secret via kubectl and leave create=false).
+secrets:
+  create: false
+  databaseUrl: postgresql+psycopg://postgres:postgres@waibao-postgresql:5432/postgres
+  redisUrl: redis://waibao-redis:6379/0
+  clickhouseUrl: http://waibao-clickhouse:8123
+  qdrantUrl: http://waibao-qdrant:6333
+  secretKey: change-me
+
+# Pod-level security
+podSecurityContext:
+  fsGroup: 1000
+  runAsNonRoot: true
+  runAsUser: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+  readOnlyRootFilesystem: true

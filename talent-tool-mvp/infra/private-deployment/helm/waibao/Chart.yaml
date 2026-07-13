@@ -1,0 +1,28 @@
+# Helm chart — v7.0 T3003
+apiVersion: v2
+name: waibao
+description: |
+  Waibao Recruitment — Enterprise SaaS recruitment agent.
+  Single-binary Helm chart packaging backend + frontend + supporting
+  data services for a private deployment.
+type: application
+
+# Chart version (SemVer); bump when chart changes.
+version: 7.0.0
+
+# Application version (SemVer); should match the Waibao release.
+appVersion: "7.0.0"
+
+keywords:
+  - recruitment
+  - ai
+  - saas
+  - private-deployment
+
+home: https://waibao.example.com
+sources:
+  - https://github.com/waibao/waibao
+
+maintainers:
+  - name: Waibao Platform Team
+    email: platform@waibao.example.com

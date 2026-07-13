@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "waibao.fullname" . }}-backend
+  labels:
+    app.kubernetes.io/name: {{ include "waibao.name" . }}
+    app.kubernetes.io/component: backend
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "waibao.name" . }}
+      app.kubernetes.io/component: backend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "waibao.name" . }}
+        app.kubernetes.io/component: backend
+      annotations:
+        whitelabel.waibao/tenant-id: {{ .Values.whitelabel.tenantId | quote }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: backend
+          image: "{{ .Values.image.backend.repository }}:{{ .Values.image.backend.tag }}"
+          imagePullPolicy: {{ .Values.image.backend.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          env:
+            - name: DEPLOYMENT_MODE
+              value: {{ .Values.backend.env.DEPLOYMENT_MODE | quote }}
+            - name: WHITELABEL_ENABLED
+              value: {{ .Values.backend.env.WHITELABEL_ENABLED | quote }}
+            - name: WHITELABEL_TENANT_ID
+              value: {{ .Values.whitelabel.tenantId | quote }}
+            - name: WHITELABEL_PRODUCT_NAME
+              value: {{ .Values.whitelabel.productName | quote }}
+            - name: WHITELABEL_PRIMARY_COLOR
+              value: {{ .Values.whitelabel.primaryColor | quote }}
+            - name: WHITELABEL_SECONDARY_COLOR
+              value: {{ .Values.whitelabel.secondaryColor | quote }}
+            - name: WHITELABEL_ACCENT_COLOR
+              value: {{ .Values.whitelabel.accentColor | quote }}
+            - name: WHITELABEL_DOMAIN
+              value: {{ .Values.whitelabel.domain | quote }}
+            - name: WHITELABEL_SUPPORT_EMAIL
+              value: {{ .Values.whitelabel.supportEmail | quote }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "waibao.fullname" . }}-secrets
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "waibao.fullname" . }}-secrets
+                  key: redis-url
+            - name: CLICKHOUSE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "waibao.fullname" . }}-secrets
+                  key: clickhouse-url
+            - name: QDRANT_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "waibao.fullname" . }}-secrets
+                  key: qdrant-url
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "waibao.fullname" . }}-secrets
+                  key: secret-key
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+      {{- with .Values.podDisruptionBudget.enabled }}
+      {{- end }}

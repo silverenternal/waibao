@@ -1,0 +1,213 @@
+# ============================================================
+# v7.0 T3003 — Private Deployment docker-compose (single host)
+#
+# 用途: 给客户运维 / 自托管场景一键启动 Waibao 全部组件。
+#      - 最小拓扑: 1 台 16C/64G 主机即可运行 demo
+#      - 数据全部本地化: Supabase (Postgres + GoTrue + Storage + Realtime)
+#                          ClickHouse (BI/数仓)
+#                          Redis (缓存 + 队列)
+#                          Qdrant (向量)
+#      - 端口对外: 仅暴露 80/443 (Caddy) + 22 (ssh)
+#
+# 用法:
+#   cp .env.example .env && vim .env           # 必填 SUPABASE_JWT_SECRET 等
+#   docker compose -f infra/private-deployment/docker-compose.yml pull
+#   docker compose -f infra/private-deployment/docker-compose.yml up -d
+#   docker compose -f infra/private-deployment/docker-compose.yml logs -f backend
+#   docker compose -f infra/private-deployment/docker-compose.yml exec backend \
+#     python -m alembic upgrade head             # 数据库迁移
+#
+# 卸载:
+#   docker compose -f infra/private-deployment/docker-compose.yml down -v
+#
+# 与主仓库 docker-compose.yml 区别:
+#   - 去掉 LiveKit / ArgoCD / 区域多活(留给生产 kube)
+#   - 把所有外部 SaaS 依赖(Stripe / SES / OpenAI)改成 env-driven 占位
+#   - 把 Supabase / ClickHouse 全部本地化
+# ============================================================
+
+version: "3.9"
+
+x-restart: &restart
+  restart: unless-stopped
+
+services:
+  # -------- 反向代理 + 自动 HTTPS --------
+  caddy:
+    image: caddy:2.7
+    <<: *restart
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [waibao]
+    depends_on:
+      - frontend
+      - backend
+
+  # -------- 后端 FastAPI --------
+  backend:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    image: waibao/backend:v7.0.0
+    <<: *restart
+    env_file: .env
+    environment:
+      - DEPLOYMENT_MODE=private
+      - WHITELABEL_ENABLED=true
+      - DATABASE_URL=postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@supabase-db:5432/postgres
+      - REDIS_URL=redis://redis:6379/0
+      - CLICKHOUSE_URL=http://clickhouse:8123
+      - QDRANT_URL=http://qdrant:6333
+    volumes:
+      - backend_uploads:/app/uploads
+      - backend_logs:/app/logs
+    networks: [waibao]
+    depends_on:
+      - supabase-db
+      - redis
+      - clickhouse
+      - qdrant
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # -------- 前端 Next.js (standalone) --------
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+    image: waibao/frontend:v7.0.0
+    <<: *restart
+    env_file: .env
+    environment:
+      - NEXT_PUBLIC_API_URL=https://${PRIMARY_DOMAIN:-localhost}/api
+      - NEXT_PUBLIC_DEPLOYMENT_MODE=private
+    networks: [waibao]
+
+  # -------- Supabase Postgres (替代托管) --------
+  supabase-db:
+    image: supabase/postgres:15.1.0.117
+    <<: *restart
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+    volumes:
+      - supabase_db:/var/lib/postgresql/data
+      - ../../supabase/migrations:/docker-entrypoint-initdb.d/migrations:ro
+    networks: [waibao]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # -------- Supabase Auth (GoTrue) --------
+  supabase-auth:
+    image: supabase/gotrue:v2.151.0
+    <<: *restart
+    environment:
+      GOTRUE_JWT_SECRET: ${SUPABASE_JWT_SECRET}
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD}@supabase-db:5432/postgres
+      GOTRUE_SITE_URL: https://${PRIMARY_DOMAIN:-localhost}
+      GOTRUE_DISABLE_SIGNUP: "false"
+    networks: [waibao]
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+
+  # -------- Supabase Storage --------
+  supabase-storage:
+    image: supabase/storage-api:v1.11.13
+    <<: *restart
+    environment:
+      ANON_KEY: ${SUPABASE_ANON_KEY}
+      SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
+      POSTGREST_URL: http://supabase-db:5432
+      STORAGE_BACKEND: file
+      TENANT_ID: stub
+      REGION: stub
+    volumes:
+      - supabase_storage:/var/lib/storage
+    networks: [waibao]
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+
+  # -------- ClickHouse (数仓) --------
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3
+    <<: *restart
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    networks: [waibao]
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # -------- Qdrant (向量库) --------
+  qdrant:
+    image: qdrant/qdrant:v1.7.4
+    <<: *restart
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks: [waibao]
+
+  # -------- Redis (缓存 + 队列) --------
+  redis:
+    image: redis:7.2-alpine
+    <<: *restart
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    networks: [waibao]
+
+  # -------- 监控 (Prometheus + Grafana, 可选) --------
+  prometheus:
+    image: prom/prometheus:v2.51.2
+    profiles: ["monitoring"]
+    <<: *restart
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks: [waibao]
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    profiles: ["monitoring"]
+    <<: *restart
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks: [waibao]
+
+volumes:
+  caddy_data:
+  caddy_config:
+  backend_uploads:
+  backend_logs:
+  supabase_db:
+  supabase_storage:
+  clickhouse_data:
+  qdrant_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  waibao:
+    driver: bridge

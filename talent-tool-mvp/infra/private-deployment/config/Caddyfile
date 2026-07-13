@@ -1,0 +1,24 @@
+# Caddyfile — v7.0 T3003 私有化部署
+#
+# 自动 HTTPS (Let's Encrypt) + 反向代理到 frontend / backend。
+# 修改 PRIMARY_DOMAIN 后 caddy 会自动申请证书。
+
+{$PRIMARY_DOMAIN:localhost} {
+    encode gzip zstd
+    reverse_proxy /api/* backend:8000
+    reverse_proxy /* frontend:3000
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # CSP — 私有化部署可按需放宽
+        Content-Security-Policy "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+    }
+}
+
+# 健康检查端点(只允许内部访问)
+internal /healthz {
+    reverse_proxy backend:8000/health
+}
