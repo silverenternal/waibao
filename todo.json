@@ -1,11 +1,11 @@
 {
   "meta": {
     "project": "招聘智能体 (Recruitment Agent)",
-    "subtitle": "v7.0 — Enterprise SaaS 化 + AI 能力深化 (RAG/Multi-Agent/Memory)",
-    "based_on": "v6.0.0 (16/16 需求 ✅ / 2273 tests / 架构可扩展 + 差异化能力)",
-    "version": "7.0.0",
+    "subtitle": "v8.0 — 把 16 项需求做透 + 服务开关(发布前控制) + 真实日活",
+    "based_on": "v7.0.0 (16/16 需求 ✅ / 2300+ tests / 16 个开源项目集成)",
+    "version": "8.0.0",
     "created": "2026-07-13",
-    "supersedes": "v6.0 todo.json (24 tasks)",
+    "supersedes": "v7.0 todo.json (19 tasks)",
     "owner": "waibao",
     "language": [
       "zh-CN",
@@ -13,460 +13,566 @@
       "ja-JP"
     ],
     "stack": {
-      "backend": "FastAPI + Python 3.12 + EventBus + RAG + MultiAgent + TenantIsolation",
-      "frontend": "Next.js 16 + TypeScript + Tailwind + next-intl + Storybook + ReactFlow",
-      "database": "Supabase (OLTP) + ClickHouse (OLAP) + pgvector (embedding) + Neo4j (knowledge graph)",
-      "ai": "OpenAI / Anthropic / DeepSeek / 智谱 / 通义 / Kimi + Whisper / GPT-4V / GPT-4o Realtime + LoRA fine-tuning",
-      "infra": "Docker Compose + Supabase + ClickHouse + Redis + OpenTelemetry + Prometheus + Sentry + Locust + ArgoCD + LiveKit"
+      "backend": "FastAPI + Python 3.12 + EventBus + ServiceToggle + Mem0 + LlamaIndex + CrewAI",
+      "frontend": "Next.js 16 + TypeScript + Tailwind + next-intl + Storybook + ServiceCatalog",
+      "database": "Supabase (OLTP) + pgvector (embedding)",
+      "ai": "OpenAI / Anthropic / DeepSeek / 智谱 / 通义 / Kimi + Whisper / GPT-4V / GPT-4o Realtime",
+      "infra": "Docker Compose + Supabase + Redis + OpenTelemetry + Prometheus + Sentry + Instatus + Authlib"
     },
-    "audit": "docs/COVERAGE-AUDIT-v7.md"
+    "audit": "docs/COVERAGE-AUDIT-v8.md"
   },
-  "goal": "在 v6.0 (16/16 ✅ / 2273 tests / 可扩展架构 + 差异化) 基础上,做两件事:(1) Enterprise SaaS 化 — 严格多租户 + 配额 + Rate Limiting + 完整审计 + GDPR/PIPL/CCPA + SLA 99.9% + SSO;(2) AI 能力深化 — 完整 RAG(文档解析/分块/重排/citation) + 统一 Agent Memory + Multi-Agent 协作框架 + Prompt 版本化/自动评估。让产品能卖钱 + 技术护城河更深",
+  "goal": "在 v7.0 基础上,做 3 件事:(1) 服务开关 (Service Toggle) - admin 在发布前可关/开每个服务,按 plan / org / role 维度控制;(2) 把 16 项需求做透 - 不是加新功能,是把现有功能质量/体验/实际效果做到甲方要求的水平;(3) 真实日活 - 让 5+ 中型企业真实用起来,500+ 日活。不做 LoRA(v7.0 跳过 v8.0)",
   "background": {
-    "v6_achievements": [
-      "16/16 项甲方需求 100% 覆盖",
-      "2273 tests collected",
-      "架构扩展性: EventBus/ConfigCenter/FeatureFlag/PluginSDK/WorkflowEngine",
-      "差异化能力: GPT-4o Realtime + AI 模拟面试官 + 视频简历 + LiveKit",
-      "v6.0.0 Release"
+    "v7_achievements": [
+      "16/16 项甲方需求 100% 形式覆盖",
+      "2300+ tests pass",
+      "16 个开源项目集成",
+      "Enterprise SaaS 多租户 + 配额 + 限流 + 审计 + GDPR",
+      "v7.0.0 Release"
     ],
-    "v6_debt_to_saas": [
-      "多租户隔离弱",
-      "Rate Limiting 散落",
-      "审计日志不完整",
-      "GDPR/PIPL/CCPA 合规只部分",
-      "无 SSO/SAML",
-      "无状态页",
-      "SLA 99.9% 未验证",
-      "API 无版本化"
+    "v7_gap_to_perfect": [
+      "16 项需求「功能有」≠「做透」",
+      "ProfileCard 是数据展示不是知心朋友",
+      "智能体不主动 push (频繁互动缺)",
+      "心情差时智能体不主动关怀",
+      "画像生成后求职者无法确认",
+      "规划生成后没执行追踪",
+      "HR 偏好存了但模板化回复",
+      "假资质鉴别弱",
+      "老板看不到偏见后果",
+      "JD 撰写缺营销化",
+      "制度缺 AI 解释",
+      "HR 不主动建议"
     ],
-    "v6_debt_to_ai": [
-      "RAG 是基础版",
-      "Agent Memory 分散",
-      "Multi-Agent 弱",
-      "Prompt 无版本化 + 无自动评估",
-      "无 Fine-tuning",
-      "智能路由缺"
-    ],
-    "v7_thinking_shift": "v6.0 是「可扩展架构」,v7.0 必须是「SaaS 化(能卖钱) + AI Deep(技术护城河)」。让产品能商业化,让 AI 能力更深不可替代。",
-    "north_star": "2027 Q4 真实 ARR ≥ 1000 万 RMB, NPS ≥ 65, RAG 检索准确度 > 85%, Multi-Agent 任务成功率 > 80%"
+    "v8_user_request": "v8.0 必须加服务开关(发布前控制);LoRA 这种高级功能先不用;把甲方需求都做到位",
+    "v8_thinking_shift": "v1-v7 是「功能铺开」,v8.0 必须是「功能做透 + 服务可控」。加新功能边际效益递减,深耕现有功能 + 商业化才是重点。",
+    "north_star": "2027 Q2 真实日活 ≥ 500, NPS ≥ 70, 16 项需求做透, 服务开关 100% 覆盖"
   },
   "phases": [
     {
       "id": "P0",
-      "title": "Enterprise SaaS 化 (多租户 + 配额 + Rate Limiting + 审计)",
-      "goal": "严格多租户隔离 + 统一配额 + 统一限流 + 完整审计 + SLA 99.9% + 状态页",
-      "duration_weeks": 5,
+      "title": "服务开关 (Service Toggle - 发布前控制)",
+      "goal": "每个服务可关/开,按 plan/org/role 维度,1 键回滚,服务依赖管理",
+      "duration_weeks": 3,
       "priority": "P0"
     },
     {
       "id": "P1",
-      "title": "AI 能力深化 (RAG + 统一 Memory + Multi-Agent)",
-      "goal": "完整 RAG(文档解析/分块/检索/重排/citation) + Agent 统一记忆库 + Multi-Agent 协作 + Prompt 版本化",
+      "title": "求职者侧 16 项需求做透 (1.1-1.6)",
+      "goal": "把 1.1-1.6 从功能有变成真好用 - 情感化对话/主动 push/画像确认/规划执行跟踪",
       "duration_weeks": 6,
       "priority": "P0"
     },
     {
       "id": "P2",
-      "title": "数据仓库 + BI + 预测分析",
-      "goal": "ClickHouse 数据仓库 + ETL + 自定义 BI 报表 + 预测性分析(流失/成功率)",
-      "duration_weeks": 5,
-      "priority": "P1"
+      "title": "用人单位侧 16 项需求做透 (2.1-2.9 + 3)",
+      "goal": "把 2.1-2.9 + 3 从功能有变成真好用 - 个性化语气/假资质检测/战略传达/主动 HR",
+      "duration_weeks": 6,
+      "priority": "P0"
     },
     {
       "id": "P3",
-      "title": "合规 + 生态 (SSO/开放平台/应用市场)",
-      "goal": "GDPR/PIPL/CCPA 完整合规 + SSO/SAML + 开放 API 平台 + Developer Portal + 第三方应用市场",
-      "duration_weeks": 5,
+      "title": "真实日活 + 商业化",
+      "goal": "5+ 中型企业真实用 30 天, 500+ 日活, 第一个付费客户, 续费机制",
+      "duration_weeks": 8,
       "priority": "P1"
     },
     {
       "id": "P4",
-      "title": "AI 高级 + 商业化 + v7.0 Release",
-      "goal": "Fine-tuning (LoRA) + AI 主动 Sourcing + 预测招聘 + 白标 + v7.0.0 Release",
-      "duration_weeks": 4,
-      "priority": "P2"
+      "title": "数据驱动 + v8.0 Release",
+      "goal": "自动周报 / 异常告警 / 用户行为分析 / v8.0.0 Release",
+      "duration_weeks": 3,
+      "priority": "P1"
     }
   ],
   "tasks": [
     {
-      "_section": "P0 — Enterprise SaaS 化",
+      "_section": "P0 — 服务开关 (Service Toggle)",
       "_comment_marker": 1,
-      "id": "T2601",
+      "id": "T3501",
       "phase": "P0",
       "priority": "P0",
-      "title": "严格多租户隔离 (RLS + Tenant 上下文)",
+      "title": "服务开关核心 (Service Toggle)",
       "requirement": [
         "all"
       ],
-      "description": "所有表加 tenant_id,严格 RLS,每个请求自动注入 TenantContext",
+      "description": "每个服务可独立关/开,按 plan / org / role 多维度控制,服务目录,服务依赖",
       "deliverables": [
-        "supabase/migrations/046_tenant_context.sql: 所有业务表加 tenant_id NOT NULL + RLS policy USING (tenant_id = current_setting('app.tenant_id')::uuid)",
-        "backend/services/platform/tenant_context.py: TenantContext + set/get/with_tenant",
-        "backend/services/platform/tenant_resolver.py: 解析请求的 tenant (从 JWT/header/cookie)",
-        "改造 main.py lifespan: 启动时 disable RLS by default,每个请求 context manager 启用",
-        "改造所有 API: 加 Depends(get_tenant_context) 自动注入",
-        "跨租户访问需要 explicit override (admin tool 才有)",
-        "tests/test_tenant_isolation.py 60+ 测试"
+        "supabase/migrations/053_service_toggle.sql: services + service_overrides + service_audit",
+        "backend/services/platform/service_toggle.py: ServiceToggle + register + override + 缓存 60s",
+        "backend/services/platform/service_catalog.py: 自动发现 + 依赖解析",
+        "service_registry 自动生成 50+ 服务 (16 agent / 5 端 / 7 业务模块)",
+        "backend/api/admin_services.py: GET / PATCH / POST /api/admin/services + override + rollback",
+        "dependency resolver: B 依赖 A 时 A 关闭自动隐藏 B",
+        "前端: frontend/app/admin/services/page.tsx (服务目录) + [name]/page.tsx (详情)",
+        "frontend/components/services/ServiceBadge.tsx + use-service-toggle.ts",
+        "tests/test_service_toggle.py 50+"
       ],
       "depends_on": [],
-      "estimate_days": 5
+      "estimate_days": 6
     },
     {
-      "id": "T2602",
+      "id": "T3502",
       "phase": "P0",
       "priority": "P0",
-      "title": "统一 Rate Limiting + 配额管理",
+      "title": "服务目录 (公开 status.waibao.cn) + 服务订阅",
       "requirement": [
         "all"
       ],
-      "description": "用 Redis token bucket 统一限流,per-tenant/per-user/per-API 多维度",
+      "description": "公开的服务目录页面,实时显示每个服务状态,支持订阅通知",
       "deliverables": [
-        "backend/services/platform/rate_limiter.py: RateLimiter 滑动窗口 + 令牌桶",
-        "backend/services/platform/quota.py: Plan Free/Pro/Enterprise + enforce(tenant_id, resource)",
-        "改造 main.py: middleware 注入 rate_limit + quota check",
-        "公开 API: 自动套用 rate limit + 配额",
-        "限流响应: 429 + Retry-After 头",
-        "前端: use-rate-limit.ts 显示配额剩余",
-        "tests/test_rate_limiter.py 40+ + test_quota.py"
+        "frontend/app/(public)/services/page.tsx (服务目录 3 列: 名称/状态/Plan 要求)",
+        "frontend/app/(public)/services/[name]/page.tsx (详情 + 依赖图 + 历史)",
+        "backend/api/public_services.py - GET /api/public/services",
+        "Email/Webhook 订阅",
+        "服务图谱可视化 (DAG)",
+        "tests/test_service_catalog.py"
       ],
       "depends_on": [
-        "T2601"
+        "T3501"
+      ],
+      "estimate_days": 3
+    },
+    {
+      "id": "T3503",
+      "phase": "P0",
+      "priority": "P0",
+      "title": "服务开关与现有 Feature Flag / ConfigCenter 整合",
+      "requirement": [
+        "all"
+      ],
+      "description": "ServiceToggle 在外层(发布控制), FeatureFlag 在内层(灰度), ConfigCenter 在最内(参数)",
+      "deliverables": [
+        "统一抽象: backend/services/platform/feature_access.py: check(name, org_id, plan, role, user_id) -> bool",
+        "改造 65+ API: 加 Depends(check_service_access) 自动校验",
+        "改造 16 Agent: run() 入口加 service_enabled check",
+        "前端: 所有 feature 组件加 FeatureGate 包装",
+        "docs/SERVICE_VS_FLAG.md",
+        "tests/test_feature_access.py 30+"
+      ],
+      "depends_on": [
+        "T3501"
       ],
       "estimate_days": 4
     },
     {
-      "id": "T2603",
-      "phase": "P0",
-      "priority": "P0",
-      "title": "完整审计日志 + GDPR/PIPL/CCPA 合规",
-      "requirement": [
-        "all"
-      ],
-      "description": "所有 PII 读写强制审计,GDPR Art. 30 处理活动记录,PIPL 数据出境声明",
-      "deliverables": [
-        "supabase/migrations/047_audit_v2.sql: audit_log_v2 + data_processing_register + data_subject_requests + data_breaches",
-        "backend/services/platform/audit_v2.py: 100% 覆盖 PII 访问 + 法律依据记录",
-        "backend/services/platform/consent.py 升级: 细粒度 consent + withdrawal + PIPL 数据出境",
-        "backend/api/gdpr_v2.py: 增强 forget/export/rectify + 30 天 SLA",
-        "前端: 隐私偏好中心",
-        "tests/test_audit_v2.py 50+ + test_gdpr_v2.py"
-      ],
-      "depends_on": [
-        "T2601"
-      ],
-      "estimate_days": 5
-    },
-    {
-      "id": "T2604",
-      "phase": "P0",
-      "priority": "P0",
-      "title": "SLA 99.9% + 状态页 + 客户支持",
-      "requirement": [
-        "all"
-      ],
-      "description": "实测 SLA + 公开状态页 + 集成客户支持工单",
-      "deliverables": [
-        "backend/services/platform/sla_monitor.py: 7/30/90 天 SLA 计算 + 异常自动告警",
-        "状态页 status.waibao.cn: 公开所有服务状态 + 90 天 uptime + 计划维护",
-        "客户支持: 集成 Intercom / Zendesk,一键创建支持工单",
-        "docs/SLA.md: 99.9% 保证 + 责任边界",
-        "tests/test_sla_monitor.py"
-      ],
-      "depends_on": [],
-      "estimate_days": 4
-    },
-    {
-      "_section": "P1 — AI 能力深化 (RAG + Memory + Multi-Agent)",
+      "_section": "P1 — 求职者侧 16 项需求做透 (1.1-1.6)",
       "_comment_marker": 2,
-      "id": "T2701",
+      "id": "T3601",
       "phase": "P1",
       "priority": "P0",
-      "title": "完整 RAG 系统 (文档解析/分块/检索/重排/citation)",
+      "title": "1.1 做透 - 智能/知心朋友 (情感化对话 + 主动关心)",
       "requirement": [
-        "all"
+        "1.1"
       ],
-      "description": "文档上传→ 解析(支持 PDF/Word/MD/HTML)→ 分块 → 嵌入 → 混合检索(BM25 + 向量)→ 重排 → 生成带引用",
+      "description": "ProfileCard 是数据展示,不是朋友。改造:情感化对话 + 主动生日/节日祝福 + 私聊风格个性化 + 求职空窗期关怀",
       "deliverables": [
-        "supabase/migrations/048_rag.sql: documents + chunks + collections",
-        "backend/services/rag/: document_parser + chunker + embedder + retriever + reranker + generator + citation",
-        "backend/api/rag.py: 上传 + 查询 + 详情 + stream",
-        "前端: DocumentUpload + ChatWithCitations (聊天 + 高亮引用) + /knowledge 页",
-        "tests/test_rag.py 60+: 检索准确度 > 85%"
+        "backend/services/jobseeker/relationship.py: 关系系统 (空窗期 / 心情波动 / 节日 / 生日 / 周年纪念)",
+        "改造 profile_agent: 根据关系上下文 + 求职者历史,生成个性化欢迎语 / 关怀消息",
+        "backend/services/jobseeker/proactive_outreach.py: 主动 push (节日 / 3 天没互动 / 空窗 > 30 天)",
+        "前端: ChatBubble (个性化头像/语气/表情) + ProactiveCard (主动消息卡片)",
+        "改造 (jobseeker)/page.tsx: 主页显示今日关怀卡片",
+        "tests/test_relationship.py"
       ],
       "depends_on": [],
-      "estimate_days": 10
+      "estimate_days": 6
     },
     {
-      "id": "T2702",
+      "id": "T3602",
       "phase": "P1",
       "priority": "P0",
-      "title": "Agent 统一记忆库 (向量 + 图谱)",
+      "title": "1.2 做透 - 工作状态 + 行业垂直评价 + 行动项追踪",
       "requirement": [
-        "1.5",
-        "all"
+        "1.2"
       ],
-      "description": "16 Agent 共享统一记忆库,跨会话/跨 Agent 持续学习",
+      "description": "日报评价模板化,改造:按 role 行业垂直评价 + 行动项完成度跟踪 + 建议可执行性",
       "deliverables": [
-        "supabase/migrations/049_agent_memory_v2.sql: memories + memory_links",
-        "backend/services/memory/: MemoryStore ABC + PostgresStore + VectorStore + GraphStore (Neo4j)",
-        "add/query/link/decay/forget",
-        "改造 16 Agent: 调用 memory_store.query() 而非 working memory",
-        "集成 EventBus: profile.updated -> 自动写入记忆",
-        "GraphStore: Neo4j 关系 + 实体抽取"
+        "改造 daily_journal_agent: 评价 prompt 按 role 行业定制 (后端/AI产品经理/运营)",
+        "journal_evaluator.py: 评价维度按 role 动态调整",
+        "action_items 加 status (pending/in_progress/done/abandoned) + 截止日期 + reminder",
+        "action_item 自动评分: 完成质量",
+        "前端: ActionItemTracker (进度条 + 完成按钮 + 评论) + RatingTrend (跨周/月趋势)",
+        "tests/test_journal_evaluator.py + test_action_items.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 6
+    },
+    {
+      "id": "T3603",
+      "phase": "P1",
+      "priority": "P0",
+      "title": "1.3 做透 - 智能体主动 push (频繁互动)",
+      "requirement": [
+        "1.3"
+      ],
+      "description": "Realtime 有了,但不主动。要做:智能体主动 push (今日状态 / 这周面试 / 新职位)",
+      "deliverables": [
+        "backend/services/platform/proactive_scheduler.py: 每小时扫用户,触发主动 push",
+        "trigger 规则: 3 天没互动 / 5 个新职位 / 面试前一天 / 长假结束",
+        "推送通道: in-app + email + 钉钉/飞书",
+        "用户偏好: 每天最多 N 条 / 静默时间",
+        "前端: ProactiveToast (桌面通知) + 通知中心",
+        "tests/test_proactive.py + A/B 测试 push 效果"
+      ],
+      "depends_on": [],
+      "estimate_days": 5
+    },
+    {
+      "id": "T3604",
+      "phase": "P1",
+      "priority": "P0",
+      "title": "1.4 做透 - 情绪关怀 (主动温暖对话 + HR 关怀)",
+      "requirement": [
+        "1.4"
+      ],
+      "description": "高风险告警有,但关怀动作弱。要做:心情差时智能体主动温暖 + HR 自动关怀 + 减压资源",
+      "deliverables": [
+        "改造 emotion_agent: 高风险时自动触发关怀 workflow",
+        "关怀动作: 1) 智能体主动温暖对话 2) 推送减压文章 3) HR 通知",
+        "减压资源库: wellness_resources.json (100+ 资源,按情绪分类)",
+        "前端: EmotionCareCard (关怀内容 + 减压资源)",
+        "HR 关怀 dashboard: /mothership/wellness",
+        "tests/test_emotion_care.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 5
+    },
+    {
+      "id": "T3605",
+      "phase": "P1",
+      "priority": "P0",
+      "title": "1.5 做透 - 画像确认 (用户审核 AI 理解是否准确)",
+      "requirement": [
+        "1.5"
+      ],
+      "description": "画像生成了,但用户看不到。改造:展示 AI 理解的你 + 用户确认 / 修正",
+      "deliverables": [
+        "改造 clarifier_agent: 生成画像时附 confidence + reasoning + 证据来源",
+        "前端: /profile 加 AI 理解的我 面板 (基础信息/性格/需求/能力, 每部分可点赞/修正)",
+        "修正反馈: 用户修正后写回 Mem0, agent 学习",
+        "准确度评分: 用户确认后画像 +1, 修正后重新计算 confidence",
+        "前端: ProfileConfirmCard",
+        "tests/test_profile_confirm.py + A/B 测试"
+      ],
+      "depends_on": [],
+      "estimate_days": 5
+    },
+    {
+      "id": "T3606",
+      "phase": "P1",
+      "priority": "P0",
+      "title": "1.6 做透 - 规划执行追踪 + 调整机制",
+      "requirement": [
+        "1.6"
+      ],
+      "description": "规划生成了,但执行跟踪弱。改造:每日 checkin + 进度可视化 + 智能调整建议",
+      "deliverables": [
+        "改造 plan_tracker: 加每日 checkin (1-2 分钟记录进展)",
+        "进度可视化: 甘特图 (每个 milestone 进度条)",
+        "智能调整: 进度落后 30% 建议缩小; 进度超前 建议增加 bonus",
+        "行动项关联: 规划中的 task 跟 T3602 action_items 关联",
+        "前端: /plan/progress (甘特图 + checkin 按钮) + PlanGantt + AdjustmentSuggestion",
+        "tests/test_plan_tracker.py + A/B 测试"
       ],
       "depends_on": [
-        "T2701"
+        "T3602"
       ],
+      "estimate_days": 6
+    },
+    {
+      "_section": "P2 — 用人单位侧 16 项需求做透 (2.1-2.9 + 3)",
+      "_comment_marker": 3,
+      "id": "T3701",
+      "phase": "P2",
+      "priority": "P0",
+      "title": "2.1 做透 - 个性化 HR (语气学习 + 模板去模板化)",
+      "requirement": [
+        "2.1"
+      ],
+      "description": "Persona 存了偏好,但回复还是模板化。改造:深度学习老板语气 + 个性化回复",
+      "deliverables": [
+        "改造 persona_agent: 加 tone_learning (从老板历史消息学语气 - 正式/轻松/数据派/关系派)",
+        "模板去模板化: 用 LLM 改写模板,让回复像老板自己写的",
+        "前例学习: 老板过去 3 个月的回复作为 few-shot",
+        "前端: /hr-tone (老板语气设置 + 调优) + ToneSimulator (输入场景预览语气)",
+        "tests/test_persona_tone.py + 人工评估"
+      ],
+      "depends_on": [],
+      "estimate_days": 6
+    },
+    {
+      "id": "T3702",
+      "phase": "P2",
+      "priority": "P0",
+      "title": "2.2 做透 - 假资质 AI 检测 (PS / 过期 / 跨源验证)",
+      "requirement": [
+        "2.2"
+      ],
+      "description": "OCR + 工商验证有,但假资质鉴别弱。改造:PS 检测 + 过期提醒 + 多重交叉验证",
+      "deliverables": [
+        "改造 compliance_agent: 加 ps_detection (图像篡改检测 - ELA / 噪点分析 / 哈希比对)",
+        "过期检测: 营业执照有效期字段, 临期 30 天告警",
+        "跨源验证: OCR 结果 vs 工商查询 vs 法人代表 vs 信用代码 四源交叉",
+        "可疑度评分: 0-100, > 70 自动转人工审核",
+        "前端: VerificationScore (4 源对比 + 可疑度) + /mothership/compliance-review (人工审核队列)",
+        "tests/test_ps_detection.py + 真实 PS 样本测试"
+      ],
+      "depends_on": [],
       "estimate_days": 8
     },
     {
-      "id": "T2703",
-      "phase": "P1",
+      "id": "T3703",
+      "phase": "P2",
       "priority": "P0",
-      "title": "Multi-Agent 协作框架 (角色 + 投票 + 共识)",
+      "title": "2.3 做透 - 战略传达 (战略-招聘影响 + 通知)",
       "requirement": [
-        "all"
+        "2.3"
       ],
-      "description": "多 Agent 协同调度,角色分工,投票/共识机制,长任务编排",
+      "description": "战略地图有,但不传达。要做:战略更新自动通知 + 战略对招聘的影响分析",
       "deliverables": [
-        "backend/services/multiagent/: Role + AgentRoleRegistry + ConsensusStrategy + CollaborationPattern",
-        "orchestrator.py: orchestrate(goal, roles, pattern, max_rounds) -> Result",
-        "4 个场景用 Multi-Agent: 简历评分(3 agent 投票) / 偏见审查(Reviewer 检查 Writer) / Offer 谈判 / 战略解码",
-        "集成 EventBus + Memory",
-        "tests/test_multiagent.py 40+"
-      ],
-      "depends_on": [
-        "T2702"
-      ],
-      "estimate_days": 6
-    },
-    {
-      "id": "T2704",
-      "phase": "P1",
-      "priority": "P0",
-      "title": "Prompt 版本化 + A/B + 自动评估",
-      "requirement": [
-        "all"
-      ],
-      "description": "所有 Agent prompt 版本化,自动 A/B 测试,LLM-as-judge 自动评估",
-      "deliverables": [
-        "supabase/migrations/050_prompt_v2.sql: prompt_versions + prompt_metrics",
-        "backend/services/platform/prompt_v2.py: get_active_prompt + create_version + traffic_pct 滚动",
-        "backend/services/platform/evaluator.py: LLM-as-judge (准确性/流畅/安全/偏见)",
-        "集成 ConfigCenter: admin UI prompt editor + A/B",
-        "tests/test_prompt_v2.py 40+ + test_evaluator.py"
-      ],
-      "depends_on": [],
-      "estimate_days": 6
-    },
-    {
-      "_section": "P2 — 数据仓库 + BI + 预测分析",
-      "_comment_marker": 3,
-      "id": "T2801",
-      "phase": "P2",
-      "priority": "P1",
-      "title": "ClickHouse 数据仓库 + ETL",
-      "requirement": [
-        "all"
-      ],
-      "description": "业务数据 ETL 到 ClickHouse,支持深度分析",
-      "deliverables": [
-        "infra/clickhouse/docker-compose.yml: ClickHouse + Zookeeper + 3 副本 + 分片 + 1 年保留 + S3 备份",
-        "backend/services/warehouse/: ETL pipeline (Supabase → ClickHouse) + 维度建模",
-        "backend/services/warehouse/etl_scheduler.py: 定时同步",
-        "backend/api/analytics_v2.py: ClickHouse 查询,毫秒级,多维度下钻",
-        "tests/test_warehouse.py + test_etl.py"
-      ],
-      "depends_on": [],
-      "estimate_days": 7
-    },
-    {
-      "id": "T2802",
-      "phase": "P2",
-      "priority": "P1",
-      "title": "自定义 BI 报表 + 数据探索",
-      "requirement": [
-        "all"
-      ],
-      "description": "用户自定义报表 + 拖拽可视化 + 数据导出",
-      "deliverables": [
-        "frontend/app/admin/bi/page.tsx: 拖拽式报表构建器 + 20+ 图表 + 保存为 dashboard",
-        "backend/api/bi.py: 报表 CRUD + 数据查询",
-        "用 Cube.js 集成",
-        "内置 5 个示例 dashboard: HR 漏斗/招聘效率/渠道 ROI/Agent 性能/客户成功",
-        "tests/test_bi.py"
-      ],
-      "depends_on": [
-        "T2801"
-      ],
-      "estimate_days": 6
-    },
-    {
-      "id": "T2803",
-      "phase": "P2",
-      "priority": "P1",
-      "title": "预测性分析 (流失/招聘成功)",
-      "requirement": [
-        "all"
-      ],
-      "description": "ML 模型预测员工流失 + 招聘成功率",
-      "deliverables": [
-        "backend/services/platform/predictive.py: AttritionModel (LightGBM) + HireSuccessModel",
-        "自动训练: 每月跑一次,在线推理 100ms",
-        "backend/api/predictive.py: attrition/{user_id} + hire-success/{candidate_id} + model-metrics",
-        "前端: PredictionCard 显示预测分数 + 关键因素 + 干预建议"
-      ],
-      "depends_on": [
-        "T2801"
-      ],
-      "estimate_days": 5
-    },
-    {
-      "_section": "P3 — 合规 + 生态 (SSO/开放平台/应用市场)",
-      "_comment_marker": 4,
-      "id": "T2901",
-      "phase": "P3",
-      "priority": "P1",
-      "title": "SSO/SAML 企业级登录",
-      "requirement": [
-        "all"
-      ],
-      "description": "SAML 2.0 + OIDC 接入 Okta/Azure AD/钉钉/飞书/企微",
-      "deliverables": [
-        "backend/services/auth/sso.py: SAML 2.0 IdP (python3-saml) + OIDC (authlib) + Just-In-Time provisioning",
-        "backend/api/auth_sso.py: login + callback + providers",
-        "支持: Okta / Azure AD / Google Workspace / DingTalk / Feishu / WeCom",
-        "Session 管理: JWT 短期 + refresh token 长期",
-        "前端: SSOCallback page + SSOButton",
-        "tests/test_sso.py 30+ - mock SAML responses"
-      ],
-      "depends_on": [],
-      "estimate_days": 6
-    },
-    {
-      "id": "T2902",
-      "phase": "P3",
-      "priority": "P1",
-      "title": "开放 API 平台 + Developer Portal",
-      "requirement": [
-        "all"
-      ],
-      "description": "第三方开发者可注册 API Key,自助文档,Sandbox 环境",
-      "deliverables": [
-        "backend/services/platform/developer_portal.py: App 注册 + API Key 签发 + OAuth 2.0 + Webhook 自助",
-        "frontend/app/(public)/developers/page.tsx: 公开 API 文档 (Swagger UI) + API Key + Sandbox + 教程",
-        "SDK 自动生成: openapi-generator (Python / TypeScript / Go)",
-        "tests/test_developer_portal.py"
+        "改造 vision_agent: 战略更新时自动 fire strategy.updated 事件",
+        "战略影响分析: 当 strategy 是出海, 需要招聘 5 个英语人才",
+        "自动通知: 战略更新 通知所有 HR + 候选人",
+        "前端: StrategyImpactCard (战略 招聘需求) + /strategy/feed (战略更新流)",
+        "tests/test_strategy_impact.py"
       ],
       "depends_on": [],
       "estimate_days": 5
     },
     {
-      "id": "T2903",
-      "phase": "P3",
-      "priority": "P1",
-      "title": "第三方应用市场",
+      "id": "T3704",
+      "phase": "P2",
+      "priority": "P0",
+      "title": "2.4 做透 - 偏见纠正 (老板看到后果 + 强制替代)",
       "requirement": [
-        "all"
+        "2.4"
       ],
-      "description": "v6.0 Plugin SDK 升级为应用市场,发布/发现/计费",
+      "description": "偏见检测有,但纠正弱。改造:老板看到偏见导致的招聘效果下降数据 + 强制使用替代话术",
       "deliverables": [
-        "supabase/migrations/051_marketplace.sql: marketplace_plugins + plugin_releases + plugin_purchases",
-        "backend/services/marketplace/: publish (审核) + install (复用 v6.0 Plugin SDK) + review + billing (分成)",
-        "frontend/app/(public)/marketplace/page.tsx: 浏览 + 搜索 + 分类 + 一键安装 + 评论",
-        "admin 审核: frontend/app/admin/marketplace/page.tsx",
-        "tests/test_marketplace.py 30+"
+        "改造 talent_brief_agent: 偏见检测后自动生成偏见后果报告 - 3 个月前有 5 个 JD 含年龄偏见, 招聘效果下降 40%",
+        "替代话术强制: 老板提交时如果包含偏见词, 必须选择替代话术才能提交",
+        "偏见统计 dashboard: /analytics/bias-impact",
+        "前端: BiasWarningModal (提交前弹窗)",
+        "tests/test_bias_enforcement.py"
       ],
-      "depends_on": [
-        "T2902"
-      ],
-      "estimate_days": 6
+      "depends_on": [],
+      "estimate_days": 5
     },
     {
-      "id": "T2904",
-      "phase": "P3",
-      "priority": "P1",
-      "title": "API 版本化 (/v1/ /v2/ 平滑过渡)",
+      "id": "T3705",
+      "phase": "P2",
+      "priority": "P0",
+      "title": "2.5 做透 - JD 营销化 (引人入胜 + SEO 优化)",
       "requirement": [
-        "all"
+        "2.5"
       ],
-      "description": "API 加版本前缀,旧版本 deprecation 流程",
+      "description": "JD 模板有,但撰写质量差。改造:营销化 (引人入胜的描述) + SEO 优化",
       "deliverables": [
-        "backend/api/v1/ + backend/api/v2/ 分目录",
-        "旧 endpoint 保留在 v1/ + 新功能在 v2/",
-        "Deprecation 头: X-API-Deprecated + Sunset date",
-        "自动迁移: /api/x -> /api/v1/x (老 client 兼容)",
-        "docs/API_VERSIONING.md",
-        "前端 lib/api/ 按版本组织",
-        "tests/test_api_versioning.py"
+        "改造 job_spec_agent: 加 marketing_mode - 用故事化方式描述",
+        "SEO 优化: 自动生成 SEO meta (title / description / keywords)",
+        "A/B 测试: 同一岗位 2 个 JD 标题, 看哪个投递多",
+        "JD 评分: 完整性 / 吸引力 / 公平性 / 营销力 4 维度",
+        "前端: JDScorer (实时评分 + 改进建议)",
+        "tests/test_jd_marketing.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 5
+    },
+    {
+      "id": "T3706",
+      "phase": "P2",
+      "priority": "P0",
+      "title": "2.6 做透 - 制度 AI 解释 (用人话解释给求职者)",
+      "requirement": [
+        "2.6"
+      ],
+      "description": "Policy 浏览/搜索有,但求职者真懂吗。要做:AI 用人话解释",
+      "deliverables": [
+        "改造 policy_agent: 政策文本 通俗解释 + FAQ 形式",
+        "AI 解释模式: 你们公司加班多吗? 解析考勤政策 通俗回答",
+        "前端: PolicyExplainer (聊天式解释) + /policy-explainer",
+        "tests/test_policy_explainer.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 4
+    },
+    {
+      "id": "T3707",
+      "phase": "P2",
+      "priority": "P0",
+      "title": "2.7 做透 - 多方互动 (notification 触达 + 沉默激活)",
+      "requirement": [
+        "2.7"
+      ],
+      "description": "协同房间有,但沉默话题缺。改造:notification 触达 + 沉默激活",
+      "deliverables": [
+        "改造 collab_room: 24h 没新消息自动 @ admin 推进",
+        "notification 调度: 早上 9 点提醒昨日未读, 下午 5 点提醒待回复",
+        "AI 沉默激活: 这话题已 3 天没新消息, 我建议...",
+        "前端: SilenceNudge",
+        "tests/test_silence_activation.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 4
+    },
+    {
+      "id": "T3708",
+      "phase": "P2",
+      "priority": "P0",
+      "title": "2.8 做透 - 共识度算法细化 (强/弱/模糊)",
+      "requirement": [
+        "2.8"
+      ],
+      "description": "共识度简单。要做:分级共识度(强/弱/模糊) + 冲突可视化",
+      "deliverables": [
+        "改造 employer_clarifier_agent: consensus_score 改 3 级 (strong > 0.8 / weak 0.5-0.8 / fuzzy < 0.5)",
+        "冲突可视化: 哪些维度有冲突 (e.g. 老板要 senior, 部门负责人要 junior)",
+        "前端: ConsensusChart (多方共识度对比)",
+        "tests/test_consensus_algorithm.py"
       ],
       "depends_on": [],
       "estimate_days": 3
     },
     {
-      "_section": "P4 — AI 高级 + 商业化 + v7.0 Release",
-      "_comment_marker": 5,
-      "id": "T3001",
-      "phase": "P4",
-      "priority": "P2",
-      "title": "Fine-tuning (LoRA) 定制模型",
+      "id": "T3709",
+      "phase": "P2",
+      "priority": "P0",
+      "title": "2.9 做透 - 主动 HR (智能体主动建议)",
       "requirement": [
-        "all"
+        "2.9"
       ],
-      "description": "为特定任务训练 LoRA 适配器(简历评分/偏见审查/HRBP 摘要)",
+      "description": "HR Service 被动响应工单,缺主动。改造:智能体每日主动给 HR 建议",
       "deliverables": [
-        "infra/training/docker-compose.yml: GPU 训练环境 (Axolotl / LLaMA-Factory)",
-        "backend/services/training/: 数据集准备 + 训练任务 (QLoRA) + 评估 + 部署 (vLLM)",
-        "backend/providers/llm/custom_lora.py: 加载 LoRA adapter + 推理",
-        "训练 3 个 LoRA: 简历评分 / 偏见审查 / HRBP 摘要",
-        "tests/test_training.py"
-      ],
-      "depends_on": [],
-      "estimate_days": 8
-    },
-    {
-      "id": "T3002",
-      "phase": "P4",
-      "priority": "P2",
-      "title": "AI 主动 Sourcing (Outbound)",
-      "requirement": [
-        "3"
-      ],
-      "description": "AI 主动发掘候选人(从 GitHub/LinkedIn/脉脉/微博/小红书)",
-      "deliverables": [
-        "backend/providers/sourcing/: base.py SourcingProvider ABC + github + linkedin + maimai + weibo_xiaohongshu",
-        "backend/services/platform/sourcing_agent.py: 输入岗位画像 输出 100 候选人",
-        "前端: frontend/app/(employer)/sourcing/page.tsx 一键启动 + 候选人列表 + 一键邀请",
-        "tests/test_sourcing.py"
-      ],
-      "depends_on": [],
-      "estimate_days": 6
-    },
-    {
-      "id": "T3003",
-      "phase": "P4",
-      "priority": "P2",
-      "title": "白标 + 私有化部署",
-      "requirement": [
-        "all"
-      ],
-      "description": "支持客户自有品牌 (白标) + 私有化 (K8s 一键部署)",
-      "deliverables": [
-        "前端: 主题系统 (logo/颜色/域名可配置) + 多租户 CSS 变量",
-        "backend: 主题配置 API + 邮件模板白标",
-        "infra/private-deployment/: docker-compose 一键启动 + K8s Helm chart + Terraform 模板",
-        "docs/PRIVATE_DEPLOYMENT.md",
-        "tests/test_whitelabel.py"
+        "改造 hr_service_agent: 每日早 9 点扫所有未处理事项, 主动生成今日建议",
+        "建议类型: 该发 offer / 该面试 / 该处理工单 SLA 临期 / 该关怀候选人",
+        "前端: DailySuggestions (早 9 点推送) + /hr/suggestions (今日建议面板)",
+        "tests/test_proactive_hr.py"
       ],
       "depends_on": [],
       "estimate_days": 5
     },
     {
-      "id": "T3004",
+      "id": "T3710",
+      "phase": "P2",
+      "priority": "P0",
+      "title": "3 做透 - 双向匹配 (实际命中率 + HR 反馈循环)",
+      "requirement": [
+        "3"
+      ],
+      "description": "算法有,但实际命中率未知。改造:命中率统计 + HR 反馈循环",
+      "deliverables": [
+        "matching 引擎加 hit_rate 统计: 匹配推荐后 HR 实际联系的比例",
+        "HR 反馈循环: HR 给候选人打标签 (合适/不合适) 自动调整模型",
+        "前端: /mothership/matching/quality (命中率 dashboard)",
+        "后端: backend/api/matching_feedback.py",
+        "tests/test_matching_feedback.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 5
+    },
+    {
+      "_section": "P3 — 真实日活 + 商业化",
+      "_comment_marker": 4,
+      "id": "T3801",
+      "phase": "P3",
+      "priority": "P1",
+      "title": "Pilot 合作方扩展 (5+ 中型企业, 30 天试用)",
+      "requirement": [
+        "all"
+      ],
+      "description": "v5.0 已有 1-2 家合作方,扩展到 5+ 家真实用 30 天",
+      "deliverables": [
+        "5+ 中型企业合作 (HR 部门试用)",
+        "每家用 30 天, 收集 NPS / 真实使用数据",
+        "Pilot report: docs/PILOT_REPORT_V8.md (5 家报告)",
+        "目标: 日活 ≥ 500"
+      ],
+      "depends_on": [],
+      "estimate_days": 30
+    },
+    {
+      "id": "T3802",
+      "phase": "P3",
+      "priority": "P1",
+      "title": "第一个付费客户 + 续费机制",
+      "requirement": [
+        "all"
+      ],
+      "description": "v5.0 已搭商业化框架,v8.0 真正转化 1 个付费客户",
+      "deliverables": [
+        "试用转付费 (1 个合作方)",
+        "订阅计费 (v3.0 billing 框架 + Stripe)",
+        "续费机制 (自动 + 失败告警)",
+        "目标: ARR ≥ 30 万 RMB"
+      ],
+      "depends_on": [
+        "T3801"
+      ],
+      "estimate_days": 15
+    },
+    {
+      "id": "T3803",
+      "phase": "P3",
+      "priority": "P1",
+      "title": "多端真实日活 (小程序/钉钉/飞书 5+ 企业安装)",
+      "requirement": [
+        "all"
+      ],
+      "description": "4 端已有,真实上架 + 5+ 企业安装",
+      "deliverables": [
+        "微信小程序真实上架 (审核通过)",
+        "钉钉/飞书应用上架 + 5+ 企业安装",
+        "PWA 真实用户 ≥ 100",
+        "跨端日活统计 ≥ 500"
+      ],
+      "depends_on": [],
+      "estimate_days": 12
+    },
+    {
+      "_section": "P4 — 数据驱动 + v8.0 Release",
+      "_comment_marker": 5,
+      "id": "T3901",
       "phase": "P4",
-      "priority": "P2",
-      "title": "v7.0.0 Release",
+      "priority": "P1",
+      "title": "数据驱动 - 自动周报 + 异常告警 + 用户行为分析",
+      "requirement": [
+        "all"
+      ],
+      "description": "虽然 v7.0 加了 BI,但没人天天看。v8.0 自动推 + 异常告警",
+      "deliverables": [
+        "backend/services/platform/auto_report.py: 每周一早上自动生成周报 PDF + 邮件给老板",
+        "异常检测: 匹配率突降 / 用户活跃度突降 / 工单积压 自动告警",
+        "用户行为分析: 哪些功能用得多,哪些被忽略 提示给 PM",
+        "前端: /admin/insights (自动洞察)",
+        "tests/test_auto_report.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 5
+    },
+    {
+      "id": "T3902",
+      "phase": "P4",
+      "priority": "P1",
+      "title": "用户反馈统一入口 (NPS + 反馈 + bug report)",
+      "requirement": [
+        "all"
+      ],
+      "description": "v5.0 已有 NPS 但散落。v8.0 统一反馈入口",
+      "deliverables": [
+        "frontend/components/feedback/FeedbackWidget.tsx - 右下角浮动 (全应用通用)",
+        "feedback 类型: 评分 / Bug / Feature Request / 一般反馈",
+        "后端: backend/api/feedback_v2.py - 统一收集 + 自动归类 (LLM)",
+        "admin: /admin/feedback (反馈 dashboard)",
+        "tests/test_feedback_v2.py"
+      ],
+      "depends_on": [],
+      "estimate_days": 3
+    },
+    {
+      "id": "T3903",
+      "phase": "P4",
+      "priority": "P1",
+      "title": "v8.0.0 Release",
       "requirement": [
         "all"
       ],
@@ -474,9 +580,9 @@
       "deliverables": [
         "集成测试 2500+ pass",
         "release notes",
-        "v7.0.0 tag + release",
+        "v8.0.0 tag + release",
         "GitHub Pages 更新",
-        "v7.0 公告给所有客户"
+        "v8.0 公告"
       ],
       "depends_on": [],
       "estimate_days": 3
@@ -484,119 +590,120 @@
   ],
   "milestones": [
     {
-      "id": "M26",
-      "title": "v7.1 — Enterprise SaaS",
-      "target_date": "2026-09-15",
+      "id": "M31",
+      "title": "v8.1 — 服务开关",
+      "target_date": "2026-08-15",
       "tasks": [
-        "T2601",
-        "T2602",
-        "T2603",
-        "T2604"
+        "T3501",
+        "T3502",
+        "T3503"
       ],
-      "deliverable": "严格多租户 + 配额 + Rate Limiting + 审计 + GDPR/PIPL/CCPA + SLA 99.9% + 状态页,可正式商业化"
+      "deliverable": "服务开关 (ServiceToggle) 完整,50+ 服务目录,3 层 feature access 整合"
     },
     {
-      "id": "M27",
-      "title": "v7.2 — AI Deep",
+      "id": "M32",
+      "title": "v8.2 — 求职者侧做透",
+      "target_date": "2026-09-30",
+      "tasks": [
+        "T3601",
+        "T3602",
+        "T3603",
+        "T3604",
+        "T3605",
+        "T3606"
+      ],
+      "deliverable": "1.1-1.6 从功能有变成真好用,情感化/主动/确认/追踪全到位"
+    },
+    {
+      "id": "M33",
+      "title": "v8.3 — 用人单位侧做透",
       "target_date": "2026-11-15",
       "tasks": [
-        "T2701",
-        "T2702",
-        "T2703",
-        "T2704"
+        "T3701",
+        "T3702",
+        "T3703",
+        "T3704",
+        "T3705",
+        "T3706",
+        "T3707",
+        "T3708",
+        "T3709",
+        "T3710"
       ],
-      "deliverable": "完整 RAG (准确度 > 85%) + Agent 统一记忆库 + Multi-Agent 协作 + Prompt 版本化 + 自动评估"
+      "deliverable": "2.1-2.9 + 3 从功能有变成真好用,个性化/防 PS/战略传达/偏见强制/主动 HR/命中率"
     },
     {
-      "id": "M28",
-      "title": "v7.3 — 数据/BI",
-      "target_date": "2026-12-31",
+      "id": "M34",
+      "title": "v8.4 — 真实日活 + 商业化",
+      "target_date": "2027-01-31",
       "tasks": [
-        "T2801",
-        "T2802",
-        "T2803"
+        "T3801",
+        "T3802",
+        "T3803"
       ],
-      "deliverable": "ClickHouse 数据仓库 + 自定义 BI + 预测性分析"
+      "deliverable": "5+ 中型企业真实用 30 天,日活 ≥ 500,1 个付费客户 ARR ≥ 30 万,多端日活"
     },
     {
-      "id": "M29",
-      "title": "v7.4 — 合规 + 生态",
+      "id": "M35",
+      "title": "v8.5 — 数据驱动 + Release",
       "target_date": "2027-02-28",
       "tasks": [
-        "T2901",
-        "T2902",
-        "T2903",
-        "T2904"
+        "T3901",
+        "T3902",
+        "T3903"
       ],
-      "deliverable": "SSO/SAML + 开放 API 平台 + 第三方应用市场 + API 版本化"
-    },
-    {
-      "id": "M30",
-      "title": "v7.5 — AI 高级 + Release",
-      "target_date": "2027-04-30",
-      "tasks": [
-        "T3001",
-        "T3002",
-        "T3003",
-        "T3004"
-      ],
-      "deliverable": "LoRA Fine-tuning + AI 主动 Sourcing + 白标/私有化 + v7.0.0 Release"
+      "deliverable": "自动周报 + 异常告警 + 用户行为 + 统一反馈入口 + v8.0.0 Release"
     }
   ],
   "success_metrics": {
-    "saas": [
-      "多租户隔离 100% 严格 (60+ 测试)",
-      "Rate Limiting 统一",
-      "配额 3 档",
-      "审计日志 100% 覆盖 PII 访问",
-      "GDPR/PIPL/CCPA 完整合规",
-      "SLA 99.9% 实测 30 天",
-      "状态页公开"
+    "service_toggle": [
+      "50+ 服务目录 100% 覆盖",
+      "服务开关按 plan/org/role 多维度生效",
+      "1 键回滚 < 5 秒",
+      "服务依赖自动隐藏"
     ],
-    "ai_deep": [
-      "RAG 检索准确度 > 85%",
-      "Agent 统一记忆库 16 agent 共享",
-      "Multi-Agent 任务成功率 > 80%",
-      "Prompt 版本化 + A/B + 自动评估"
+    "user_need_depth": [
+      "1.1 主动 push 触达率 ≥ 60%",
+      "1.2 行业垂直评价准确度 > 80%",
+      "1.3 push 提升 7 日留存 > 30%",
+      "1.4 情绪关怀后情绪改善 ≥ 20%",
+      "1.5 画像确认后准确度 > 85%",
+      "1.6 计划完成率提升 > 50%",
+      "2.1 HR 反馈语气像人 ≥ 80%",
+      "2.2 假资质检出率 > 90%",
+      "2.3 战略影响分析 HR 采用 > 50%",
+      "2.4 偏见强制提交 > 70%",
+      "2.5 JD 营销化提升投递率 > 20%",
+      "2.6 制度 AI 解释用户满意度 > 80%",
+      "2.7 沉默激活参与度 > 40%",
+      "2.8 共识度 HR 反馈准确 > 80%",
+      "2.9 主动 HR 建议采纳率 > 60%",
+      "3 匹配命中率 > 30%"
     ],
-    "data": [
-      "ClickHouse 仓库 1 年保留",
-      "BI 自定义报表 50+ 用户",
-      "预测准确度 AUC > 0.80"
-    ],
-    "ecosystem": [
-      "SSO 支持 5+ 企业 IdP",
-      "开放 API 平台 100+ 开发者",
-      "应用市场 10+ 第三方插件",
-      "API 版本化 /v1/ /v2/"
-    ],
-    "commercialization": [
-      "2027 Q4 真实 ARR ≥ 1000 万 RMB",
-      "NPS ≥ 65",
-      "3+ LoRA 定制模型",
-      "白标客户 1+ 家"
+    "business": [
+      "5+ 中型企业真实用 30 天",
+      "日活 ≥ 500",
+      "1 个付费客户 ARR ≥ 30 万",
+      "NPS ≥ 70",
+      "续费率 ≥ 80%"
     ]
   },
   "risks": [
     {
-      "risk": "多租户 RLS 改造可能破坏现有功能",
-      "mitigation": "分阶段迁移,每步 100% 测试覆盖"
+      "risk": "服务开关可能误关关键服务",
+      "mitigation": "1 键回滚 + 7 天日志审计 + P0 服务保护(只 admin 能关)"
     },
     {
-      "risk": "RAG 准确度难达标 85%",
-      "mitigation": "用领域数据训练 LoRA 提升重排"
+      "risk": "Pilot 合作方找不到",
+      "mitigation": "朋友公司 + 免费赠送 + 行业协会推荐"
     },
     {
-      "risk": "ClickHouse 运维成本高",
-      "mitigation": "用 ClickHouse Cloud 托管"
+      "risk": "主动 push 引起用户反感",
+      "mitigation": "A/B 测试 + 频率控制 + 反馈学习"
     },
     {
-      "risk": "SSO 集成多 IdP 复杂",
-      "mitigation": "先支持 2 个,其他后补"
-    },
-    {
-      "risk": "LoRA 训练需要 GPU 成本",
-      "mitigation": "用 AutoTrain / HuggingFace 托管"
+      "risk": "个性化语气学习不到位",
+      "mitigation": "先规则化 (模板 + 变量), 再 LLM 学习"
     }
   ]
 }
