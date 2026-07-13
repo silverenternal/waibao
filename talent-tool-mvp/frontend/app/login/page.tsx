@@ -7,6 +7,7 @@ import { Users, Briefcase, Shield, Loader2, ArrowRight, Sparkles } from "lucide-
 import { signInAsDemo, getDashboardPath, DEMO_USERS } from "@/lib/auth";
 import { useAuth } from "@/app/providers";
 import type { UserRole } from "@/contracts/canonical";
+import { SSOButtonGroup } from "@/components/auth/SSOButtonGroup";
 
 const PERSONA_CONFIG = {
   talent_partner: {
@@ -36,6 +37,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { setDemoUser } = useAuth();
   const [loading, setLoading] = useState<UserRole | null>(null);
+  const [ssoOpen, setSsoOpen] = useState(false);
 
   const handleLogin = async (role: UserRole) => {
     setLoading(role);
@@ -111,6 +113,35 @@ export default function LoginPage() {
                 </button>
               );
             }
+          )}
+        </div>
+
+        {/* T2901: Enterprise SSO (collapsed by default) */}
+        <div className="space-y-3" style={{ animation: "fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both" }}>
+          <button
+            type="button"
+            onClick={() => setSsoOpen((v) => !v)}
+            className="w-full inline-flex items-center justify-between rounded-xl border border-white/8 bg-[#151B2B]/40 px-4 py-3 text-sm hover:bg-[#151B2B]/60 transition-colors"
+            aria-expanded={ssoOpen}
+            data-testid="sso-toggle"
+          >
+            <span className="text-muted-foreground">
+              Sign in with enterprise SSO
+            </span>
+            <ArrowRight
+              className={`h-4 w-4 text-muted-foreground transition-transform ${
+                ssoOpen ? "rotate-90" : ""
+              }`}
+            />
+          </button>
+          {ssoOpen && (
+            <div className="space-y-3 pt-1" data-testid="sso-providers">
+              <SSOButtonGroup showCNProviders />
+              <p className="text-[11px] text-muted-foreground/70 px-1">
+                SSO is configured by your organisation admin. If you don't see
+                your IdP, contact <a className="underline" href="mailto:admin@recruittech.com">admin@recruittech.com</a>.
+              </p>
+            </div>
           )}
         </div>
 
