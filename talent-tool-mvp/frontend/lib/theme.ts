@@ -299,4 +299,5 @@ export const whitelabelApi = {
 // Re-exports kept at the bottom to avoid breaking on circular imports.
 // ---------------------------------------------------------------------------
 
-export type { BrandingBundle };
+export const themes = ["light", "dark", "system"] as const;
+export type AppTheme = (typeof themes)[number];

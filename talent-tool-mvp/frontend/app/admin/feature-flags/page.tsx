@@ -44,7 +44,7 @@ export default function FeatureFlagsAdminPage(): React.JSX.Element {
   const [newName, setNewName] = React.useState("");
   const [newDesc, setNewDesc] = React.useState("");
 
-  const bus = useEventBus?.();
+  const bus = useEventBus(["feature_flag.changed"]);
 
   const reload = React.useCallback(async () => {
     try {

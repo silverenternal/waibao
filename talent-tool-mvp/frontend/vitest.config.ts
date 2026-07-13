@@ -7,11 +7,10 @@ export default defineConfig({
     globals: false,
     environment: "node",
     include: ["tests/**/*.spec.ts"],
-    environmentMatchGlobs: [
-      // a11y/scan tests need DOM; everything else stays in node.
-      ["tests/test_a11y*.spec.ts", "happy-dom"],
-      ["tests/test_search.spec.ts", "happy-dom"],
-    ],
+    // Vitest 4 removed `environmentMatchGlobs` in favor of per-file
+    // workspace / `// @vitest-environment happy-dom` pragmas. Project
+    // specs have been updated accordingly; the explicit pragmas in
+    // tests/test_a11y*.spec.ts and tests/test_search.spec.ts take effect.
   },
   resolve: {
     alias: {

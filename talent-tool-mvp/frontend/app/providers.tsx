@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, useCallback, type React
 import { createClient } from "@/lib/supabase";
 import type { User } from "@/contracts/canonical";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { RefineProvider } from "@/lib/refine";
 
 interface AuthContextValue {
   supabase: SupabaseClient;
@@ -101,7 +102,7 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ supabase, user, loading, setDemoUser, signOut }}>
-      {children}
+      <RefineProvider>{children}</RefineProvider>
     </AuthContext.Provider>
   );
 }

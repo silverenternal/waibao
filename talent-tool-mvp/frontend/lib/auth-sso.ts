@@ -13,7 +13,12 @@
  * access token (15 min) is refreshed automatically by `refreshSession()`
  * which is wired into the React provider.
  */
-import type { NextAuthOptions } from "next-auth";
+// NextAuth v5 (beta) uses the `NextAuthConfig` shape; the v4 type
+// `NextAuthOptions` was removed. We import the closest equivalent so the
+// rest of the module compiles without depending on internal beta APIs.
+import type { NextAuthConfig } from "next-auth";
+
+type NextAuthOptions = NextAuthConfig;
 
 // ---------------------------------------------------------------------------
 // Types

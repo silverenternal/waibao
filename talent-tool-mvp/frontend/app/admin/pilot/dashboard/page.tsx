@@ -187,7 +187,7 @@ export default function PilotDashboardPage() {
             label="活跃告警"
             value={String(summary.active_alerts)}
             sub={summary.active_alerts > 0 ? "需处理" : "无"}
-            tone={summary.active_alerts > 0 ? "danger" : "ok"}
+            tone={summary.active_alerts > 0 ? "bad" : "ok"}
           />
           <KpiCard
             icon={<CheckCircle2 className="h-5 w-5" />}
@@ -229,6 +229,28 @@ function KpiCard({
       </div>
       <div className="mt-2 text-2xl font-semibold">{value}</div>
       {sub && <div className="mt-1 text-xs text-muted-foreground">{sub}</div>}
+    </Card>
+  );
+}
+
+function PartnerCard({ partner }: { partner: PartnerRow }): React.ReactElement {
+  return (
+    <Card className="p-4" data-testid={`partner-${partner.program_id}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h3 className="text-base font-semibold">{partner.program_name}</h3>
+          <p className="text-xs text-muted-foreground">
+            {partner.organisation_name ?? "未关联组织"}
+          </p>
+        </div>
+        <Badge variant="secondary">{partner.status}</Badge>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+        <div>NPS: {partner.nps.nps ?? "-"}</div>
+        <div>续约: {Math.round(partner.renewal_probability * 100)}%</div>
+        <div>日活: {Math.round(partner.weekly_active_rate * 100)}%</div>
+        <div>告警: {partner.alerts.length}</div>
+      </div>
     </Card>
   );
 }

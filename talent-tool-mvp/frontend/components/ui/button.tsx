@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 
@@ -42,18 +43,62 @@ const buttonVariants = cva(
   }
 )
 
+/**
+ * Lightweight Slot — clones its single child and merges the className + props.
+ * Used internally by Button (when `asChild` is set) to forward styles to the
+ * underlying element (typically a Next.js <Link>).
+ */
+function SlotImpl({
+  children,
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLElement> & { children: React.ReactElement }) {
+  if (!React.isValidElement(children)) return null
+  const childProps = (children.props ?? {}) as Record<string, unknown>
+  const merged: Record<string, unknown> = { ...props, ...childProps }
+  if (className) {
+    const existing = (childProps.className as string | undefined) ?? ""
+    merged.className = cn(existing, className)
+  }
+  merged["data-slot"] = "button"
+  return React.cloneElement(children, merged)
+}
+
+export interface ButtonProps
+  extends ButtonPrimitive.Props,
+    VariantProps<typeof buttonVariants> {
+  asChild?: boolean
+}
+
 function Button({
   className,
   variant = "default",
   size = "default",
+  asChild,
+  children,
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: ButtonProps) {
+  const classes = cn(buttonVariants({ variant, size, className }))
+  if (asChild && React.isValidElement(children)) {
+    // Merge button className into the child (Link/Anchor/etc.)
+    const childProps = (children.props ?? {}) as Record<string, unknown>
+    const childCls = (childProps.className as string | undefined) ?? ""
+    const merged = {
+      ...props,
+      ...childProps,
+      className: cn(childCls, classes),
+      "data-slot": "button",
+    }
+    return React.cloneElement(children, merged)
+  }
   return (
     <ButtonPrimitive
       data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
-    />
+      className={classes}
+      {...(props as ButtonPrimitive.Props)}
+    >
+      {children}
+    </ButtonPrimitive>
   )
 }
 

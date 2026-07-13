@@ -1,5 +1,5 @@
 site_name: 招聘智能体
-site_description: v8.1 - 16 项做透完成 (P1 求职者 6 + P2 用人单位 10) 的双向招聘智能体
+site_description: v9.0 - 前端整体重做达到企业级 (Refine + shadcn/admin + Tremor + Open WebUI + OpenResume)
 site_author: waibao
 
 repo_name: silverenternal/waibao
@@ -80,15 +80,12 @@ nav:
   - 部署: DEPLOYMENT.md
   - 私有化 + 白标: PRIVATE_DEPLOYMENT.md
   - 开源选型: VENDOR_SELECTION.md
+  - 前端选型 ADR (v9.0): FRONTEND_SELECTION.md
+  - 组件目录: COMPONENTS.md
+  - 跨端一致性: CROSS_END_CONSISTENCY.md
+  - 性能与 Lighthouse: PERFORMANCE_LIGHTHOUSE.md
   - 商业化与合规: COMMERCIAL.md
-  - 服务开关规格: SERVICE_TOGGLE_SPEC.md
-  - 16 项做透计划: DEPTH_PLAN.md
-  - Release Notes:
-    - v4.0.0: releases/v4.0.0.md
-    - v5.0.0: releases/v5.0.0.md
-    - v7.0.0: releases/v7.0.0.md
-    - v8.0.0: releases/v8.0.0.md
-    - v8.1.0: releases/v8.1.0.md
+  - 服务开关规格:
   - 路线图: ROADMAP.md
   - 贡献指南: CONTRIBUTING.md
 

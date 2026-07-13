@@ -321,3 +321,9 @@ main > *:nth-child(6) { animation-delay: 0.3s; }
   background: rgba(0, 212, 170, 0.3);
   color: #F1F5F9;
 }
+
+
+/* Shared shadcn + Tremor design-token bridge */
+:root { --brand-primary: #00D4AA; --tremor-brand: var(--primary); --tremor-background: var(--card); --tremor-content: var(--foreground); --spacing-page: clamp(1rem, 3vw, 2rem); }
+.dark { --tremor-brand: var(--primary); --tremor-background: var(--card); --tremor-content: var(--foreground); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; } }

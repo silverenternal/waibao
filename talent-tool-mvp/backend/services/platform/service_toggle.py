@@ -306,6 +306,11 @@ class ServiceToggle:
     def get_service(self, name: str) -> Optional[Service]:
         cached = _cache_get(_key_service(name))
         if cached is not None:
+            # ``__missing__`` is a sentinel value meaning "not found in
+            # the database / catalog" — return None instead of trying to
+            # deserialize the marker as a Service.
+            if cached.get("__missing__"):
+                return None
             return Service.from_dict(cached)
         sb = _supabase_safe()
         if sb is None:

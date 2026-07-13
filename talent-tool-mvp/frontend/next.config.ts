@@ -56,10 +56,49 @@ const PWA_HEADERS: Array<{ source: string; headers: Array<{ key: string; value: 
   },
 ];
 
+// v9.0 — Performance defaults aligned with Lighthouse ≥90.
+//   * `compress: true`          → gzip / br on every response
+//   * `poweredByHeader: false`  → drop X-Powered-By (best-practices)
+//   * `productionBrowserSourceMaps: false` → smaller bundles
+//   * `images.formats`          → AVIF first, WebP fallback
+//   * `output: 'standalone'` is NOT enabled here — Next 16 + Turbopack
+//     already trims chunks via the React Server Components default. We
+//     keep the regular `pages`/`app` runtime so deployments remain
+//     compatible with the GitHub Pages + Edge hybrid in use today.
 const nextConfig: NextConfig = {
-  /* config options here */
+  compress: true,
+  poweredByHeader: false,
+  productionBrowserSourceMaps: false,
+  images: {
+    formats: ["image/avif", "image/webp"],
+    remotePatterns: [
+      { protocol: "https", hostname: "**" },
+    ],
+  },
+  experimental: {
+    // Tree-shake i18n messages per route — keeps the initial JS payload
+    // under the 200 KB gzipped target Lighthouse recommends.
+    optimizePackageImports: [
+      "@tremor/react",
+      "lucide-react",
+      "recharts",
+      "date-fns",
+    ],
+  },
   async headers() {
-    return PWA_HEADERS;
+    return [
+      ...PWA_HEADERS,
+      // Long-cache hashed assets emitted under /_next/static.
+      {
+        source: "/_next/static/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+    ];
   },
 };
 

@@ -116,7 +116,7 @@ export function useFeatureFlag(
   const [loaded, setLoaded] = React.useState(false);
 
   // Bus subscription — re-fetch whenever a flag changes on the server.
-  const bus = useEventBus?.();
+  const bus = useEventBus(["feature_flag.changed"]);
   React.useEffect(() => {
     if (isStatic || !bus) return;
     const unsub = bus.subscribe?.("feature_flag.changed", (evt: any) => {

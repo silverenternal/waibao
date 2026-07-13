@@ -1,13 +1,13 @@
 # 招聘智能体 (Recruitment Agent)
 
-> **v8.1 — 16 项做透 Complete Pass**
+> **v9.0 — Frontend Enterprise Rebuild**
 >
-> 把 v8.0 因 token 限制未完成的 P1 (6 项求职者) + P2 (10 项用人单位) = 16 项需求做透全部 production-ready,共享 Mem0 记忆库 + EventBus 事件链 + ServiceToggle 控制。
+> 前端整体重做达到企业级 (Refine + shadcn/admin + Tremor + Open WebUI + OpenResume 五大开源参考),共享 design tokens / 组件库 / Storybook / A11y,后端 3700+ 测试通过,5 端 (Web + 小程序 + 钉钉 + 飞书 + PWA) 视觉一致。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org)
-[![Tests](https://img.shields.io/badge/tests-3004%20passed-green.svg)](./talent-tool-mvp/backend/tests)
+[![Tests](https://img.shields.io/badge/tests-3700%2B%20passed-green.svg)](./talent-tool-mvp/backend/tests)
 [![Providers](https://img.shields.io/badge/providers-7%20capabilities%20×%20N%20vendors-blue.svg)](./talent-tool-mvp/backend/providers/README.md)
 [![v8.1](https://img.shields.io/badge/version-8.1.0-blueviolet.svg)](./CHANGELOG.md)
 

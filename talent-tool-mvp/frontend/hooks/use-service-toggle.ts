@@ -86,7 +86,9 @@ export function useServiceToggle(
   options: UseServiceToggleOptions = {},
 ): boolean {
   const { plan = "free", role = "", orgId, static: staticMode, defaultAvailable = true } = options;
-  const bus = useEventBus();
+  // Subscribe to service.changed and feature_flag.changed so toggling a
+  // service on the admin side flips this hook's cached value within ~5s.
+  const bus = useEventBus(["service.changed", "feature_flag.changed"]);
 
   // Optimistic local cache
   const [available, setAvailable] = React.useState<boolean>(() => {
@@ -162,4 +164,33 @@ export function useServiceCatalog(
     },
   });
   return { data: q.data, isLoading: q.isLoading, refetch: q.refetch };
+}
+
+/**
+ * Return the full `ServiceDecision` (status / available / plan_required)
+ * for a single service name. Useful for admin / inspector UIs that
+ * need more than the boolean flip from `useServiceToggle`.
+ */
+export function useServiceDecision(
+  name: string,
+  options: UseServiceToggleOptions = {},
+): ServiceDecision | null {
+  const { plan = "free", role = "", orgId, static: staticMode } = options;
+  const q = useQuery({
+    queryKey: ["service-decision", name, plan, role, orgId ?? ""],
+    enabled: !staticMode,
+    staleTime: CACHE_TTL_MS,
+    queryFn: async (): Promise<ServiceDecision | null> => {
+      try {
+        const res = await fetch(buildQuery(name, plan, role, orgId), {
+          credentials: "include",
+        });
+        if (!res.ok) return null;
+        return (await res.json()) as ServiceDecision;
+      } catch {
+        return null;
+      }
+    },
+  });
+  return q.data ?? null;
 }

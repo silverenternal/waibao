@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 // Fonts: use system stack + locally installed via CSS @font-face to avoid
 // Google Fonts runtime fetch (which fails in offline / sandbox builds).
 import { Providers } from "./providers";
-import { Toaster } from "@/components/ui/sonner";
+import { ToastContainer } from "@/components/shared/ToastContainer";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { OfflineBanner } from "@/components/OfflineBanner";
@@ -128,7 +128,7 @@ export default async function RootLayout({
                 {children}
               </main>
               <InstallPrompt />
-              <Toaster />
+              <ToastContainer />
               <FeedbackWidget />
             </NextIntlClientProvider>
           </Providers>

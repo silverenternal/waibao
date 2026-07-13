@@ -76,6 +76,18 @@ class _FakeTable:
         return rows
 
     def execute(self):
+        # Apply deferred mutations (update / delete) using the same
+        # filter logic as _matched() so chained .eq()/.neq() actually
+        # scope the write — mirrors the real Supabase client.
+        if getattr(self, "_pending_update", None) is not None:
+            payload = self._pending_update
+            for r in self._matched():
+                r.update(payload)
+            self._pending_update = None
+        if getattr(self, "_pending_delete", False):
+            for r in self._matched():
+                self.store.setdefault(self.name, []).remove(r)
+            self._pending_delete = False
         return _FakeRow(self._matched())
 
     def insert(self, payload):
@@ -85,14 +97,14 @@ class _FakeTable:
         return self
 
     def update(self, payload):
-        for r in self._matched():
-            r.update(payload)
+        # Defer the actual write until .execute() so chained .eq()/.neq()
+        # filters can be applied — mirrors the real Supabase client.
+        self._pending_update = payload
         return self
 
     def delete(self):
-        rows = self._matched()
-        for r in rows:
-            self.store.setdefault(self.name, []).remove(r)
+        # Same deferral pattern as update().
+        self._pending_delete = True
         return self
 
     def upsert(self, payload, on_conflict=None):
@@ -308,6 +320,10 @@ def test_per_org_override_outranks_status(fake_supabase):
         return {}
 
     app.include_router(r, prefix="/api/candidates")
+
+    # Mount the admin router so the public /decide endpoint is reachable.
+    from api.admin_services import router as admin_router
+    app.include_router(admin_router)
 
     client = TestClient(app)
 
@@ -733,9 +749,17 @@ def test_admin_lists_endpoint_returns_catalog_snapshot(fake_supabase):
     from fastapi.testclient import TestClient
     from fastapi import FastAPI
     from api.admin_services import router as admin_router
+    from api.auth import get_current_user
 
     app = FastAPI()
     app.include_router(admin_router)
+
+    class _User:
+        id = "admin-1"
+        role = "admin"
+
+    app.dependency_overrides[get_current_user] = lambda: _User()
+
     client = TestClient(app)
     res = client.get("/api/admin/services", params={"plan": "free"})
     assert res.status_code == 200

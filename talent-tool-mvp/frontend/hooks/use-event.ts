@@ -136,22 +136,40 @@ export interface UseEventBusOptions extends UseEventOptions {
   filterTopics?: string[];
 }
 
+export interface UseEventBus extends UseEventResult {
+  topic: string | null;
+  /**
+   * Subscribe to incoming events for a specific topic. Returns an
+   * unsubscribe function. Works whether or not the bus is bound to a
+   * topic whitelist at construction time.
+   */
+  subscribe: (
+    topic: string,
+    handler: (evt: WbEvent) => void
+  ) => () => void;
+}
+
 /**
  * Listen to multiple topics at once. Returns the latest event of any of
- * the supplied topics.
+ * the supplied topics. The `topics` argument is optional — callers that
+ * only need a generic `subscribe` API can omit it.
  */
 export function useEventBus(
-  topics: string[],
+  topics?: string[],
   options: UseEventBusOptions = {},
-): UseEventResult & { topic: string | null } {
-  const joined = topics.join(",");
+): UseEventBus {
+  const topicList = topics ?? [];
+  const joined = topicList.join(",");
   const { token, enabled = true } = options;
   const [event, setEvent] = React.useState<WbEvent | null>(null);
   const [error, setError] = React.useState<Error | null>(null);
   const [connected, setConnected] = React.useState(false);
+  const handlersRef = React.useRef<Map<string, Set<(evt: WbEvent) => void>>>(
+    new Map()
+  );
 
   React.useEffect(() => {
-    if (!enabled || topics.length === 0 || typeof window === "undefined") {
+    if (!enabled || topicList.length === 0 || typeof window === "undefined") {
       return;
     }
     if (typeof EventSource === "undefined") {
@@ -174,10 +192,24 @@ export function useEventBus(
       es.addEventListener("message", (raw: MessageEvent) => {
         try {
           const data: WbEvent = JSON.parse(raw.data);
-          if (topics.includes(data.name)) {
-            if (!options.filterTopics || options.filterTopics.includes(data.name)) {
-              setEvent(data);
-              setError(null);
+          if (!topicList.includes(data.name)) return;
+          if (
+            options.filterTopics &&
+            !options.filterTopics.includes(data.name)
+          ) {
+            return;
+          }
+          setEvent(data);
+          setError(null);
+          // Dispatch to subscribers (used by useFeatureFlag, useServiceToggle).
+          const subs = handlersRef.current.get(data.name);
+          if (subs) {
+            for (const fn of subs) {
+              try {
+                fn(data);
+              } catch {
+                /* swallow subscriber errors */
+              }
             }
           }
         } catch {
@@ -199,11 +231,30 @@ export function useEventBus(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [joined, token, enabled]);
 
+  const subscribe = React.useCallback(
+    (topic: string, handler: (evt: WbEvent) => void) => {
+      let set = handlersRef.current.get(topic);
+      if (!set) {
+        set = new Set();
+        handlersRef.current.set(topic, set);
+      }
+      set.add(handler);
+      return () => {
+        set?.delete(handler);
+        if (set && set.size === 0) {
+          handlersRef.current.delete(topic);
+        }
+      };
+    },
+    []
+  );
+
   return {
     event,
     lastEventId: event?.event_id ?? null,
     error,
     connected,
     topic: event?.name ?? null,
+    subscribe,
   };
 }

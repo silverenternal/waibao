@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { ThemeProvider as NextThemesProvider } from "next-themes";
 
 /**
  * ThemeProvider — accessibility-focused theme switcher.
@@ -147,7 +148,9 @@ export function ThemeProvider({
   );
 
   return (
-    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+    <NextThemesProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+    </NextThemesProvider>
   );
 }
 

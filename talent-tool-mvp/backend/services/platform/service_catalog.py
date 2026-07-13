@@ -6,7 +6,7 @@ small so it can be imported anywhere without side effects.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field, asdict, fields
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
@@ -131,16 +131,19 @@ class Service:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Service":
         """Build from a database / API dict."""
-        if "category" in data and isinstance(data["category"], str):
-            data = {**data, "category": ServiceCategory(data["category"])}
-        if "status" in data and isinstance(data["status"], str):
-            data = {**data, "status": ServiceStatus(data["status"])}
-        if "plan_required" in data and isinstance(data["plan_required"], str):
-            data = {**data, "plan_required": PlanTier(data["plan_required"])}
+        # Drop sentinel / non-field keys (e.g. ``__missing__`` cache marker).
+        allowed = {f.name for f in fields(cls)}
+        cleaned = {k: v for k, v in data.items() if k in allowed}
+        if "category" in cleaned and isinstance(cleaned["category"], str):
+            cleaned["category"] = ServiceCategory(cleaned["category"])
+        if "status" in cleaned and isinstance(cleaned["status"], str):
+            cleaned["status"] = ServiceStatus(cleaned["status"])
+        if "plan_required" in cleaned and isinstance(cleaned["plan_required"], str):
+            cleaned["plan_required"] = PlanTier(cleaned["plan_required"])
         # metadata may be missing
-        if "metadata" not in data:
-            data = {**data, "metadata": {}}
-        return cls(**data)
+        if "metadata" not in cleaned:
+            cleaned["metadata"] = {}
+        return cls(**cleaned)
 
 
 @dataclass
