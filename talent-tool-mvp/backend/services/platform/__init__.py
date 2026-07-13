@@ -94,6 +94,29 @@ from .whitelabel import (  # noqa: E402,F401,F403
     to_css_variables,
 )
 
+# T3901 — Auto weekly report + anomaly detector
+from .auto_report import (  # noqa: E402,F401,F403
+    AutoReportService,
+    DAUMetric,
+    FeatureUsage,
+    ReportFormat,
+    RequirementUsage,
+    SIXTEEN_REQUIREMENTS,
+    WeeklyReport,
+    get_auto_report_service,
+    reset_auto_report_service,
+)
+from .anomaly_detector import (  # noqa: E402,F401,F403
+    AnomalyDetector,
+    AnomalyResult,
+    AnomalyType,
+    BehaviorInsight,
+    FeatureUsageRow,
+    Severity,
+    get_anomaly_detector,
+    reset_anomaly_detector,
+)
+
 __all__: list[str] = [
     "get_hash_salt",
     "set_hash_salt",
@@ -195,4 +218,14 @@ __all__: list[str] = [
     "render_email_footer", "render_email_header",
     "render_email_html", "render_pdf_report_brand",
     "reset_whitelabel_service", "to_css_variables",
+
+    # T3901 auto weekly report
+    "DAUMetric", "FeatureUsage", "RequirementUsage", "WeeklyReport",
+    "ReportFormat", "AutoReportService",
+    "SIXTEEN_REQUIREMENTS",
+    "get_auto_report_service", "reset_auto_report_service",
+    # T3901 anomaly detector
+    "AnomalyResult", "AnomalyType", "BehaviorInsight", "FeatureUsageRow",
+    "Severity", "AnomalyDetector",
+    "get_anomaly_detector", "reset_anomaly_detector",
 ]

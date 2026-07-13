@@ -26,6 +26,12 @@ app = FastAPI(
 # T1606: 集中初始化 middleware / handlers / metrics / OTel instrumentation
 setup_application(app)
 
+# T3505: auto-wire service gates onto every /api/* router. Must run
+# before any app.include_router(...) call below.
+from services.platform.middleware import install_auto_gates  # noqa: E402
+
+install_auto_gates(app)
+
 
 # ---- Health Check ----
 
@@ -271,9 +277,13 @@ app.include_router(admin_audit_router, prefix="/api/admin/audit", tags=["admin-a
 # T1106: Pilot program + invitation + feedback collection
 from api.pilot import router as pilot_router
 from api.feedback import router as feedback_router
+from api.feedback_v2 import router as feedback_v2_router
+from api.insights import router as insights_router
 
 app.include_router(pilot_router, tags=["pilot"])
 app.include_router(feedback_router, tags=["feedback"])
+app.include_router(feedback_v2_router, tags=["feedback-v2"])
+app.include_router(insights_router, tags=["insights"])
 
 # T1203: WeChat mini-program authentication
 from api.miniprogram_auth import router as miniprogram_auth_router
@@ -458,3 +468,19 @@ try:
 except ImportError as _e:  # pragma: no cover - defensive
     import logging
     logging.getLogger("waibao.main").warning("T3003 whitelabel not enabled: %s", _e)
+
+# T3501: Service Toggle core — 50+ services, admin toggle, 1-key rollback
+try:
+    from api.admin_services import router as admin_services_router
+    app.include_router(admin_services_router)
+except ImportError as _e:  # pragma: no cover - defensive
+    import logging
+    logging.getLogger("waibao.main").warning("T3501 admin_services not enabled: %s", _e)
+
+# T3501: auto-register 50+ service catalog at startup (best effort)
+try:
+    import logging as _t3501_log
+    from services.platform.service_registry import register_all as _register_all_services
+    _register_all_services(persist=False)
+except Exception as _e:  # pragma: no cover - defensive
+    _t3501_log.getLogger("waibao.main").warning("T3501 register_all skipped: %s", _e)
