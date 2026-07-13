@@ -59,4 +59,5 @@ supabase/.branches
 supabase/.temp
 
 # Mkdocs build output (built by CI)
-site/
+site/talent-tool-mvp/frontend/test-results/
+talent-tool-mvp/frontend/playwright-report/
