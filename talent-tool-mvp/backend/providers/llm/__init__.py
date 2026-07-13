@@ -15,6 +15,7 @@ from .base import (
     Usage,
 )
 from .deepseek_provider import DeepSeekProvider
+from .custom_lora import CustomLoRAProvider, get_custom_lora_provider
 from .mock_provider import MockLLMProvider
 from .moonshot_provider import MoonshotProvider
 from .openai_provider import OpenAIProvider
@@ -23,6 +24,7 @@ from .zhipu_provider import ZhipuProvider
 
 __all__ = [
     "AnthropicProvider",
+    "CustomLoRAProvider",
     "DeepSeekProvider",
     "LLMProvider",
     "LLMResponse",
@@ -36,4 +38,5 @@ __all__ = [
     "TongyiProvider",
     "Usage",
     "ZhipuProvider",
+    "get_custom_lora_provider",
 ]

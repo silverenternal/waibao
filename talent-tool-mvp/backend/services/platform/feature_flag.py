@@ -437,6 +437,11 @@ def is_enabled(name: str, *, user_id: Optional[str] = None,
     return decision
 
 
+def get_flag(name: str) -> Optional[FeatureFlag]:
+    """Module-level convenience: lookup a flag by name."""
+    return _SupabaseClient.instance().get_flag(name)
+
+
 def decide(name: str, *, user_id: Optional[str] = None,
            org_id: Optional[str] = None) -> Dict[str, Any]:
     """Like ``is_enabled`` but returns the structured decision payload."""

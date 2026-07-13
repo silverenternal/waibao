@@ -101,7 +101,7 @@ def instrument_app(app: FastAPI) -> None:
 # ---------------------------------------------------------------------------
 
 def install_middleware(app: FastAPI) -> None:
-    """Install CORS + request logging middleware in canonical order."""
+    """Install CORS + request logging + T2601 tenant + T2602 quota middleware."""
 
     app.add_middleware(
         CORSMiddleware,
@@ -109,7 +109,51 @@ def install_middleware(app: FastAPI) -> None:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=[
+            "X-RateLimit-Limit",
+            "X-RateLimit-Remaining",
+            "X-RateLimit-Reset",
+            "Retry-After",
+            "X-Tenant-ID",
+            "X-Plan",
+            "X-Request-ID",
+        ],
     )
+
+    @app.middleware("http")
+    async def tenant_and_quota_middleware(
+        request: Request, call_next: Callable[[Request], Awaitable[Any]]
+    ):
+        """T2601 + T2602: resolve the tenant from JWT/header/cookie, then
+        enforce the per-tenant per-minute quota.  Always runs first so the
+        slowapi key function (which uses the bound tenant) sees the right key.
+        """
+        try:
+            from services.platform.tenant_resolver import TenantResolver
+            from services.platform.quota import enforce_request
+            claims = getattr(request.state, "jwt_claims", None)
+            ctx = TenantResolver().resolve(request, jwt_claims=claims)
+            if ctx is not None:
+                request.state.tenant_id = ctx.tenant_id
+                request.state.tenant_role = ctx.role
+                request.state.tenant_plan = ctx.plan
+                request.state.tenant_ctx = ctx
+                from services.platform.tenant_context import set_tenant_context
+                set_tenant_context(ctx)
+                if not enforce_request(ctx.tenant_id):
+                    from starlette.responses import JSONResponse
+                    return JSONResponse(
+                        status_code=429,
+                        content={
+                            "detail": "Rate limit exceeded (tenant quota)",
+                            "retry_after_seconds": 60,
+                            "path": request.url.path,
+                        },
+                        headers={"Retry-After": "60"},
+                    )
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("tenant middleware skipped: %s", exc)
+        return await call_next(request)
 
     @app.middleware("http")
     async def log_requests(request: Request, call_next: Callable[[Request], Awaitable[Any]]):
@@ -127,6 +171,10 @@ def install_middleware(app: FastAPI) -> None:
             duration_ms,
         )
         response.headers["X-Request-ID"] = request_id
+        tid = getattr(request.state, "tenant_id", None)
+        if tid is not None:
+            response.headers["X-Tenant-ID"] = str(tid)
+            response.headers["X-Plan"] = str(getattr(request.state, "tenant_plan", "free"))
         return response
 
 
@@ -208,4 +256,11 @@ def setup_application(
     if with_handlers:
         install_exception_handlers(app)
     instrument_app(app)
+    # T2602: install slowapi limiter + 429 handler last so it sees all
+    # earlier middleware.  Failures are non-fatal (CI / offline tests).
+    try:
+        from services.platform.rate_limiter import install_slowapi
+        install_slowapi(app)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("slowapi install skipped: %s", exc)
     return app

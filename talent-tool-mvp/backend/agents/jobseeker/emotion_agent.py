@@ -94,6 +94,40 @@ class EmotionAgent(BaseAgent):
                 "全国24小时心理援助热线: 400-161-9995。"
             )
 
+        # v8.1 T3604 — 高风险自动触发关怀 workflow
+        intensity = max(
+            (e.get("intensity", 0) for e in result.get("emotions", [])),
+            default=0.0,
+        )
+        care_ticket_id: str | None = None
+        if risk in ("mild", "moderate", "severe"):
+            try:
+                from services.jobseeker.emotion_care import get_emotion_care_service
+
+                care = get_emotion_care_service()
+                ticket = care.trigger_care(
+                    agent_input.user_id,
+                    risk_level=risk,
+                    primary_emotion=result.get("primary_emotion", "neutral"),
+                    trigger_text=text,
+                    intensity=intensity,
+                )
+                care_ticket_id = ticket.id
+                # 用关怀 ticket 里的资源替换 response
+                resources = care.list_actions(ticket.id)
+                if resources:
+                    first_res = next(
+                        (a for a in resources if a.action_type == "send_resource"),
+                        None,
+                    )
+                    if first_res:
+                        response_text += (
+                            f"\n\n🌱 我给你准备了一个小资源: 《{first_res.payload.get('title')}》"
+                            f" — {first_res.payload.get('url')}"
+                        )
+            except Exception as _e:
+                logger.debug("emotion care workflow failed: %s", _e)
+
         # v6.0 EventBus — publish domain events
         try:
             intensity = max(
@@ -130,6 +164,7 @@ class EmotionAgent(BaseAgent):
                 "response_tone": result.get("recommended_response_tone"),
                 "needs_attention": risk in ("moderate", "severe"),
                 "reasoning": {e.get("name"): e.get("evidence") for e in result.get("emotions", [])},
+                "care_ticket_id": care_ticket_id,
             },
         )
 

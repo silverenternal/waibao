@@ -11,6 +11,7 @@ from contracts.candidate import CandidateAnonymized, CandidateCreate
 from contracts.shared import AvailabilityStatus, SeniorityLevel, UserRole
 from pipelines.deduplicate import DeduplicationPipeline
 from pipelines.enrich import ExtractionPipeline
+from services.platform.audit_v2 import audit_pii
 
 logger = logging.getLogger("recruittech.api.candidates")
 router = APIRouter()
@@ -20,6 +21,7 @@ dedup_pipeline = DeduplicationPipeline()
 
 
 @router.get("", response_model=PaginatedResponse)
+@audit_pii("read", "candidate", pii_fields=["location"])
 async def list_candidates(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
@@ -66,6 +68,7 @@ async def list_candidates(
 
 
 @router.get("/search", response_model=PaginatedResponse)
+@audit_pii("read", "candidate", pii_fields=["location"])
 async def search_candidates(
     q: Optional[str] = Query(
         default=None, description="Free text search query"

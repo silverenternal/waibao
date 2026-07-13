@@ -33,6 +33,7 @@ from plugins import (
     get_installed_plugin_registry,
 )
 from plugins.sdk.sandbox import SandboxConfig
+from services.platform.audit_v2 import audit_pii
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +100,7 @@ async def install(body: InstallBody) -> Dict[str, Any]:
 
 
 @router.post("/{name}/enable")
+@audit_pii("update", "plugin", pii_fields=["name"], resource_id_arg="name")
 async def enable(name: str, body: Optional[EnableBody] = None) -> Dict[str, Any]:
     try:
         return get_installed_plugin_registry().enable(
@@ -109,6 +111,7 @@ async def enable(name: str, body: Optional[EnableBody] = None) -> Dict[str, Any]
 
 
 @router.post("/{name}/disable")
+@audit_pii("update", "plugin", pii_fields=["name"], resource_id_arg="name")
 async def disable(name: str, body: Optional[DisableBody] = None) -> Dict[str, Any]:
     try:
         return get_installed_plugin_registry().disable(
@@ -119,6 +122,7 @@ async def disable(name: str, body: Optional[DisableBody] = None) -> Dict[str, An
 
 
 @router.delete("/{name}")
+@audit_pii("delete", "plugin", pii_fields=["name"], resource_id_arg="name")
 async def uninstall(name: str, body: Optional[UninstallBody] = None) -> Dict[str, Any]:
     try:
         return get_installed_plugin_registry().uninstall(
@@ -131,6 +135,7 @@ async def uninstall(name: str, body: Optional[UninstallBody] = None) -> Dict[str
 
 
 @router.post("/{name}/run")
+@audit_pii("update", "plugin_run", pii_fields=["name"], resource_id_arg="name")
 async def run(name: str, body: RunBody) -> Dict[str, Any]:
     try:
         return get_installed_plugin_registry().run(name, body.payload)
@@ -148,6 +153,7 @@ async def list_runs(plugin_name: Optional[str] = Query(None),
 
 
 @router.get("/{name}/runs")
+@audit_pii("read", "plugin_runs", pii_fields=["name"], resource_id_arg="name")
 async def list_runs_for_plugin(name: str,
                                limit: int = Query(100, ge=1, le=1000)) -> List[Dict[str, Any]]:
     return get_installed_plugin_registry().list_runs(plugin_name=name, limit=limit)

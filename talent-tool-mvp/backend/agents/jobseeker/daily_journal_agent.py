@@ -1,6 +1,6 @@
 """Daily Journal Agent - 接收每日工作内容,触发 Advisor Agent.
 
-需求 1.2: 即时更新工作状态,智能体给出评价/建议/注意事项.
+v8.1 T3602: 按 10 角色行业定制评价 prompt + 输出更结构化评价.
 """
 from __future__ import annotations
 
@@ -9,11 +9,12 @@ import logging
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient, MemoryScope
+from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
 from agents.toolkit import llm_call
 from eventbus import emit
 
 logger = logging.getLogger("recruittech.agents.jobseeker.journal")
+
 
 JOURNAL_PROMPT = """你是求职者的工作教练。
 
@@ -34,17 +35,31 @@ JOURNAL_PROMPT = """你是求职者的工作教练。
 
 class DailyJournalAgent(BaseAgent):
     name = "daily_journal_agent"
-    description = "日报摄取 + AI 评价(需求 1.2)"
+    description = "日报摄取 + AI 评价 (需求 1.2, v8.1 行业垂直)"
     required_personas = ("jobseeker", "talent_partner")
 
     async def _handle(self, agent_input: AgentInput) -> AgentOutput:
         text = agent_input.text
         ctx = agent_input.context or {}
         today = datetime.utcnow().date().isoformat()
+        role = ctx.get("industry_role") or ctx.get("role") or "backend"
 
-        system = "你是一位有 10 年经验的职业教练,语言温暖但一针见血。"
-        user_msg = JOURNAL_PROMPT.format(text=text)
-        raw = await llm_call(self.llm or LLMClient(), user_msg, system=system, json_mode=True)
+        # v8.1 - 行业垂直 prompt
+        try:
+            from services.jobseeker.journal_evaluator import build_prompt, ROLE_DISPLAY
+            system_prompt = (
+                f"你是一位有 10 年经验的 {ROLE_DISPLAY.get(role, role)} 行业的职业教练,"
+                "语言温暖但一针见血。"
+            )
+            user_msg = build_prompt(role, text)
+        except Exception as e:
+            logger.debug("journal evaluator import failed: %s", e)
+            system_prompt = "你是一位有 10 年经验的职业教练,语言温暖但一针见血。"
+            user_msg = JOURNAL_PROMPT.format(text=text)
+
+        raw = await llm_call(
+            self.llm or LLMClient(), user_msg, system=system_prompt, json_mode=True
+        )
 
         try:
             result = json.loads(raw)
@@ -58,7 +73,32 @@ class DailyJournalAgent(BaseAgent):
                 "topics": [],
             }
 
-        # 写日报到 Supabase
+        # v8.1 - 写 action_items 状态机
+        action_items_v2 = []
+        try:
+            from services.jobseeker.journal_evaluator import get_journal_evaluator
+            evaluator = get_journal_evaluator()
+            parsed_for_evaluator = {
+                "score": _rating_to_score(result.get("rating", "good")),
+                "dimension_scores": result.get("dimension_scores", {}),
+                "strengths": [],
+                "improvements": [result.get("advice", "")] if result.get("advice") else [],
+                "risks": result.get("warnings", []),
+                "action_items": [
+                    {"title": ai, "feasibility": 3} if isinstance(ai, str) else ai
+                    for ai in (result.get("action_items") or [])
+                ],
+            }
+            evaluation = evaluator.evaluate(
+                text=text,
+                role=role,
+                context={"user_id": agent_input.user_id},
+                parsed=parsed_for_evaluator,
+            )
+            action_items_v2 = [ai.to_dict() for ai in evaluation.action_items]
+        except Exception as e:
+            logger.debug("evaluator failed: %s", e)
+
         journal_record = {
             "id": str(uuid4()),
             "user_id": agent_input.user_id,
@@ -70,6 +110,7 @@ class DailyJournalAgent(BaseAgent):
             "ai_advice": result.get("advice"),
             "ai_warnings": result.get("warnings", []),
             "ai_action_items": result.get("action_items", []),
+            "industry_role": role,
             "advisor_agent": "daily_journal_agent",
             "reviewed_at": datetime.utcnow().isoformat(),
         }
@@ -80,20 +121,21 @@ class DailyJournalAgent(BaseAgent):
                 journal_record,
                 on_conflict="user_id,journal_date",
             ).execute()
-        except Exception as e:
-            logger.warning(f"failed to persist journal: {e}")
+        except Exception:
+            pass
 
-        # v6.0 EventBus — publish journal.submitted
         try:
             emit("journal.submitted", {
                 "user_id": agent_input.user_id,
                 "journal_id": journal_record["id"],
+                "role": role,
                 "mood": result.get("mood_score"),
                 "summary": result.get("advice"),
                 "ts": journal_record.get("journal_date"),
+                "action_items_count": len(action_items_v2),
             }, source="agent.daily_journal")
-        except Exception as _e:
-            logger.debug("eventbus publish failed: %s", _e)
+        except Exception:
+            pass
 
         return AgentOutput(
             agent_name=self.name,
@@ -109,10 +151,21 @@ class DailyJournalAgent(BaseAgent):
                 "warnings": result.get("warnings"),
                 "action_items": result.get("action_items"),
                 "mood_score": result.get("mood_score"),
+                "industry_role": role,
+                "action_items_v2": action_items_v2,
             },
             signals=[{
                 "type": "journal_logged",
                 "rating": result.get("rating"),
                 "mood": result.get("mood_score"),
+                "role": role,
             }],
         )
+
+
+def _rating_to_score(rating):
+    return {
+        "excellent": 9.0,
+        "good": 7.0,
+        "needs_improvement": 4.5,
+    }.get(str(rating).lower(), 6.0)

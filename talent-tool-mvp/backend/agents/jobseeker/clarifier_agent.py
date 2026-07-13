@@ -262,3 +262,61 @@ class ClarifierAgent(BaseAgent):
                 "reasoning_chain": ["synthesize", "reflect"] if self.enable_reflection else ["synthesize"],
             },
         )
+
+
+def record_user_correction(
+    user_id: str,
+    *,
+    field_path: str,
+    original_value: str,
+    corrected_value: str,
+    reason: str = "",
+) -> dict:
+    """v8.1 T3605 — 记录用户对画像的修正, 写回 Mem0 用于未来 learning.
+
+    返回: 写回结果 + 供前端展示的 correction 对象.
+    """
+    correction = {
+        "id": str(uuid4()),
+        "user_id": user_id,
+        "field_path": field_path,
+        "original_value": original_value,
+        "corrected_value": corrected_value,
+        "reason": reason,
+        "created_at": datetime.utcnow().isoformat(),
+    }
+    # 1. 写 DB
+    try:
+        from api.deps import get_supabase_admin
+        supabase = get_supabase_admin()
+        supabase.table("profile_corrections").insert(correction).execute()
+    except Exception as e:
+        logger.warning(f"persist correction failed: {e}")
+    # 2. 写 Mem0 (best-effort)
+    try:
+        from services.memory import mem0_store
+        if hasattr(mem0_store, "add_memory"):
+            mem0_store.add_memory(
+                user_id,
+                text=(
+                    f"用户修正画像字段 {field_path}: "
+                    f"'{original_value}' -> '{corrected_value}'."
+                    f" 原因: {reason or '未填'}"
+                ),
+                kind="profile_correction",
+                metadata=correction,
+            )
+    except Exception as e:
+        logger.debug("mem0 write failed: %s", e)
+    return correction
+
+
+def upvote_profile_field(user_id: str, *, field_path: str) -> dict:
+    """用户对画像字段点赞 — 用于 AI 理解的我 面板."""
+    return {
+        "id": str(uuid4()),
+        "user_id": user_id,
+        "field_path": field_path,
+        "kind": "upvote",
+        "created_at": datetime.utcnow().isoformat(),
+    }

@@ -32,6 +32,7 @@ from services.platform import (
     list_templates,
     validate_definition,
 )
+from services.platform.audit_v2 import audit_pii
 
 logger = logging.getLogger(__name__)
 
@@ -122,6 +123,7 @@ async def list_builtin_templates() -> List[Dict[str, Any]]:
 
 
 @router.get("/templates/{name}")
+@audit_pii("read", "workflow_template", pii_fields=["name"], resource_id_arg="name")
 async def get_builtin_template(name: str) -> Dict[str, Any]:
     try:
         wf = get_template(name)

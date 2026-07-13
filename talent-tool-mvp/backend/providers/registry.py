@@ -85,6 +85,7 @@ def get_llm_provider() -> Any:
             return _llm
         from .llm import (
             AnthropicProvider,
+            CustomLoRAProvider,
             DeepSeekProvider,
             MoonshotProvider,
             OpenAIProvider,
@@ -99,6 +100,7 @@ def get_llm_provider() -> Any:
             "zhipu": ZhipuProvider,
             "tongyi": TongyiProvider,
             "moonshot": MoonshotProvider,
+            "custom_lora": CustomLoRAProvider,
         }
         cls = mapping.get(name)
         if cls is None:

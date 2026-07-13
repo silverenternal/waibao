@@ -13,3 +13,19 @@ sqlalchemy==2.0.36
 Levenshtein==0.26.1
 pytest==8.3.4
 pytest-asyncio==0.24.0
+
+# T2701: RAG (LlamaIndex + Qdrant)
+llama-index>=0.12.0
+qdrant-client>=1.12.0
+sentence-transformers>=3.0.0
+
+# T2803: Predictive analytics (LightGBM + Prophet)
+lightgbm>=4.0
+prophet>=1.1
+scikit-learn>=1.3
+numpy>=1.24
+
+# T2901: SSO/SAML (Authlib + python3-saml)
+authlib>=1.3
+python3-saml>=1.16
+defusedxml>=0.7

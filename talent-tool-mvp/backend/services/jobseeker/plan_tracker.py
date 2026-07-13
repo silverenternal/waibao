@@ -232,21 +232,28 @@ class PlanTrackerService:
             if it.title == target_item:
                 target = it
                 break
-        if target is None:
-            raise ValueError(f"plan item '{target_item}' not found")
 
         if action == "accelerate":
+            if target is None:
+                raise ValueError(f"plan item '{target_item}' not found")
             target.duration = _shorten_duration(target.duration, delta_days)
             target.priority = "high"
         elif action == "delay":
+            if target is None:
+                raise ValueError(f"plan item '{target_item}' not found")
             target.duration = _extend_duration(target.duration, delta_days)
         elif action == "replace":
+            if target is None:
+                raise ValueError(f"plan item '{target_item}' not found")
             target.title = detail or target.title
         elif action == "remove":
+            if target is None:
+                raise ValueError(f"plan item '{target_item}' not found")
             for bucket in (plan.short_term, plan.mid_term, plan.long_term):
                 bucket[:] = [i for i in bucket if i is not target]
         elif action == "add":
-            new_item = PlanItem(title=detail or "新行动项")
+            # add 允许 target 不存在 — detail 作为新 title
+            new_item = PlanItem(title=detail or target_item or "新行动项")
             plan.short_term.append(new_item)
         else:
             raise ValueError(f"unknown action {action!r}")
@@ -325,7 +332,10 @@ def _extend_duration(duration: str, delta_days: int) -> str:
 
 def _parse_iso(s: str) -> datetime:
     try:
-        return datetime.fromisoformat(s.replace("Z", "+00:00"))
+        dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
     except Exception:
         return datetime.now(tz=timezone.utc)
 
@@ -344,3 +354,96 @@ def reset_plan_tracker() -> None:
     """测试用: 重置单例."""
     global _singleton
     _singleton = None
+
+
+# ---------------------------------------------------------------------------
+# v8.1 T3606 — plan_tracker v3: 每日 checkin + 智能调整
+# ---------------------------------------------------------------------------
+def adjust_suggestions(user_id: str) -> list[dict]:
+    """智能调整建议 — 返回 [{item, suggestion, kind, ...}]."""
+    plan = get_plan_tracker().get_plan(user_id)
+    if not plan:
+        return []
+    out: list[dict] = []
+    now = datetime.now(tz=timezone.utc)
+    for it in plan.all_items:
+        if it.completed:
+            continue
+        # 1) 进度落后 30% -> 缩小 scope
+        if it.started_at:
+            started = _parse_iso(it.started_at)
+            elapsed = (now - started).days
+            expected = max(1, elapsed / 30.0)  # 30 天应 100%
+            if it.progress < expected * 0.5 and elapsed >= 7:
+                out.append({
+                    "kind": "shrink_scope",
+                    "item": it.title,
+                    "suggestion": (
+                        f"进度仅 {int(it.progress * 100)}%, 落后预期. "
+                        "建议缩小范围, 拆成更小的子任务."
+                    ),
+                    "priority": "high",
+                })
+        # 2) 进度超前 -> 加 bonus
+        if it.progress >= 0.8:
+            out.append({
+                "kind": "add_bonus",
+                "item": it.title,
+                "suggestion": (
+                    f"进度已达 {int(it.progress * 100)}%, 表现优秀. "
+                    "建议加一个 bonus 任务: 写一篇学习笔记 / 分享给团队."
+                ),
+                "priority": "low",
+            })
+    return out
+
+
+def daily_checkin(user_id: str, *, item_title: str, note: str = "") -> dict:
+    """v8.1 T3606 — 每日打卡 (简单版)."""
+    tracker = get_plan_tracker()
+    checkin = tracker.checkin(user_id, item_title, progress_delta=0.1, note=note)
+    suggestions = adjust_suggestions(user_id)
+    return {
+        "checkin": checkin.to_dict(),
+        "progress": tracker.progress(user_id),
+        "suggestions": suggestions,
+    }
+
+
+def gantt_data(user_id: str) -> dict:
+    """v8.1 T3606 — 甘特图数据."""
+    plan = get_plan_tracker().get_plan(user_id)
+    if not plan:
+        return {"user_id": user_id, "tasks": [], "milestones": []}
+    tasks = []
+    for it in plan.all_items:
+        tasks.append({
+            "title": it.title,
+            "progress": it.progress,
+            "completed": it.completed,
+            "duration": it.duration,
+            "bucket": (
+                "short" if it in plan.short_term
+                else "mid" if it in plan.mid_term else "long"
+            ),
+            "priority": it.priority,
+        })
+    return {
+        "user_id": user_id,
+        "plan_id": plan.id,
+        "tasks": tasks,
+        "milestones": [m.to_dict() for m in plan.milestones],
+        "overall_progress": plan.overall_progress,
+    }
+
+
+def link_action_item_to_plan(user_id: str, action_item_id: str, plan_item_title: str) -> dict:
+    """v8.1 T3606 — 关联 action_items (T3602) 到 plan."""
+    try:
+        from services.jobseeker.journal_evaluator import get_journal_evaluator
+
+        evaluator = get_journal_evaluator()
+        item = evaluator.link_to_plan(action_item_id, plan_item_title)
+        return {"linked": True, "item": item.to_dict()}
+    except Exception as e:  # noqa: BLE001
+        return {"linked": False, "error": str(e)}

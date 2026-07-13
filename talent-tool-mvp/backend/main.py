@@ -484,3 +484,21 @@ try:
     _register_all_services(persist=False)
 except Exception as _e:  # pragma: no cover - defensive
     _t3501_log.getLogger("waibao.main").warning("T3501 register_all skipped: %s", _e)
+
+# T3601-T3606: v8.1 6 P1 任务的对外 API (relationship/outreach/journal/action/
+# proactive/emotion_care/profile_confirm/plan_v3)
+try:
+    from api.v8_1 import router as v8_1_router
+    app.include_router(v8_1_router)
+except ImportError as _e:  # pragma: no cover - defensive
+    import logging as _v81_log
+    _v81_log.getLogger("waibao.main").warning("v8.1 api not enabled: %s", _e)
+
+# T3701-T3710: v8.1 10 P2 任务的对外 API (tone/ps/strategy/bias/jd/policy/
+# silence/consensus/suggestions/matching_feedback)
+try:
+    from api.v8_1_p2 import router as v8_1_p2_router
+    app.include_router(v8_1_p2_router)
+except ImportError as _e:  # pragma: no cover - defensive
+    import logging as _v81p2_log
+    _v81p2_log.getLogger("waibao.main").warning("v8.1 P2 api not enabled: %s", _e)

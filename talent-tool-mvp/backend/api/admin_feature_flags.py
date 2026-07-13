@@ -22,6 +22,7 @@ from fastapi import APIRouter, Body, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from services.platform import feature_flag as ff
+from services.platform.audit_v2 import audit_pii
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,7 @@ async def audit(flag_name: Optional[str] = Query(None),
 
 
 @router.get("/{name}")
+@audit_pii("read", "feature_flag", pii_fields=["name"], resource_id_arg="name")
 async def get_flag(name: str) -> Dict[str, Any]:
     flag = ff._SupabaseClient.instance().get_flag(name)  # noqa: SLF001
     if flag is None:
@@ -77,6 +79,7 @@ async def get_flag(name: str) -> Dict[str, Any]:
 
 
 @router.put("/{name}")
+@audit_pii("update", "feature_flag", pii_fields=["name"], resource_id_arg="name")
 async def upsert_flag(name: str, body: FlagUpsertBody) -> Dict[str, Any]:
     payload = body.model_dump()
     payload["name"] = name
@@ -87,12 +90,14 @@ async def upsert_flag(name: str, body: FlagUpsertBody) -> Dict[str, Any]:
 
 
 @router.delete("/{name}")
+@audit_pii("delete", "feature_flag", pii_fields=["name"], resource_id_arg="name")
 async def delete_flag(name: str, actor: Optional[str] = None) -> Dict[str, Any]:
     ff.delete_flag(name, actor=actor)
     return {"deleted": name}
 
 
 @router.post("/{name}/override")
+@audit_pii("update", "feature_flag_override", pii_fields=["name"], resource_id_arg="name")
 async def set_override(name: str, body: OverrideBody) -> Dict[str, Any]:
     body.flag_name = name
     try:
@@ -102,6 +107,7 @@ async def set_override(name: str, body: OverrideBody) -> Dict[str, Any]:
 
 
 @router.delete("/{name}/override")
+@audit_pii("delete", "feature_flag_override", pii_fields=["name"], resource_id_arg="name")
 async def remove_override(name: str, user_id: Optional[str] = None,
                           org_id: Optional[str] = None,
                           actor: Optional[str] = None) -> Dict[str, Any]:
@@ -110,6 +116,7 @@ async def remove_override(name: str, user_id: Optional[str] = None,
 
 
 @router.get("/{name}/decide")
+@audit_pii("read", "feature_flag", pii_fields=["name"], resource_id_arg="name")
 async def decide(name: str, user_id: Optional[str] = None,
                  org_id: Optional[str] = None) -> Dict[str, Any]:
     return ff.decide(name, user_id=user_id, org_id=org_id)

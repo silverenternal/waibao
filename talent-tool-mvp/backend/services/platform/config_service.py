@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 # Scope / value_type constants
 # ---------------------------------------------------------------------------
 
-VALID_SCOPES = ("system", "org", "agent", "feature")
+VALID_SCOPES = ("system", "org", "agent", "feature", "service_toggle")
 VALID_VALUE_TYPES = ("json", "string", "number", "boolean", "array")
 
 

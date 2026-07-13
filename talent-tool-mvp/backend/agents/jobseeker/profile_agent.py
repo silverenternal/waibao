@@ -342,3 +342,44 @@ class ProfileAgent(BaseAgent):
                 "value": updated,
             }],
         )
+
+
+def build_relationship_aware_greeting(
+    user_id: str,
+    *,
+    name: str = "",
+) -> dict[str, Any]:
+    """v8.1 T3601 — 关系上下文感知的欢迎语.
+
+    返回:
+        {
+          "greeting": "...",
+          "tone": "friendly|casual|gentle|formal|celebratory",
+          "avatar": "wave|smile|heart|briefcase|tada",
+          "stage": "new_user|active_job_seeker|on_break|negotiating|hired"
+        }
+    """
+    try:
+        from services.jobseeker.relationship import (
+            get_relationship_service,
+            STAGE_TONE,
+        )
+    except Exception:  # pragma: no cover
+        return {
+            "greeting": f"你好 {name or '同学'}!",
+            "tone": "friendly",
+            "avatar": "wave",
+            "stage": "new_user",
+        }
+
+    rel = get_relationship_service()
+    rel.touch_interaction(user_id)
+    stage = rel.get_stage(user_id)
+    tone = STAGE_TONE.get(stage, STAGE_TONE["new_user"])
+    greeting = tone["greeting_template"].format(name=name or "同学")
+    return {
+        "greeting": greeting,
+        "tone": tone["tone"],
+        "avatar": tone["avatar"],
+        "stage": stage,
+    }
