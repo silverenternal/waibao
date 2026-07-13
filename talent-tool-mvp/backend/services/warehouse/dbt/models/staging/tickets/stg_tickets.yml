@@ -1,0 +1,14 @@
+version: 2
+
+models:
+  - name: stg_tickets
+    description: "客服工单 (staging)."
+    columns:
+      - name: id
+        tests: [not_null, unique]
+      - name: priority
+        tests: [accepted_values:
+            values: ['low', 'normal', 'high', 'urgent']]
+      - name: status
+        tests: [accepted_values:
+            values: ['open', 'pending', 'resolved', 'closed']]

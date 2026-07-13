@@ -1,0 +1,15 @@
+version: 2
+
+models:
+  - name: fct_sla_metrics
+    description: |
+      SLA 指标预聚合 (AggregatingMergeTree).
+      查询时用 -State / -Merge 配合: SELECT countMerge(ticket_count) ...
+    columns:
+      - name: event_date
+        tests: [not_null]
+      - name: tenant_id
+        tests: [not_null]
+      - name: priority
+        tests: [not_null, accepted_values:
+            values: ['low', 'normal', 'high', 'urgent']]

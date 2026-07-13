@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: stg_candidates
+    description: "清洗后的候选人 (staging)."
+    columns:
+      - name: id
+        description: "primary key"
+        tests:
+          - not_null
+          - unique
+      - name: email
+        tests:
+          - not_null
+      - name: tenant_id
+        tests:
+          - not_null
+      - name: created_at
+        tests:
+          - not_null
+    tests:
+      - dbt_utils.accepted_range:
+          column_name: experience_years
+          min_value: 0
+          max_value: 60

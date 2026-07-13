@@ -1,0 +1,51 @@
+name: 'waibao_warehouse'
+version: '1.0.0'
+config-version: 2
+
+# T2801 — dbt-clickhouse 项目
+# 走两层:
+#   staging  — 1:1 映射 raw_*, 重命名 / 改类型 / 加 audit 字段
+#   marts    — 维度建模 (dim / fct), 给 API 用
+
+profile: 'waibao_warehouse'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+vars:
+  # 默认全量 1 年
+  retention_days: 365
+  # 各业务 domain 时间分桶
+  time_buckets:
+    candidates: [day, week, month]
+    jobs:       [day, week, month]
+    tickets:    [hour, day, week]
+  # 留存 cohort
+  retention_cohorts: [1, 7, 14, 30, 60, 90]
+
+models:
+  staging:
+    +materialized: view
+    +schema: staging
+  intermediate:
+    +materialized: view
+    +schema: intermediate
+  marts:
+    +materialized: table
+    +schema: marts
+    dim_*:
+      +engine: ReplacingMergeTree
+      +order_by: ['id']
+      +partition_by: ['toYYYYMM(_ingested_at)']
+    fct_*:
+      +engine: MergeTree
+      +order_by: ['event_date', 'id']
+      +partition_by: ['toYYYYMM(event_date)']

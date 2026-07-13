@@ -1,0 +1,23 @@
+waibao_warehouse:
+  target: prod
+  outputs:
+    dev:
+      type: clickhouse
+      host: "{{ env_var('CLICKHOUSE_HOST', 'localhost') }}"
+      port: 9000
+      database: "{{ env_var('CLICKHOUSE_DB', 'warehouse') }}"
+      user: "{{ env_var('CLICKHOUSE_USER', 'clickhouse') }}"
+      password: "{{ env_var('CLICKHOUSE_PASSWORD', 'clickhouse') }}"
+      schema: staging
+      secure: false
+    prod:
+      type: clickhouse
+      host: "{{ env_var('CLICKHOUSE_HOST', 'clickhouse-shard1-replica1') }}"
+      port: 9000
+      database: "{{ env_var('CLICKHOUSE_DB', 'warehouse') }}"
+      user: "{{ env_var('CLICKHOUSE_USER', 'etl') }}"
+      password: "{{ env_var('CLICKHOUSE_PASSWORD', 'etl_change_me') }}"
+      schema: staging
+      secure: false
+      # 集群模式下用 ReplicatedMergeTree
+      cluster: "{{ env_var('CLICKHOUSE_CLUSTER', 'waibao_cluster') }}"

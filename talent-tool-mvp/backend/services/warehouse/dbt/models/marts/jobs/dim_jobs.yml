@@ -1,0 +1,10 @@
+version: 2
+
+models:
+  - name: dim_jobs
+    description: "岗位维度."
+    columns:
+      - name: id
+        tests: [not_null, unique]
+      - name: status
+        tests: [not_null]

@@ -1,0 +1,16 @@
+version: 2
+
+models:
+  - name: stg_jobs
+    description: "清洗后的岗位 (staging)."
+    columns:
+      - name: id
+        tests: [not_null, unique]
+      - name: tenant_id
+        tests: [not_null]
+      - name: status
+        tests: [not_null, accepted_values:
+            values: ['open', 'paused', 'closed', 'draft']]
+    tests:
+      - dbt_utils.expression_is_true:
+          expression: "salary_min <= salary_max OR salary_min IS NULL OR salary_max IS NULL"

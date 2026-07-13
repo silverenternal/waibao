@@ -1,0 +1,15 @@
+version: 2
+
+models:
+  - name: dim_candidates
+    description: "候选人维度 (BI 友好)."
+    columns:
+      - name: id
+        tests: [not_null, unique]
+      - name: tenant_id
+        tests: [not_null]
+      - name: experience_band
+        tests: [not_null, accepted_values:
+            values: ['unknown', 'junior', 'mid', 'senior', 'principal']]
+      - name: is_active_30d
+        tests: [not_null]

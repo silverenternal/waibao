@@ -1,0 +1,13 @@
+version: 2
+
+sources:
+  - name: warehouse_raw
+    description: "Airbyte 同步进来的原始表 (raw_*)"
+    database: "{{ env_var('CLICKHOUSE_DB', 'warehouse') }}"
+    schema: "{{ env_var('CLICKHOUSE_DB', 'warehouse') }}"
+    tables:
+      - name: raw_candidates
+      - name: raw_jobs
+      - name: raw_matches
+      - name: raw_applications
+      - name: raw_tickets
