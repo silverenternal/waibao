@@ -1,0 +1,15 @@
+{
+  "name": "waibao-bi-cube",
+  "version": "1.0.0",
+  "description": "BI / Analytics Cube.js server for the Waibao talent platform",
+  "main": "index.js",
+  "scripts": {
+    "dev": "cubejs-dev-server",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@cubejs-backend/postgres-driver": "^1.2.0",
+    "@cubejs-backend/server-core": "^1.2.0",
+    "dotenv": "^16.4.5"
+  }
+}
