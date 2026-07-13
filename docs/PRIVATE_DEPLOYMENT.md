@@ -300,3 +300,66 @@ Day 3+: Customer DevOps
 * v8.0 — fully server-rendered theme for SEO-critical landing pages
   (currently the provider runs on the client; SSR will pre-paint CSS
   variables to avoid FOUC).
+
+---
+
+## 11. v8.0 — Service Toggle in private deployment
+
+v8.0 introduces per-tenant service toggles. When deployed privately, the
+operator can decide which services each customer (org) can access.
+
+### 11.1 Service registry at startup
+
+`register_all(persist=True)` is called from `main.py` on boot and seeds
+the `services` table with the 50+ canonical services. For private
+deployments, set `WAIBAO_PERSIST_SERVICES=false` to keep the registry
+in-memory only (faster startup, ephemeral).
+
+### 11.2 Per-tenant override
+
+```bash
+# Disable a service for one tenant
+curl -X POST https://api.example.com/api/admin/services/ai_interview/overrides \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"tenant_id": "acme", "status": "disabled", "reason": "contract limitation"}'
+```
+
+### 11.3 Audit retention
+
+Private deployments may want longer audit retention. Override via
+`WAIBAO_SERVICE_AUDIT_RETENTION_DAYS=2555` (7 years, GDPR compliant).
+
+### 11.4 Custom service registration
+
+Private customers may want to register their own internal services:
+
+```python
+from services.platform.service_registry import register
+
+register(
+    name="internal_company_directory",
+    display_name="Internal Directory",
+    description="Customer's internal staff directory",
+    category="business",
+    plan_required="enterprise",
+    roles_allowed=["admin", "hr"],
+    depends_on=["matching"],
+    is_external=True,  # marks as customer-managed
+)
+```
+
+### 11.5 Rollback workflow
+
+`POST /api/admin/services/{name}/rollback` reverts to the previous
+state. In private deployment this is the recommended way to recover
+from a faulty rollout — operators should still capture a backup
+before major registry changes.
+
+### 11.6 Smoke test
+
+Run `tests/smoke/v8_smoke.py` after each deployment to verify:
+- 50+ services registered
+- All 65+ gated APIs return 200/4xx as expected
+- FeedbackWidget + auto_report endpoints respond
+- Anomaly detector returns 0 anomalies on healthy system
