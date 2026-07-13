@@ -120,3 +120,37 @@ All in Supabase, RLS-protected (org_id from JWT).
 - v8.1: Service-level metrics (calls/sec, p99 latency per service)
 - v8.2: Service-level cost tracking (LLM token usage / API cost)
 - v9.0: Auto-rollback on error rate spike (anomaly-driven)
+
+---
+
+## v8.1 更新 (2026-07-13)
+
+### 新增到服务目录
+
+v8.1 把 16 项做透功能全部纳入服务目录:
+
+**P1 求职者侧 (6 项)**:
+- `jobseeker.relationship` (T3601 知心朋友)
+- `jobseeker.journal` (T3602 行业垂直评价)
+- `jobseeker.proactive` (T3603 智能体 push)
+- `jobseeker.emotion` (T3604 情绪关怀)
+- `jobseeker.clarifier` (T3605 画像确认)
+- `jobseeker.plan_tracker` (T3606 规划执行)
+
+**P2 用人单位侧 (10 项)**:
+- `employer.persona` (T3701 个性化 HR)
+- `employer.ps_detection` (T3702 假资质检测)
+- `employer.strategy` (T3703 战略传达)
+- `employer.bias` (T3704 偏见纠正)
+- `employer.jd_marketing` (T3705 JD 营销化)
+- `employer.policy_explainer` (T3706 制度 AI 解释)
+- `employer.silence_activator` (T3707 多方通知)
+- `employer.consensus` (T3708 共识度细化)
+- `employer.suggestions` (T3709 主动 HR)
+- `matching.feedback` (T3710 双向匹配)
+
+总计: **50+ → 70+ 服务**
+
+### v8.1 修复
+
+- `/api/auth/*` 等 routers mounted 在 `/api/auth` 不在 `/api/v1/*` 下,加入 NEVER_REDIRECT_PREFIXES 防止被错误重定向

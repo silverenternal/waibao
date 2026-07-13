@@ -1,15 +1,15 @@
 # 招聘智能体 (Recruitment Agent)
 
-> **v8.0 — Depth + Service Toggle + Data-Driven**
+> **v8.1 — 16 项做透 Complete Pass**
 >
-> 服务开关 (50+ 服务可控) + 16 项需求做透 + 真实日活数据驱动 (自动周报 / 异常告警 / 用户行为分析) + 统一用户反馈入口。
+> 把 v8.0 因 token 限制未完成的 P1 (6 项求职者) + P2 (10 项用人单位) = 16 项需求做透全部 production-ready,共享 Mem0 记忆库 + EventBus 事件链 + ServiceToggle 控制。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org)
-[![Tests](https://img.shields.io/badge/tests-641%20passed-green.svg)](./talent-tool-mvp/backend/tests)
+[![Tests](https://img.shields.io/badge/tests-3004%20passed-green.svg)](./talent-tool-mvp/backend/tests)
 [![Providers](https://img.shields.io/badge/providers-7%20capabilities%20×%20N%20vendors-blue.svg)](./talent-tool-mvp/backend/providers/README.md)
-[![v7.0](https://img.shields.io/badge/version-7.0.0-blueviolet.svg)](./CHANGELOG.md)
+[![v8.1](https://img.shields.io/badge/version-8.1.0-blueviolet.svg)](./CHANGELOG.md)
 
 ---
 

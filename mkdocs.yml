@@ -1,5 +1,5 @@
 site_name: 招聘智能体
-site_description: v8.0 - 服务开关 + 16 项做透 + 真实日活数据驱动的双向招聘智能体
+site_description: v8.1 - 16 项做透完成 (P1 求职者 6 + P2 用人单位 10) 的双向招聘智能体
 site_author: waibao
 
 repo_name: silverenternal/waibao
@@ -83,6 +83,12 @@ nav:
   - 商业化与合规: COMMERCIAL.md
   - 服务开关规格: SERVICE_TOGGLE_SPEC.md
   - 16 项做透计划: DEPTH_PLAN.md
+  - Release Notes:
+    - v4.0.0: releases/v4.0.0.md
+    - v5.0.0: releases/v5.0.0.md
+    - v7.0.0: releases/v7.0.0.md
+    - v8.0.0: releases/v8.0.0.md
+    - v8.1.0: releases/v8.1.0.md
   - 路线图: ROADMAP.md
   - 贡献指南: CONTRIBUTING.md
 

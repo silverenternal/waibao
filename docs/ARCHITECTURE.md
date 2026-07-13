@@ -569,3 +569,26 @@ Backend (FastAPI)
 - [VENDOR_SELECTION.md](./VENDOR_SELECTION.md) — 开源选型决策
 - [COMMERCIAL.md](./COMMERCIAL.md) — 商业化 / 计费 / 隐私
 - [EXTENSIBILITY_SPEC.md](./EXTENSIBILITY_SPEC.md) — v6.0 扩展性契约
+
+---
+
+## v8.1 — 16 项做透完成 (2026-07-13)
+
+v8.0 启动了 16 项做透,v8.1 把它交付完。每一项都从 stub 升级到 production-ready:
+
+- **P1 求职者侧 6 项**: 知心朋友 / 行业垂直评价 / 智能体 push / 情绪关怀 / 画像确认 / 规划执行
+- **P2 用人单位侧 10 项**: 个性化 HR / 假资质检测 / 战略传达 / 偏见纠正 / JD 营销化 / 制度 AI 解释 / 多方通知 / 共识度细化 / 主动 HR / 双向匹配
+
+### v8.1 关键架构变化
+
+1. **ServiceToggle 覆盖到 70+ 服务** — 新增的 16 项功能全部纳入服务目录
+2. **Mem0 统一记忆库** — 16 项共享同一画像,避免重复询问
+3. **EventBus 跨功能事件链** — 主动 push 触发情绪关怀等组合场景
+4. **API versioning fix** — `/api/auth/*` 不再被错误重定向到 `/api/v1/auth/*`
+5. **test_integration 友好化** — ServiceToggle 在 auth 前返回 403 是正确行为
+
+### 文档
+
+- [DEPTH_PLAN.md](./DEPTH_PLAN.md) — 16 项做透计划 (status: COMPLETE)
+- [SERVICE_TOGGLE_SPEC.md](./SERVICE_TOGGLE_SPEC.md) — 服务开关规格
+- [releases/v8.1.0.md](./releases/v8.1.0.md) — v8.1.0 release notes
