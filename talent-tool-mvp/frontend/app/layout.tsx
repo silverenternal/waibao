@@ -13,6 +13,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { GlobalSearchBar } from "@/components/GlobalSearchBar";
 import { organizationJsonLd, SITE_NAME, SITE_URL } from "@/lib/metadata";
 import { JsonLd } from "@/components/JsonLd";
+import { FeedbackWidget } from "@/components/feedback/FeedbackWidget";
 import "./globals.css";
 
 // Font CSS variables are defined in globals.css via @font-face with locally
@@ -128,6 +129,7 @@ export default async function RootLayout({
               </main>
               <InstallPrompt />
               <Toaster />
+              <FeedbackWidget />
             </NextIntlClientProvider>
           </Providers>
         </ThemeProvider>
