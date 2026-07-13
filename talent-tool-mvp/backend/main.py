@@ -207,6 +207,14 @@ app.include_router(notification_prefs_router, prefix="/api/notifications", tags=
 from api.tickets import router as tickets_router
 app.include_router(tickets_router, prefix="/api/tickets", tags=["tickets"])
 
+# T2604: SLA monitoring endpoints
+from api.sla import router as sla_router
+app.include_router(sla_router, prefix="", tags=["sla"])  # router already mounts /api/admin/sla
+
+# T2604: Customer support widget endpoints (Intercom / Zendesk)
+from api.support import router as support_router
+app.include_router(support_router, prefix="", tags=["support"])  # router already mounts /api/support
+
 # T608: Multi-party collaboration rooms (5 方实时协同)
 from api.rooms import router as rooms_router
 app.include_router(rooms_router, prefix="/api/rooms", tags=["rooms"])
@@ -244,6 +252,16 @@ app.include_router(admin_ab_router, prefix="/api/admin/ab", tags=["admin-ab"])
 from api.admin_cost import router as admin_cost_router
 
 app.include_router(admin_cost_router, prefix="/api/admin/cost", tags=["admin-cost"])
+
+# T2701: 完整 RAG (LlamaIndex + Qdrant)
+from api.rag import router as rag_router
+
+app.include_router(rag_router, prefix="/api/rag", tags=["rag"])
+
+# T2702: 统一记忆库 (Mem0 vendor-in)
+from api.memory import router as memory_router
+
+app.include_router(memory_router, prefix="/api/memory", tags=["memory"])
 
 # T1004: Audit log (admin-only)
 from api.admin_audit import router as admin_audit_router
@@ -359,3 +377,84 @@ try:
     app.include_router(attrition_router, prefix="/api/attrition", tags=["attrition"])
 except ImportError:
     pass
+
+# T2802: BI (Cube.js) — proxy + Redis cache + dashboard CRUD
+try:
+    from api.bi import router as bi_router
+    app.include_router(bi_router, prefix="/api/bi", tags=["bi"])
+except ImportError:
+    pass
+
+# T2803: Predictive Analytics (LightGBM + Prophet)
+try:
+    from api.predictive import router as predictive_router
+    app.include_router(predictive_router, prefix="/api/predictive", tags=["predictive"])
+except ImportError:
+    pass
+
+# T2901: SSO/SAML (Authlib + NextAuth + Keycloak) — 6 IdPs
+try:
+    from api.auth_sso import router as auth_sso_router
+    app.include_router(auth_sso_router, tags=["auth-sso"])
+except ImportError as _e:  # pragma: no cover - defensive
+    import logging
+    logging.getLogger("waibao.main").warning("T2901 auth_sso not enabled: %s", _e)
+
+# T2801: ClickHouse 数据仓库 + 维度建模
+try:
+    from api.analytics_v2 import router as analytics_v2_router
+    app.include_router(analytics_v2_router)
+    # 启动 ETL 调度 (每小时)
+    from services.warehouse import start_scheduler_in_background
+    start_scheduler_in_background()
+except ImportError as _e:
+    import logging
+    logging.getLogger("waibao.main").warning("T2801 analytics_v2 not enabled: %s", _e)
+
+# T2902: Developer Portal (App 注册 + OAuth 2.0 + Webhooks + 自助 API Key)
+try:
+    from api.developer_portal import router as developer_portal_router
+    app.include_router(developer_portal_router)
+except ImportError as _e:  # pragma: no cover - defensive
+    import logging
+    logging.getLogger("waibao.main").warning("T2902 developer_portal not enabled: %s", _e)
+
+# T2903: Third-party Application Marketplace (Strapi-backed catalog + reviews + billing)
+try:
+    from api.marketplace import router as marketplace_router
+    app.include_router(marketplace_router)
+except ImportError as _e:  # pragma: no cover - defensive
+    import logging
+    logging.getLogger("waibao.main").warning("T2903 marketplace not enabled: %s", _e)
+
+# T2904: API 版本化 — 同时挂载 /api 和 /api/v1/v2 双套路由 + 旧 URL 兼容
+try:
+    from api.versioning import install_versioning
+    install_versioning(app)
+except ImportError as _e:  # pragma: no cover - defensive
+    import logging
+    logging.getLogger("waibao.main").warning("T2904 versioning not enabled: %s", _e)
+
+# T3001: LoRA Fine-tuning (LLaMA-Factory) — 训练/评估/部署/注册
+try:
+    from api.training import router as training_router
+    app.include_router(training_router, prefix="/api/training", tags=["training"])
+except ImportError as _e:  # pragma: no cover - defensive
+    import logging
+    logging.getLogger("waibao.main").warning("T3001 training not enabled: %s", _e)
+
+# T3002: AI 主动 Sourcing (Outbound) — GitHub / mock 候选人发掘
+try:
+    from api.sourcing import router as sourcing_router
+    app.include_router(sourcing_router, prefix="/api/sourcing", tags=["sourcing"])
+except ImportError as _e:  # pragma: no cover - defensive
+    import logging
+    logging.getLogger("waibao.main").warning("T3002 sourcing not enabled: %s", _e)
+
+# T3003: White-label + private deployment branding — 域名/logo/颜色/字体可配置
+try:
+    from api.whitelabel import router as whitelabel_router
+    app.include_router(whitelabel_router)
+except ImportError as _e:  # pragma: no cover - defensive
+    import logging
+    logging.getLogger("waibao.main").warning("T3003 whitelabel not enabled: %s", _e)

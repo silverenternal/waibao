@@ -1,6 +1,24 @@
 """v5.0 services/platform/ public API."""
 from __future__ import annotations
 
+# T2601 + T2602: strict multi-tenant + rate limiting primitives
+from .tenant_context import (  # noqa: E402,F401
+    TenantContext, set_tenant_context, reset_tenant_context,
+    get_tenant_context, get_tenant, with_tenant,
+)
+from .tenant_resolver import (  # noqa: E402,F401
+    TenantResolver, get_tenant_context_dep, get_tenant_resolver,
+)
+from .rate_limiter import (  # noqa: E402,F401
+    get_limiter, set_limiter, per_route_limit,
+    rate_limit_exceeded_handler, install_slowapi,
+)
+from .quota import (  # noqa: E402,F401
+    PlanLimits, get_plan, list_plans,
+    QuotaStore, get_quota_store, reset_quota_store,
+    enforce_request, enforce_resource, remaining,
+)
+
 from .ab_test import get_hash_salt, set_hash_salt, Variant, Experiment, hash_bucket, assign_variant, MetricSample, MetricStore, get_metric_store, record_metric, compute_significance, create_experiment  # noqa: F401,F403
 from .backup import StorageBackend, BackupConfig, BackupRecord, verify_supabase_pitr_config, report_pitr_settings, BackupManager, BackupScheduler, compute_rto_rpo_estimate  # noqa: F401,F403
 from .collection import CollectionService  # noqa: F401,F403
@@ -29,6 +47,51 @@ from .workflow_templates import (  # noqa: E402,F401,F403
     BUILTIN_TEMPLATES, ONBOARDING_TEMPLATE, INTERVIEW_TEMPLATE,
     RESUME_SCORING_TEMPLATE, BIAS_REVIEW_TEMPLATE, SLA_TEMPLATE,
     get_template, list_templates,
+)
+
+# T2704: prompt v2 (Agenta vendor-in) + LLM-as-judge evaluator
+from .prompt_v2 import (  # noqa: E402,F401,F403
+    InMemoryPromptRegistry,
+    METRIC_DIMENSIONS,
+    PromptMetric,
+    PromptRegistryError,
+    PromptService,
+    PromptStatus,
+    PromptVersion,
+    get_prompt_service,
+    reset_prompt_service,
+)
+from .evaluator import (  # noqa: E402,F401,F403
+    EvalCase,
+    EvalRun,
+    JudgeVerdict,
+    PromptComparison,
+    PromptEvaluator,
+    compare_prompts,
+    default_runner,
+    gold_standard_suite,
+    judge_output,
+)
+
+# T3003 — White-label + private deployment branding
+from .whitelabel import (  # noqa: E402,F401,F403
+    ALLOWED_FONT_FAMILIES,
+    ALLOWED_LOCALES,
+    ALLOWED_TEMPLATES,
+    Branding,
+    BrandingNotFoundError,
+    BrandingValidationError,
+    CSS_VAR_KEYS,
+    WhitelabelError,
+    WhitelabelService,
+    build_fastapi_router as build_whitelabel_router,
+    get_whitelabel_service,
+    render_email_footer,
+    render_email_header,
+    render_email_html,
+    render_pdf_report_brand,
+    reset_whitelabel_service,
+    to_css_variables,
 )
 
 __all__: list[str] = [
@@ -94,4 +157,42 @@ __all__: list[str] = [
     "BUILTIN_TEMPLATES", "ONBOARDING_TEMPLATE", "INTERVIEW_TEMPLATE",
     "RESUME_SCORING_TEMPLATE", "BIAS_REVIEW_TEMPLATE", "SLA_TEMPLATE",
     "get_template", "list_templates",
+
+    # T2601 strict multi-tenant
+    "TenantContext", "set_tenant_context", "reset_tenant_context",
+    "get_tenant_context", "get_tenant", "with_tenant",
+    "TenantResolver", "get_tenant_context_dep", "get_tenant_resolver",
+    # T2602 rate limiting + quota
+    "get_limiter", "set_limiter", "per_route_limit",
+    "rate_limit_exceeded_handler", "install_slowapi",
+    "PlanLimits", "get_plan", "list_plans",
+    "QuotaStore", "get_quota_store", "reset_quota_store",
+    "enforce_request", "enforce_resource", "remaining",
+    # T2603 audit v2
+    "AuditContext", "audit", "audit_pii",
+    "set_audit_context", "get_audit_context", "update_audit_context", "clear_audit_context",
+    "get_audit_store", "reset_audit_store",
+    "scan_module_for_pii", "build_audit_decorators", "coverage_report",
+    "PII_FIELDS", "DEFAULT_LAWFUL_BASIS", "ACTION_DATA_CLASS",
+    "compute_retention_until", "AuditRecord",
+    # T2603 consent v6
+    "ConsentStore", "ConsentState", "PurposeConsent", "CrossBorderNotice",
+    "PURPOSES", "PIPL_CROSS_BORDER_DISCLOSURE",
+    "get_consent_store", "reset_consent_store", "list_purposes",
+    # T2704 prompt v2 (Agenta vendor-in)
+    "PromptStatus", "PromptVersion", "PromptMetric", "PromptRegistryError",
+    "InMemoryPromptRegistry", "PromptService",
+    "get_prompt_service", "reset_prompt_service", "METRIC_DIMENSIONS",
+    # T2704 evaluator
+    "EvalCase", "JudgeVerdict", "EvalRun", "PromptEvaluator",
+    "PromptComparison", "judge_output", "default_runner",
+    "gold_standard_suite", "compare_prompts",
+    # T3003 white-label
+    "ALLOWED_FONT_FAMILIES", "ALLOWED_LOCALES", "ALLOWED_TEMPLATES",
+    "Branding", "BrandingNotFoundError", "BrandingValidationError",
+    "CSS_VAR_KEYS", "WhitelabelError", "WhitelabelService",
+    "build_whitelabel_router", "get_whitelabel_service",
+    "render_email_footer", "render_email_header",
+    "render_email_html", "render_pdf_report_brand",
+    "reset_whitelabel_service", "to_css_variables",
 ]
