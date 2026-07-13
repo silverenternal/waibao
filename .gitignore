@@ -61,3 +61,8 @@ supabase/.temp
 # Mkdocs build output (built by CI)
 site/talent-tool-mvp/frontend/test-results/
 talent-tool-mvp/frontend/playwright-report/
+
+# v10.0 ultracode
+site/
+talent-tool-mvp/frontend/storybook-static/
+talent-tool-mvp/frontend/test-results/
