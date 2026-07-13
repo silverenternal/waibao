@@ -424,3 +424,148 @@ alidns (国内)  +  Cloudflare (海外)
 - [MULTI_REGION.md](./MULTI_REGION.md) — 多区域详细架构
 - [DISASTER_RECOVERY.md](./DISASTER_RECOVERY.md) — 灾备
 - 4 份法律页 (`/legal/privacy`, `/legal/terms`, `/legal/dpa`, `/legal/cookies`)
+
+---
+
+## v7.0 — Enterprise SaaS 化 + AI 能力深化
+
+v7.0 在 v6.0 「可扩展架构」基础上,做两件事:
+1. **Enterprise SaaS 化** — 严格多租户 + 配额 + 限流 + 审计 + SLA + SSO + 白标 + 私有化
+2. **AI 能力深化** — 完整 RAG + 统一 Memory + Multi-Agent + Prompt v2 + LoRA fine-tuning
+
+### v7.0 总体架构图
+
+```
+                ┌────────────────────────────────────────────────────┐
+                │   Customer Domain (CNAME / 私有部署域名)            │
+                └────────────────────────────────────────────────────┘
+                                          │
+                                          ▼
+                ┌────────────────────────────────────────────────────┐
+                │  Caddy / nginx-ingress (TLS + CSP + WAF)            │
+                └──────────┬────────────────────────┬─────────────────┘
+                           │                        │
+                           ▼                        ▼
+   ┌──────────────────────────────────┐  ┌──────────────────────────────────┐
+   │ Frontend (Next.js 16)             │  │ Backend (FastAPI + Python 3.12) │
+   │ WhiteLabelProvider → CSS vars     │  │ TenantContext + RateLimiter     │
+   │ Storybook + ReactFlow + i18n     │  │ Audit v2 + Consent v6            │
+   └──────────────────────────────────┘  │                                    │
+                                          │ 16 个 Agent                         │
+                                          │ ├ Profile / Clarifier / Planner   │
+                                          │ ├ Persona / Compliance / Brief   │
+                                          │ └ MultiAgent (CrewAI)              │
+                                          │                                    │
+                                          │ RAG (LlamaIndex) + Qdrant          │
+                                          │ Memory (Mem0) + Neo4j              │
+                                          │ Prompt v2 (Agenta-style)           │
+                                          │ LoRA fine-tuning (LLaMA-Factory)   │
+                                          │                                    │
+                                          │ ClickHouse 数仓 + ETL + dbt       │
+                                          │ Cube.js BI + LightGBM 预测        │
+                                          │ SSO/SAML + Developer Portal       │
+                                          │ Whitelabel Service                 │
+                                          │ Marketplace (Strapi)               │
+                                          └──────────────┬─────────────────────┘
+                                                         │
+                          ┌──────────────┬──────────────┼──────────────┐
+                          ▼              ▼              ▼              ▼
+                   Supabase         ClickHouse      Qdrant         Redis
+                   (OLTP + RLS)    (数仓 + ETL)    (向量)         (缓存+队列)
+                          │              │              │              │
+                          ▼              ▼              ▼              ▼
+                   pgvector       dbt models     Mem0 graph     OpenTelemetry
+                   + Realtime     + Cube.js      + LoRA index   + Prometheus
+```
+
+### v7.0 新增子系统
+
+| 子系统 | 路径 | 关键能力 |
+|---|---|---|
+| **Tenant Context** | `services/platform/tenant_context.py` | RLS + Postgres `current_setting('app.tenant_id')` |
+| **Rate Limiter** | `services/platform/rate_limiter.py` | slowapi + per-route + per-tenant |
+| **Quota** | `services/platform/quota.py` | Plan-based (Starter/Growth/Enterprise) |
+| **Audit v2** | `services/platform/audit_v2.py` | 不可变 append-only + AST 自动打点 |
+| **Consent v6** | `services/platform/consent.py` | per-purpose 同意 + 跨境披露 |
+| **SLA Monitor** | `services/platform/sla_monitor.py` | 月度 99.9% + RTO/RPO 跟踪 |
+| **RAG** | `services/rag/` | LlamaIndex + Qdrant + 文档解析/分块/重排 |
+| **Memory** | `services/memory/` | Mem0 + 向量 + 图谱 + 跨 Agent 共享 |
+| **MultiAgent** | `services/multiagent/` | CrewAI + 角色 + 投票 + 共识 |
+| **Prompt v2** | `services/platform/prompt_v2.py` | 版本化 + A/B + LLM-as-judge |
+| **Warehouse** | `services/warehouse/` | ETL pipeline + ClickHouse + dbt |
+| **BI** | `services/bi/` + `cube-server/` | Cube.js + 拖拽报表 |
+| **Predictive** | `services/platform/predictive.py` | LightGBM + Prophet |
+| **SSO/SAML** | `services/auth/jit.py` | Authlib + NextAuth + Keycloak |
+| **Developer Portal** | `services/platform/developer_portal.py` | OAuth 2.0 + SDK 自动生成 |
+| **Marketplace** | `services/marketplace/` | Strapi 后台 + 审核 + 安装 |
+| **Whitelabel** | `services/platform/whitelabel.py` | 域名 / logo / 颜色 / 字体可配置 |
+| **Training (LoRA)** | `services/training/` | LLaMA-Factory + QLoRA + vLLM |
+| **Sourcing** | `providers/sourcing/` | Outbound 寻才 + GitHub 集成 |
+
+### v7.0 数据流
+
+```
+用户请求
+   │
+   ▼
+Caddy (TLS + WAF + 域名白标)
+   │
+   ▼
+Frontend (WhiteLabelProvider 注入 CSS 变量)
+   │  HTTPS / SSE / WebSocket
+   ▼
+Backend (FastAPI)
+   │
+   ├─► TenantContext (RLS 检查)
+   ├─► RateLimiter / Quota (slowapi + plan)
+   ├─► Auth (Supabase JWT / SAML)
+   │
+   ├─► Agent (16 个)
+   │     │
+   │     ├─► MultiAgent (CrewAI, 跨 Agent 协作)
+   │     │     │
+   │     │     ├─► RAG (LlamaIndex + Qdrant)
+   │     │     │     └─► Citation → 返回给用户
+   │     │     │
+   │     │     ├─► Memory (Mem0 + 向量 + 图谱)
+   │     │     │     └─► 长期偏好 → 影响下一次匹配
+   │     │     │
+   │     │     └─► Prompt v2 (Agenta-style)
+   │     │           └─► LLM-as-judge 评估输出
+   │     │
+   │     └─► Tools (db / llm / notify / ocr / search)
+   │
+   ├─► Audit v2 (append-only + PII 检测)
+   └─► EventBus (Agent 间解耦通信)
+         │
+         ▼
+   Warehouse ETL ──► ClickHouse ──► BI / Predictive
+```
+
+### v7.0 部署形态
+
+| 形态 | 适用 | 关键文件 |
+|---|---|---|
+| **公有云 SaaS** | 中小企业 | `infra/region-cn` / `infra/region-sg` / `infra/region-us` |
+| **单租户私有化 (Docker)** | PoC / 试点 | `infra/private-deployment/docker-compose.yml` |
+| **单租户私有化 (K8s)** | 中大型企业 | `infra/private-deployment/helm/waibao/` |
+| **白标转售** | ISV / 渠道 | `tenant_branding` 表 + WhiteLabelProvider |
+| **客户云账号 (AWS)** | 金融 / 政府 | `infra/private-deployment/terraform/main.tf` |
+
+### v7.0 关键设计决策
+
+1. **Tenant isolation 第一公民** — 所有 SQL 必须经过 `with_tenant(ctx)` context manager;`tenant_id` 永不来自 request body。
+2. **Audit 不可变** — `audit_log_v2` 不允许 UPDATE/DELETE;7 年保留。
+3. **RAG citation 强制** — 每个 LLM 输出必须带文档 ID + page;无引用 = 拒绝回答。
+4. **Multi-Agent 共识** — 关键决策 (offer / 拒信 / 红线) 必须 ≥ 2/3 投票通过。
+5. **LoRA 热挂载** — `vllm serve --enable-lora` 多适配器共享一份基模型。
+6. **Whitelabel CSS variables** — 客户换 logo 不发版,运行时热更新。
+7. **API 双轨** — `/api/v1/` 旧 + `/api/v2/` 新,共存 ≥ 12 个月。
+
+### 关联文档
+
+- [AI_DEEP.md](./AI_DEEP.md) — RAG / Multi-Agent / Memory / Fine-tuning 详解
+- [PRIVATE_DEPLOYMENT.md](./PRIVATE_DEPLOYMENT.md) — 白标 + 私有化
+- [VENDOR_SELECTION.md](./VENDOR_SELECTION.md) — 开源选型决策
+- [COMMERCIAL.md](./COMMERCIAL.md) — 商业化 / 计费 / 隐私
+- [EXTENSIBILITY_SPEC.md](./EXTENSIBILITY_SPEC.md) — v6.0 扩展性契约

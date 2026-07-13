@@ -1,5 +1,5 @@
 site_name: 招聘智能体
-site_description: AI-native 招聘智能体 - 16 个智能体协同,服务求职者+用人单位双向匹配
+site_description: v7.0 - Enterprise SaaS + AI 能力深化的双向招聘智能体 (RAG/MultiAgent/Memory/LoRA/White-label)
 site_author: waibao
 
 repo_name: silverenternal/waibao
@@ -66,6 +66,7 @@ markdown_extensions:
 nav:
   - 首页: README.md
   - 架构: ARCHITECTURE.md
+  - AI 能力深解: AI_DEEP.md
   - 智能体: AGENTS.md
   - API: API.md
   - Providers & 横切能力: PROVIDERS.md
@@ -77,6 +78,9 @@ nav:
   - 覆盖审计 v3: COVERAGE-AUDIT-v3.md
   - 覆盖审计 v4: COVERAGE-AUDIT-v4.md
   - 部署: DEPLOYMENT.md
+  - 私有化 + 白标: PRIVATE_DEPLOYMENT.md
+  - 开源选型: VENDOR_SELECTION.md
+  - 商业化与合规: COMMERCIAL.md
   - 路线图: ROADMAP.md
   - 贡献指南: CONTRIBUTING.md
 

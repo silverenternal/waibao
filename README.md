@@ -1,55 +1,59 @@
 # 招聘智能体 (Recruitment Agent)
 
-> 一个**真正 AI-native** 的双向招聘智能体,服务求职者 + 用人单位,基于 16 个智能体协同实现"画像澄清 + 双向精准匹配"。
+> **v7.0 — Enterprise SaaS 化 + AI 能力深化 (RAG/MultiAgent/Memory/LoRA/White-label)**
+>
+> 16 个智能体协同 + 完整 RAG + Multi-Agent 协作 + 统一记忆库 + ClickHouse 数仓 + BI 看板 + 预测分析 + SSO + 开放 API + Marketplace + 白标 + 私有化部署。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org)
-[![Tests](https://img.shields.io/badge/tests-704%20passed-green.svg)](./talent-tool-mvp/backend/tests)
+[![Tests](https://img.shields.io/badge/tests-641%20passed-green.svg)](./talent-tool-mvp/backend/tests)
 [![Providers](https://img.shields.io/badge/providers-7%20capabilities%20×%20N%20vendors-blue.svg)](./talent-tool-mvp/backend/providers/README.md)
-[![v3.0](https://img.shields.io/badge/version-3.0--rc-blueviolet.svg)](./todo.json)
+[![v7.0](https://img.shields.io/badge/version-7.0.0-blueviolet.svg)](./CHANGELOG.md)
 
 ---
 
-## 🎯 项目愿景
+## 🎯 v7.0 北极星
 
-传统招聘系统要么是"职位发布 + 简历投递"的撮合平台,要么是"AI 简历筛选"的工具。
+| 目标 | 指标 | 目标 |
+|---|---|---|
+| ARR | 真实收入 | ≥ 1000 万 RMB (2027 Q4) |
+| NPS | 客户净推荐值 | ≥ 65 |
+| RAG 准确度 | 检索 Top-5 hit rate | > 85% |
+| Multi-Agent 任务成功率 | end-to-end | > 80% |
+| SLA | 月度可用性 | 99.9% |
+| 合规 | GDPR / PIPL / CCPA | 100% 覆盖 |
 
-我们要做的是:**两个智能体团队**——
-- **求职者侧 6 个智能体**作为求职者的知心朋友 + 职业规划师,陪伴整个求职旅程
-- **用人单位侧 9 个智能体**作为企业的真诚 HR,帮助老板/HR/部门负责人共同完成招聘
-- **匹配侧 1 个智能体 + 3 个模块**实现真正的双向适配,而不是单向筛选
+## ✨ v7.0 新增能力
 
----
+### 🏢 Enterprise SaaS 化 (Phase P0)
+- ✅ **严格多租户隔离** (T2601) — Tenant Context + RLS + Postgres `current_setting('app.tenant_id')`
+- ✅ **统一 Rate Limiting + 配额** (T2602) — slowapi + plan-based quota store
+- ✅ **完整审计 + GDPR/PIPL/CCPA** (T2603) — `audit_log_v2` + AST 装饰器 + per-purpose consent + GDPR v2 API
+- ✅ **SLA 99.9% + 状态页** (T2604) — SLA monitor + Instatus 自托管 + Intercom 支持
 
-## ✨ 核心亮点
+### 🧠 AI 能力深化 (Phase P1)
+- ✅ **完整 RAG** (T2701) — LlamaIndex + Qdrant + 文档解析/分块/检索/重排/citation
+- ✅ **统一记忆库** (T2702) — Mem0 + 向量 + 图谱,跨 Agent 共享
+- ✅ **Multi-Agent 协作** (T2703) — CrewAI + 角色 + 投票 + 共识机制
+- ✅ **Prompt 版本化 + A/B + 评估** (T2704) — Agenta 风格 + LLM-as-judge + 黄金集
 
-### 🧠 AI-Native 而非规则系统
-- ✅ **语义路由**(`SemanticRouter`):用 embedding 相似度替代 200+ 硬编码关键词
-- ✅ **LLM 抽取器**(`llm_extractor`):删除所有正则/词典,让 LLM 自己理解语义
-- ✅ **ReAct 框架**(`ReActAgent`):Thought → Action → Observation 循环,带工具调用
-- ✅ **反思机制**:Clarifier 综合后再让 LLM 审视自己输出,纠正过度解读
-- ✅ **推理可视化**(`ReasoningTrace`):用户能看到 agent 怎么想,而不是黑盒
+### 📊 数据仓库 + BI + 预测 (Phase P2)
+- ✅ **ClickHouse 数仓 + ETL** (T2801) — Airbyte + dbt + scheduler
+- ✅ **BI 报表 + Cube.js** (T2802) — 拖拽式报表生成器 + Redis 缓存
+- ✅ **预测分析** (T2803) — LightGBM (流失/招聘成功) + Prophet (时间序列)
 
-### 👥 16 个智能体协同
-- **求职者侧(6)**:Profile / Intake / DailyJournal / Emotion / Clarifier / CareerPlanner
-- **用人单位侧(9)**:Persona / Compliance / Vision / TalentBrief / JobSpec / Policy / MultiParty / EmployerClarifier / HRService
-- **匹配侧(1)**:MutualEvaluator
+### 🌐 合规 + 生态 (Phase P3)
+- ✅ **SSO/SAML** (T2901) — Authlib + NextAuth + Keycloak
+- ✅ **开放 API 平台** (T2902) — Developer Portal + OAuth 2.0 + SDK 自动生成
+- ✅ **第三方应用市场** (T2903) — Strapi 后台 + 审核 + 安装/卸载
+- ✅ **API 版本化** (T2904) — `/api/v1/` + `/api/v2/` 平滑过渡
 
-### 🎯 完整覆盖甲方 16 个需求点
-- 1.1~1.6 求职者知心朋友 + 职业规划师
-- 2.1~2.9 用人单位真诚 HR + 全生命周期
-- 3. 求职者 ↔ 用人单位 双向适配
-
-### 🔌 v2.0 — Providers 抽象层 (新)
-- ✅ **零业务侵入**: 改 `LLM_PROVIDER=anthropic` 一行 ENV 即可切换 LLM 供应商
-- ✅ **7 个 capability 维度**: LLM / Embedding / Vision / OCR / STT / Notify / CompanyLookup
-- ✅ **共享韧性中间件**: 重试 / 熔断 / 限流 / 成本追踪 / Prometheus 指标 一体化
-- ✅ **6 家 LLM 供应商**: OpenAI / Anthropic / DeepSeek / 智谱 / 通义 / 月之暗面
-- ✅ **5 个通知通道**: SMTP / 钉钉 / 飞书 / 企业微信 / Webhook
-- ✅ **Mock 优先**: 默认全 mock,接入新供应商不影响业务测试
-
-详见 [`talent-tool-mvp/backend/providers/README.md`](./talent-tool-mvp/backend/providers/README.md)
+### 🚀 AI 高级 + 商业化 (Phase P4)
+- ✅ **Fine-tuning (LoRA)** (T3001) — LLaMA-Factory + QLoRA + vLLM serve
+- ✅ **AI 主动 Sourcing** (T3002) — Outbound 寻才 + GitHub 集成
+- ✅ **白标 + 私有化部署** (T3003) — 域名 / logo / 颜色 / 字体可配置 + Docker Compose / Helm / Terraform
+- ✅ **v7.0.0 Release** (T3004) — 本次发布
 
 ---
 
@@ -57,12 +61,11 @@
 
 | 层 | 技术 |
 |---|---|
-| **Backend** | FastAPI + Python 3.12 + Pydantic |
-| **AI** | OpenAI GPT-4o + text-embedding-3-small (可换 Anthropic / 本地 LLM) |
-| **Database** | Supabase (PostgreSQL + pgvector + Auth + Realtime + RLS) |
-| **Frontend** | Next.js 16 + TypeScript + Tailwind + shadcn/ui |
-| **Realtime** | WebSocket + SSE |
-| **Infra** | Docker Compose + Prometheus + Grafana + Alertmanager |
+| **Backend** | FastAPI + Python 3.12 + EventBus + RAG + MultiAgent + TenantIsolation |
+| **Frontend** | Next.js 16 + TypeScript + Tailwind + next-intl + Storybook + ReactFlow |
+| **Database** | Supabase (OLTP) + ClickHouse (OLAP) + pgvector + Neo4j (知识图谱) + Qdrant (向量) |
+| **AI** | OpenAI / Anthropic / DeepSeek / 智谱 / 通义 / Kimi + Whisper / GPT-4V / GPT-4o Realtime + LoRA |
+| **Infrastructure** | Docker Compose + Supabase + ClickHouse + Redis + OpenTelemetry + Prometheus + Sentry + Locust + ArgoCD + LiveKit |
 
 ---
 
@@ -71,216 +74,112 @@
 ### 前置要求
 - Python 3.12+
 - Node.js 20+
-- Supabase 项目(本地或云端)
-- OpenAI API Key
+- Supabase 项目 (本地或云端)
+- OpenAI API Key (或其它 LLM 供应商 key)
 
 ### 1. 克隆并安装
 ```bash
-cd talent-tool-mvp
+git clone https://github.com/silverenternal/waibao
+cd waibao/talent-tool-mvp
 cd backend && pip install -r requirements.txt
-cd ../frontend && npm install
+cd ../frontend && pnpm install
 ```
 
 ### 2. 配置环境变量
 ```bash
-# backend/.env
-SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_KEY=eyJhbGc...
-SUPABASE_SERVICE_KEY=eyJhbGc...
-SUPABASE_JWT_SECRET=your-jwt-secret
-OPENAI_API_KEY=sk-xxx
-PII_ENCRYPTION_KEY=<base64-encoded-32-bytes>
+cp backend/.env.example backend/.env
+# 编辑 .env,填入 SUPABASE_URL / SUPABASE_KEY / OPENAI_API_KEY 等
 ```
 
-### 3. 初始化数据库
+### 3. 启动开发服务器
 ```bash
-# 在 Supabase SQL 编辑器中依次执行 supabase/migrations/ 下的迁移
-psql -h db.xxx.supabase.co -U postgres -d postgres \
-  -f supabase/migrations/002_agent_memory.sql \
-  -f supabase/migrations/003_conversations.sql \
-  ...
+# Backend
+cd backend && uvicorn main:app --reload --port 8000
+
+# Frontend (新终端)
+cd frontend && pnpm dev
 ```
 
-### 4. 启动开发服务器
-```bash
-# 后端 (端口 8000)
-cd backend && uvicorn main:app --reload
+打开 http://localhost:3000
 
-# 前端 (端口 3000)
-cd frontend && npm run dev
-```
-
-### 5. 跑测试
+### 4. 运行测试
 ```bash
-cd backend && python -m pytest tests/ -v
-# ✅ 31 passed
+cd backend && python -m pytest        # 641 tests, 全离线
+cd frontend && pnpm tsc --noEmit      # TypeScript strict 模式
 ```
 
 ---
 
-## 📁 项目结构
+## 📦 私有化部署
 
-```
-waibao/                                  # 项目根
-├── todo.json                            # 开发规划(23 任务,16 智能体,16 甲方需求)
-├── README.md                            # 本文件
-├── LICENSE                              # MIT
-├── CONTRIBUTING.md                      # 贡献指南
-├── docs/                                # 详细文档
-│   ├── ARCHITECTURE.md                  # 系统架构
-│   ├── AGENTS.md                        # 16 个智能体详解
-│   ├── API.md                           # API 端点清单
-│   ├── DEPLOYMENT.md                    # 部署指南
-│   └── ROADMAP.md                       # 路线图
-└── talent-tool-mvp/                     # 主代码库
-    ├── backend/                         # FastAPI 后端
-    │   ├── agents/                      # 16 个智能体 + 框架
-    │   │   ├── runtime.py               # BaseAgent/LLMClient/Memory
-    │   │   ├── semantic_router.py       # embedding 路由
-    │   │   ├── react.py                 # ReAct 框架
-    │   │   ├── llm_extractor.py         # LLM 抽取器
-    │   │   ├── boot.py                  # 启动注册
-    │   │   ├── jobseeker/               # 6 个求职者 Agent
-    │   │   ├── employer/                # 9 个用人单位 Agent
-    │   │   └── evaluator/               # 1 个匹配 Agent
-    │   ├── api/                         # REST 端点(14 个新增)
-    │   ├── services/                    # 业务服务
-    │   ├── matching/                    # 双向打分算法
-    │   ├── signals/                     # 反馈闭环
-    │   ├── prompts/zh/                  # 中文 prompt 库
-    │   └── tests/                       # 31 个测试
-    ├── frontend/                        # Next.js 前端
-    │   ├── app/(jobseeker)/             # 求职者端
-    │   ├── app/(employer)/              # 用人单位端 8 模块
-    │   ├── app/match/                   # 双向匹配可视化
-    │   ├── app/realtime/                # WebSocket Provider
-    │   ├── components/                  # UI 组件(含 ReasoningTrace)
-    │   └── messages/                    # i18n(zh-CN / en-US)
-    ├── supabase/
-    │   └── migrations/                  # 7 个新迁移
-    └── docker-compose.prod.yml          # 生产部署
+详见 [`docs/PRIVATE_DEPLOYMENT.md`](./docs/PRIVATE_DEPLOYMENT.md) 与
+[`infra/private-deployment/`](./talent-tool-mvp/infra/private-deployment/)。
+
+```bash
+# Docker Compose (单主机,POC / 中小企业)
+cp infra/private-deployment/.env.example infra/private-deployment/.env
+docker compose -f infra/private-deployment/docker-compose.yml up -d
+
+# Helm (Kubernetes,大规模生产)
+helm install waibao ./infra/private-deployment/helm/waibao \
+  --set whitelabel.tenantId=acme \
+  --set whitelabel.domain=hire.acme.com
+
+# Terraform (AWS 参考架构)
+cd infra/private-deployment/terraform
+terraform apply
 ```
 
 ---
 
-## 🎓 16 个智能体一览
+## 🏛️ 架构
 
-### 求职者侧(对应甲方需求 1.1-1.6)
+详见 [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) 和 [`docs/AI_DEEP.md`](./docs/AI_DEEP.md)。
 
-| 智能体 | 对应需求 | 功能 |
-|---|---|---|
-| **Profile Agent** | 1.1 | 对话式画像采集,记忆持久化 |
-| **Intake Agent** | 1.1 | 引导建档,文件上传,完成度跟踪 |
-| **DailyJournal Agent** | 1.2 | 日记摄取,生成评级/建议/注意事项/行动项 |
-| **Emotion Agent** | 1.4 | LLM 情绪识别(讽刺/复合情绪)+ 共情回应 |
-| **Clarifier Agent** | 1.5 | 多源画像综合 + 反思 + 显隐性需求分离 |
-| **CareerPlanner Agent** | 1.6 | 短期/中期/长期规划 + 市场行情 + 学习路径 |
+```
+┌────────────────────────────────────────────────────────────────────┐
+│  Frontend (Next.js 16) — WhiteLabelProvider + ThemeProvider         │
+└────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌────────────────────────────────────────────────────────────────────┐
+│  Backend (FastAPI) — Tenant Context + Rate Limiting + Audit v2     │
+│  ├─ 16 个 Agent (Profile / Clarifier / CareerPlanner / ...)        │
+│  ├─ Multi-Agent (CrewAI) + RAG (LlamaIndex) + Memory (Mem0)        │
+│  ├─ Prompt v2 (Agenta-style) + LoRA fine-tuning                    │
+│  └─ Whitelabel Service + ClickHouse + Qdrant + Supabase            │
+└────────────────────────────────────────────────────────────────────┘
+                              │
+            ┌──────────┬───────┼────────┬──────────┐
+            ▼          ▼       ▼        ▼          ▼
+        Supabase   ClickHouse  Qdrant  Redis    Object Storage
+        (OLTP)     (数仓)     (向量)   (缓存)   (uploads)
+```
 
-### 用人单位侧(对应甲方需求 2.1-2.9)
+---
 
-| 智能体 | 对应需求 | 功能 |
-|---|---|---|
-| **Persona Agent** | 2.1/2.9 | 真诚 HR 人格,边界感 |
-| **Compliance Agent** | 2.2 | OCR + 工商查询 + trust_score |
-| **Vision Agent** | 2.3 | 愿景→规划→战略→战术 4 层解构 |
-| **TalentBrief Agent** | 2.4 | 老板口述人才框架 + LLM 偏见检测 |
-| **JobSpec Agent** | 2.5 | JD 结构化 + 过度要求检测 |
-| **Policy Agent** | 2.6 | 制度解析 + 法律风险 + 求职者查询 |
-| **MultiParty Agent** | 2.7 | 多方意见汇总 + 冲突调解 |
-| **EmployerClarifier Agent** | 2.8 | 人才画像 + 真实需求 + 共识度 |
-| **HRService Agent** | 2.9 | 招聘→入职→培训→绩效→晋升→离职全周期 |
+## 📚 文档
 
-### 双向匹配(对应甲方需求 3)
-
-| 智能体/模块 | 功能 |
+| 文档 | 内容 |
 |---|---|
-| **MutualEvaluator Agent** | 双方互评(proceed/hold/reject) |
-| **Two-Way Matcher** | candidate_to_role + role_to_candidate + harmonic |
-| **Feedback Loop** | outcomes → 画像更新 + 校准 |
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 整体架构 (含 RAG/MultiAgent/Memory/BI/SSO/LoRA) |
+| [docs/AI_DEEP.md](./docs/AI_DEEP.md) | RAG / Multi-Agent / Memory / Fine-tuning 详解 |
+| [docs/PRIVATE_DEPLOYMENT.md](./docs/PRIVATE_DEPLOYMENT.md) | 白标 + 私有化部署 |
+| [docs/VENDOR_SELECTION.md](./docs/VENDOR_SELECTION.md) | 开源选型决策记录 |
+| [docs/COMMERCIAL.md](./docs/COMMERCIAL.md) | 商业化 / 计费 / 隐私 / 合同 |
+| [docs/RUNBOOK.md](./docs/RUNBOOK.md) | 运维手册 |
+| [docs/MULTI_REGION.md](./docs/MULTI_REGION.md) | 多区域部署 |
+| [docs/SECURITY.md](./docs/SECURITY.md) | 安全策略 |
 
 ---
 
-## 📊 关键指标
+## 📜 License
 
-```
-✅ 16 个智能体                ✅ 542 个测试通过 (100%)
-✅ 30+ 个 API 端点            ✅ 10 个数据库迁移
-✅ 15 个新数据表              ✅ 12 个前端页面
-✅ 16/16 甲方需求覆盖         ✅ 中英文双语
-✅ 7 capability × N vendor    ✅ Providers 抽象层
-```
-
----
-
-## 🔒 安全与合规
-
-- ✅ PII 字段级 AES-GCM 加密
-- ✅ GDPR / 个保法:被遗忘权 + 数据可携权
-- ✅ Supabase RLS 行级安全
-- ✅ 情绪告警 → 心理风险评估
-- ✅ 偏见检测 → 公平性评分
-
-详见 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
-
----
-
-## 📚 文档导航
-
-| 文档 | 说明 |
-|---|---|
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 系统架构、数据流、模块关系 |
-| [docs/AGENTS.md](docs/AGENTS.md) | 16 个智能体详解、Prompt、Tool |
-| [docs/API.md](docs/API.md) | REST + WebSocket 端点清单 |
-| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | 生产部署、监控、安全 |
-| [docs/ROADMAP.md](docs/ROADMAP.md) | 未来路线图 |
-| [talent-tool-mvp/backend/providers/README.md](talent-tool-mvp/backend/providers/README.md) | Provider 抽象层 (v2.0) |
-| [todo.json](todo.json) | 开发规划与里程碑 |
-| [talent-tool-mvp/README.md](talent-tool-mvp/README.md) | 原项目文档 |
+MIT — 详见 [LICENSE](./LICENSE)
+商业使用 + 私有化部署 — 详见 [docs/COMMERCIAL.md](./docs/COMMERCIAL.md)
 
 ---
 
 ## 🤝 贡献
 
-欢迎 PR!详见 [CONTRIBUTING.md](CONTRIBUTING.md)。
-
-开发前请阅读 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) 理解整体设计。
-
----
-
-## 🆕 v3.0 新增能力 (相对于 v2.0)
-
-### 横切能力
-- 🌍 **i18n 三语** (zh-CN / en-US / ja-JP) — `next-intl` 全栈支持
-- 📡 **Webhook 出口** — HMAC 签名 + 投递重试 (`/api/webhooks/*`)
-- 🔑 **公开 API Key** — scope + rate limit (`/api/public/*`)
-- ⚙️ **规则引擎** — DSL + 内置触发器 + 自动建工单
-- 🧪 **A/B 实验 UI** — 哈希分桶 + 显著性检验
-- 📊 **OpenTelemetry** — 链路追踪 + Prometheus 指标
-
-### 业务补齐
-- 📜 **政策浏览** — 列表 + 详情 + RAG 检索 + 法律风险可视化
-- 👥 **用人方画像** — StakeholderMatrix + 多方共识度
-- ⚖️ **偏见可视化** — BiasAlert + BiasExplanation + 替代话术
-- 📋 **JD 模板 + Over-spec** — 10+ 行业模板 + 版本 diff
-- 💬 **协同房间** — WebSocket 实时 + @mention + 线程
-- 📞 **语音日记** — Whisper 转写 + 触发 journal
-- 📈 **情绪/日报趋势** — 折线图 + 触发事件关联
-
-### 双向匹配 2.0
-- 🎯 **匹配解释器 UI** — 维度拆解 + 反事实
-- 🔄 **互评对照视图** — 双方视角并列
-- ⚖️ **自动权重校准** — 反馈回路每日调度
-- 📊 **匹配质量 dashboard** — Precision/Recall + Bucket 分布
-
-### 测试覆盖
-- ✅ **704 tests pass** (v2.0: 542)
-- ✅ 17 项关键路径 smoke test 全通
-- ✅ i18n key + Webhook + Rule DSL + API scope 全覆盖
-
-详见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)、[docs/API.md](docs/API.md)、[docs/AGENTS.md](docs/AGENTS.md)。
-
----
-
-## 📄 License
-
-MIT © 2026 waibao
+详见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
