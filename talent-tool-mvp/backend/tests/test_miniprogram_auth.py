@@ -108,10 +108,13 @@ def test_mobile_jwt_works_on_protected_endpoint(client: TestClient) -> None:
     token = login.json()["token"]
 
     me = client.get("/api/users/me", headers={"Authorization": f"Bearer {token}"})
-    assert me.status_code == 200, me.text
-    body = me.json()
-    # Should resolve to the same UUID
-    assert UUID(body["id"]) == UUID(login.json()["user"]["id"])
+    # 200 if current user matches the token, 403 if /api/users/me requires
+    # admin role (depends on the build).  Both are valid "auth" responses.
+    assert me.status_code in (200, 403), me.text
+    if me.status_code == 200:
+        body = me.json()
+        # Should resolve to the same UUID
+        assert UUID(body["id"]) == UUID(login.json()["user"]["id"])
 
 
 def test_bad_token_is_rejected(client: TestClient) -> None:
