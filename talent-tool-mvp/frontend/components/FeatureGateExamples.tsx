@@ -35,7 +35,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { FeatureGate, useFeatureGate, GateState } from "@/components/FeatureGate";
-import { useServiceToggle } from "@/hooks/use-service-toggle";
+import { useServiceDecision } from "@/hooks/use-service-toggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -77,9 +77,9 @@ interface ServiceCardProps {
 }
 
 function ServiceStatusCard({ name, description }: ServiceCardProps) {
-  const decision = useServiceToggle(name);
+  const decision = useServiceDecision(name);
   const status = decision?.status || "missing";
-  const available = decision?.available;
+  const available = decision?.available ?? false;
   const planRequired = decision?.plan_required || "free";
 
   return (

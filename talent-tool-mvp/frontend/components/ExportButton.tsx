@@ -115,7 +115,7 @@ export function ExportButton({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+      <DropdownMenuTrigger>
         <Button variant={variant} size={size} className={className}>
           {loading ? (
             <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />

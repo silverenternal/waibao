@@ -1,0 +1,1 @@
+import {Skeleton} from "@/components/ui/skeleton"; export function LoadingState({rows=5,label="Loading"}:{rows?:number;label?:string}){return <div role="status" aria-label={label} className="space-y-3">{Array.from({length:rows},(_,i)=><Skeleton key={i} className="h-12 w-full"/>)}<span className="sr-only">{label}</span></div>}
