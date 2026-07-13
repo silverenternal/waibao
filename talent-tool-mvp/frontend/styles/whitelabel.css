@@ -1,0 +1,68 @@
+/*
+ * whitelabel.css — T3003
+ *
+ * Defines the default CSS custom properties consumed by
+ * <WhiteLabelProvider/>. The provider pushes live values into these
+ * variables at runtime so every Tailwind component that reads
+ * var(--color-primary), var(--logo-url) etc. renders the tenant's
+ * brand automatically.
+ *
+ * If you add a new variable:
+ *   1. Update lib/theme.ts (CSS_VAR_KEYS + DEFAULT_BRANDING).
+ *   2. Update services/platform/whitelabel.py (Branding + to_css_variables).
+ *   3. Document it here so designers know it's safe to use.
+ */
+
+:root {
+  --color-primary: #2563EB;
+  --color-secondary: #0F172A;
+  --color-accent: #F59E0B;
+  --logo-url: none;
+  --favicon-url: "";
+  --font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --product-name: "Waibao Recruitment";
+  --footer-text: "Powered by Waibao Recruitment";
+  --hide-powered-by: "false";
+  --support-email: "support@waibao.example.com";
+  --locale: "zh-CN";
+}
+
+/* Utility helpers consumed by statically-coded Tailwind components
+ * that want to opt into the brand colour without rewriting class names. */
+.brand-bg-primary {
+  background-color: var(--color-primary);
+}
+.brand-text-primary {
+  color: var(--color-primary);
+}
+.brand-border-primary {
+  border-color: var(--color-primary);
+}
+.brand-bg-secondary {
+  background-color: var(--color-secondary);
+}
+.brand-text-secondary {
+  color: var(--color-secondary);
+}
+.brand-bg-accent {
+  background-color: var(--color-accent);
+}
+.brand-text-accent {
+  color: var(--color-accent);
+}
+.brand-logo {
+  /* Use as a mask so the customer's logo retains its colours. */
+  background-color: var(--color-primary);
+  -webkit-mask-image: var(--logo-url);
+  mask-image: var(--logo-url);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+.brand-hide-powered-by[data-hide="true"] .powered-by {
+  display: none !important;
+}
