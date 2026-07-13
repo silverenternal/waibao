@@ -1,8 +1,8 @@
 # 招聘智能体 (Recruitment Agent)
 
-> **v7.0 — Enterprise SaaS 化 + AI 能力深化 (RAG/MultiAgent/Memory/LoRA/White-label)**
+> **v8.0 — Depth + Service Toggle + Data-Driven**
 >
-> 16 个智能体协同 + 完整 RAG + Multi-Agent 协作 + 统一记忆库 + ClickHouse 数仓 + BI 看板 + 预测分析 + SSO + 开放 API + Marketplace + 白标 + 私有化部署。
+> 服务开关 (50+ 服务可控) + 16 项需求做透 + 真实日活数据驱动 (自动周报 / 异常告警 / 用户行为分析) + 统一用户反馈入口。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org)
