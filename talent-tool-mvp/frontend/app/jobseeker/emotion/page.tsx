@@ -1,19 +1,20 @@
 "use client";
 
 /**
- * Emotion timeline page (T605).
+ * v9.1 — Emotion timeline page (T605).
  *
  * Layout:
- *   ┌─ Header ─────────────────────────────────────┐
- *   ├─ Stat strip (count / alerts / last 7d avg)   │
- *   ├─ Timeline chart (large, clickable points)    │
- *   ├─ Side panel: detail + correlation cards      │
- *   ├─ Weekly summary strip                        │
- *   └─ Daily correlation card (emotion vs diary)   │
+ *   ┌─ Header (sticky · title · range toggle · refresh) ───────┐
+ *   ├─ KPI band  (count / alerts / avg / mood band)           │
+ *   ├─ Tabs    折线图 / 情绪分布 / 日报                           │
+ *   │   ├─ tab 折线: chart + detail + correlation              │
+ *   │   ├─ tab 分布: emotion donut + intensity histogram       │
+ *   │   └─ tab 日报: EmotionWeekSummary + EmotionCareCard      │
+ *   └─ 关怀 / 风险 trigger correlation  (sticky bottom?)       │
  *
- * Clicking a point on the chart pulls that day's data into the
- * `EmotionEventDetail` side card. The page polls every 60s so newly
- * detected emotions surface without a manual refresh.
+ * Clicking a chart point surfaces its day in the `EmotionEventDetail`
+ * side card. The page polls every 60s so newly detected emotions surface
+ * without a manual refresh.
  */
 
 import * as React from "react";
@@ -25,13 +26,22 @@ import {
   Heart,
   AlertTriangle,
   CalendarRange,
-  TrendingUp,
+  Activity,
+  PieChart as PieChartIcon,
+  Notebook,
+  HeartHandshake,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 
 import {
   EmotionTimelineChart,
@@ -47,6 +57,17 @@ import {
   type RawTimelineRow,
 } from "@/components/EmotionWeekSummary";
 import { EmotionTriggerCorrelation } from "@/components/EmotionTriggerCorrelation";
+import {
+  EmotionCareCard,
+  type CareTicket,
+  type CareAction,
+} from "@/components/emotion/EmotionCareCard";
+import {
+  TremorKpiCard,
+  TremorKpiGrid,
+  TremorPanel,
+} from "@/components/charts/tremor-shell";
+import { EmotionDistribution } from "@/components/emotion/EmotionDistribution";
 
 const POLL_MS = 60_000;
 
@@ -70,6 +91,11 @@ async function authHeaders(): Promise<HeadersInit> {
   return {};
 }
 
+interface CareApiResponse {
+  ticket?: CareTicket;
+  actions?: CareAction[];
+}
+
 export default function EmotionTimelinePage() {
   const router = useRouter();
   const [points, setPoints] = React.useState<EmotionPoint[]>([]);
@@ -81,6 +107,7 @@ export default function EmotionTimelinePage() {
   const [refreshing, setRefreshing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [days, setDays] = React.useState(30);
+  const [care, setCare] = React.useState<CareApiResponse | null>(null);
 
   const load = React.useCallback(
     async (manual = false) => {
@@ -153,6 +180,20 @@ export default function EmotionTimelinePage() {
 
         // If detail panel was empty, fold in the newest row.
         setSelected((prev) => prev ?? toDetail(emotionPoints[emotionPoints.length - 1]));
+
+        // Optionally fetch active care ticket (best-effort)
+        try {
+          const careResp = await fetch(`${API_BASE}/api/emotion/care/active`, {
+            headers,
+            cache: "no-store",
+          });
+          if (careResp.ok) {
+            const careJson = (await careResp.json()) as CareApiResponse;
+            setCare(careJson);
+          }
+        } catch {
+          /* care is optional */
+        }
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : "加载失败");
       } finally {
@@ -170,19 +211,37 @@ export default function EmotionTimelinePage() {
   }, [load]);
 
   // ---------------------------------------------------------------- stats
-  const { alerts, avg30d, count, lastEventAt } = React.useMemo(() => {
+  const { alerts, avg, count, lastEventAt, spark, prevAvg } = React.useMemo(() => {
     const sentiments = points
       .map((p) => p.sentiment)
       .filter((v): v is number => typeof v === "number");
+    const sum = sentiments.reduce((a, b) => a + b, 0);
+    const mean = sentiments.length ? sum / sentiments.length : 0;
+    const half = Math.floor(sentiments.length / 2);
+    const prev =
+      sentiments.length > 4
+        ? sentiments.slice(0, half).reduce((a, b) => a + b, 0) / Math.max(1, half)
+        : null;
     return {
       count: points.length,
       alerts: points.filter((p) => p.needs_attention).length,
-      avg30d: sentiments.length
-        ? sentiments.reduce((a, b) => a + b, 0) / sentiments.length
-        : 0,
+      avg: mean,
       lastEventAt: points[points.length - 1]?.date ?? null,
+      spark: sentiments.slice(-14),
+      prevAvg: prev,
     };
   }, [points]);
+
+  const deltaPct = React.useMemo(() => {
+    if (prevAvg == null || Math.abs(prevAvg) < 1e-6) return null;
+    return ((avg - prevAvg) / Math.abs(prevAvg)) * 100;
+  }, [avg, prevAvg]);
+
+  const moodBand = React.useMemo(() => {
+    if (avg > 0.2) return { label: "状态向好", tone: "emerald" as const };
+    if (avg < -0.2) return { label: "需要支持", tone: "rose" as const };
+    return { label: "平稳", tone: "slate" as const };
+  }, [avg]);
 
   const weeklyRows = React.useMemo(
     () => weeklyAggregate(points as unknown as RawTimelineRow[], 4),
@@ -190,7 +249,12 @@ export default function EmotionTimelinePage() {
   );
 
   const correlation = React.useMemo(() => {
-    const out: { date: string; sentiment: number; moodScore: number; journalRating: "excellent" | "good" | "warning" | null }[] = [];
+    const out: {
+      date: string;
+      sentiment: number;
+      moodScore: number;
+      journalRating: "excellent" | "good" | "warning" | null;
+    }[] = [];
     for (const p of points) {
       const mood = journalPoints.find((j) => j.date === p.date);
       if (mood && p.sentiment != null) {
@@ -206,7 +270,7 @@ export default function EmotionTimelinePage() {
   }, [points, journalPoints]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100">
       <header className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4">
           <div className="flex items-center gap-3">
@@ -224,7 +288,7 @@ export default function EmotionTimelinePage() {
                 情绪时间线
               </h1>
               <p className="text-xs text-muted-foreground">
-                折线 + 触发事件叠加,数据每 {Math.round(POLL_MS / 1000)} 秒刷新
+                折线 · 触发事件 · 关联日记 · 周报 · 关怀,数据每 {Math.round(POLL_MS / 1000)} 秒刷新
               </p>
             </div>
           </div>
@@ -255,31 +319,52 @@ export default function EmotionTimelinePage() {
       </header>
 
       <main className="mx-auto max-w-6xl space-y-6 px-6 py-6">
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatCard
-            label="记录数"
-            value={count.toString()}
-            icon={<CalendarRange className="size-4 text-blue-500" />}
+        {/* KPI band — Tremor style */}
+        <TremorKpiGrid>
+          <TremorKpiCard
+            title="记录数"
+            value={count}
+            unit="条"
+            helper={`最近 ${days} 天`}
+            spark={spark.length > 1 ? spark : undefined}
           />
-          <StatCard
-            label="关注告警"
-            value={alerts.toString()}
-            tone={alerts > 0 ? "rose" : "emerald"}
-            icon={<AlertTriangle className="size-4 text-rose-500" />}
+          <TremorKpiCard
+            title="关注告警"
+            value={alerts}
+            unit="次"
+            delta={alerts > 0 ? alerts * 8 : 0}
+            helper={alerts > 0 ? "建议联系 HR" : "状态稳定"}
           />
-          <StatCard
-            label={`${days}天均值`}
-            value={avg30d.toFixed(2)}
-            icon={<TrendingUp className="size-4 text-emerald-500" />}
+          <TremorKpiCard
+            title="情绪均值"
+            value={avg.toFixed(2)}
+            helper={`${days} 天滑动平均`}
+            delta={deltaPct ?? undefined}
           />
-          <StatCard
-            label="最近记录"
-            value={lastEventAt ?? "—"}
-            icon={<Heart className="size-4 text-pink-500" />}
-            small
+          <TremorKpiCard
+            title="状态带"
+            value={moodBand.label}
+            helper={
+              lastEventAt ? `最近记录 · ${lastEventAt}` : "尚无记录"
+            }
           />
-        </div>
+        </TremorKpiGrid>
+
+        {care?.ticket && (
+          <section className="space-y-2">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+              <HeartHandshake className="size-4 text-rose-500" />
+              关怀与建议
+              <Badge variant="destructive" className="ml-auto text-[10px]">
+                待处理
+              </Badge>
+            </div>
+            <EmotionCareCard
+              ticket={care.ticket}
+              actions={care.actions ?? []}
+            />
+          </section>
+        )}
 
         {loading ? (
           <Card>
@@ -299,44 +384,68 @@ export default function EmotionTimelinePage() {
             </CardContent>
           </Card>
         ) : (
-          <>
-            {/* Chart + detail */}
-            <div className="grid gap-4 lg:grid-cols-3">
-              <Card className="lg:col-span-2">
-                <CardContent className="py-4">
-                  <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">
-                    <TrendingUp className="size-4 text-indigo-500" />
-                    情绪倾向 · 强度 · 触发事件
-                  </h2>
+          <Tabs defaultValue="timeline" className="space-y-4">
+            <TabsList className="w-full sm:w-fit">
+              <TabsTrigger value="timeline">
+                <Activity className="mr-1.5 size-3.5" /> 折线图
+              </TabsTrigger>
+              <TabsTrigger value="distribution">
+                <PieChartIcon className="mr-1.5 size-3.5" /> 情绪分布
+              </TabsTrigger>
+              <TabsTrigger value="weekly">
+                <CalendarRange className="mr-1.5 size-3.5" /> 周报
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="timeline">
+              <div className="grid gap-4 lg:grid-cols-3">
+                <TremorPanel
+                  title="情绪倾向 · 强度 · 触发事件"
+                  description="点击任意点查看当日详情"
+                  className="lg:col-span-2"
+                >
                   <EmotionTimelineChart
                     data={points}
                     height={340}
                     onPointClick={(p) => setSelected(toDetail(p))}
                   />
-                </CardContent>
-              </Card>
-              <EmotionEventDetail
-                event={selected}
-                onClose={() => setSelected(null)}
-                onOpenJournal={(id) => router.push(`/journal/${id}`)}
-              />
-            </div>
+                </TremorPanel>
+                <EmotionEventDetail
+                  event={selected}
+                  onClose={() => setSelected(null)}
+                  onOpenJournal={(id) => router.push(`/jobseeker/journal/${id}`)}
+                />
+              </div>
 
-            {/* Weekly strip */}
-            <section className="space-y-2">
-              <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-                <CalendarRange className="size-4 text-violet-500" />
-                按周汇总
-                <Badge variant="outline" className="ml-auto text-[10px]">
-                  最近 {weeklyRows.length} 周
-                </Badge>
-              </h2>
-              <EmotionWeekSummary rows={weeklyRows} />
-            </section>
+              <div className="mt-4">
+                <EmotionTriggerCorrelation joined={correlation} />
+              </div>
+            </TabsContent>
 
-            {/* Correlation */}
-            <EmotionTriggerCorrelation joined={correlation} />
-          </>
+            <TabsContent value="distribution">
+              <TremorPanel
+                title="情绪分布"
+                description="按主情绪频次 + 强度直方图"
+              >
+                <EmotionDistribution points={points} />
+              </TremorPanel>
+            </TabsContent>
+
+            <TabsContent value="weekly">
+              <section className="space-y-3">
+                <header className="flex items-center gap-2">
+                  <Notebook className="size-4 text-violet-500" />
+                  <h2 className="text-sm font-semibold text-slate-800">
+                    按周汇总
+                  </h2>
+                  <Badge variant="outline" className="ml-auto text-[10px]">
+                    最近 {weeklyRows.length} 周
+                  </Badge>
+                </header>
+                <EmotionWeekSummary rows={weeklyRows} />
+              </section>
+            </TabsContent>
+          </Tabs>
         )}
       </main>
     </div>
@@ -344,51 +453,8 @@ export default function EmotionTimelinePage() {
 }
 
 // ---------------------------------------------------------------------------
-// Sub-blocks
+// Helpers
 // ---------------------------------------------------------------------------
-
-function StatCard({
-  label,
-  value,
-  icon,
-  tone,
-  small,
-}: {
-  label: string;
-  value: string;
-  icon: React.ReactNode;
-  tone?: "emerald" | "rose";
-  small?: boolean;
-}) {
-  return (
-    <Card
-      className={cn(
-        tone === "rose"
-          ? "border-rose-200 bg-rose-50/30"
-          : tone === "emerald"
-            ? "border-emerald-200 bg-emerald-50/30"
-            : "border-slate-200",
-      )}
-    >
-      <CardContent className="flex items-center gap-2 py-3">
-        <span className="grid size-8 place-items-center rounded-lg bg-white shadow-sm ring-1 ring-black/5">
-          {icon}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] uppercase tracking-wide text-slate-500">{label}</p>
-          <p
-            className={cn(
-              "font-semibold tabular-nums text-slate-900",
-              small ? "text-xs" : "text-base",
-            )}
-          >
-            {value}
-          </p>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 function toDetail(p?: EmotionPoint): EmotionEventDetailData | null {
   if (!p) return null;

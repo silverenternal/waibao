@@ -1,15 +1,16 @@
 # 招聘智能体 (Recruitment Agent)
 
-> **v9.0 — Frontend Enterprise Rebuild**
+> **v9.1 — Jobseeker 端 Enterprise Rebuild**
 >
-> 前端整体重做达到企业级 (Refine + shadcn/admin + Tremor + Open WebUI + OpenResume 五大开源参考),共享 design tokens / 组件库 / Storybook / A11y,后端 3700+ 测试通过,5 端 (Web + 小程序 + 钉钉 + 飞书 + PWA) 视觉一致。
+> v9.0 完成雇主端+管理端+前端架构;**v9.1 完成求职者端整体重做**,三大端 (Jobseeker + Employer + Admin) 全部达到企业级。借鉴 5 个开源项目 (Refine + shadcn-admin + Tremor + Open WebUI + OpenResume + Cal.com),共享 150+ components / 60+ tokens / Storybook / A11y,后端测试 3533 passed + 72 deselected (infrastructure 失败属环境,详见 docs)。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org)
-[![Tests](https://img.shields.io/badge/tests-3700%2B%20passed-green.svg)](./talent-tool-mvp/backend/tests)
+[![Tests](https://img.shields.io/badge/tests-3533%20passed-green.svg)](./talent-tool-mvp/backend/tests)
+[![Storybook](https://img.shields.io/badge/Storybook-150%20stories-ff4785.svg)](./talent-tool-mvp/frontend/.storybook)
 [![Providers](https://img.shields.io/badge/providers-7%20capabilities%20×%20N%20vendors-blue.svg)](./talent-tool-mvp/backend/providers/README.md)
-[![v8.1](https://img.shields.io/badge/version-8.1.0-blueviolet.svg)](./CHANGELOG.md)
+[![v9.1](https://img.shields.io/badge/version-9.1.0-blueviolet.svg)](./CHANGELOG.md)
 
 ---
 
@@ -162,8 +163,11 @@ terraform apply
 
 | 文档 | 内容 |
 |---|---|
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 整体架构 (含 RAG/MultiAgent/Memory/BI/SSO/LoRA) |
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 整体架构 (含 RAG/MultiAgent/Memory/BI/SSO/LoRA + 前端 5 端) |
 | [docs/AI_DEEP.md](./docs/AI_DEEP.md) | RAG / Multi-Agent / Memory / Fine-tuning 详解 |
+| [docs/FRONTEND_SELECTION.md](./docs/FRONTEND_SELECTION.md) | 前端 5 开源选型 (Refine + shadcn-admin + Tremor + Open WebUI + OpenResume + Cal.com) |
+| [docs/COMPONENTS.md](./docs/COMPONENTS.md) | 60+ 组件目录 + 用法 + props |
+| [docs/I18N_GUIDE.md](./talent-tool-mvp/docs/I18N_GUIDE.md) | 国际化 (zh-CN / en-US / ja-JP) 添加与同步 |
 | [docs/PRIVATE_DEPLOYMENT.md](./docs/PRIVATE_DEPLOYMENT.md) | 白标 + 私有化部署 |
 | [docs/VENDOR_SELECTION.md](./docs/VENDOR_SELECTION.md) | 开源选型决策记录 |
 | [docs/COMMERCIAL.md](./docs/COMMERCIAL.md) | 商业化 / 计费 / 隐私 / 合同 |

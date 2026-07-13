@@ -201,3 +201,81 @@ Talent-partner + admin widgets.
 * [docs/STORYBOOK.md](STORYBOOK.md) — running and writing stories.
 * [frontend/.storybook/main.ts](../talent-tool-mvp/frontend/.storybook/main.ts) — story globs.
 * [frontend/.storybook/preview.ts](../talent-tool-mvp/frontend/.storybook/preview.ts) — global decorators.
+---
+
+## v9.1 Component Inventory (2026-07-13)
+
+**315 components across 47 domains · 150 Storybook stories.**
+
+### Jobseeker (新增 v9.1 — 主)
+
+| Domain | Component | Purpose |
+|---|---|---|
+| `jobseeker/` | `<ProactiveBanner/>` | 顶部今日关怀 |
+| `jobseeker/` | `<ChatBubble/>` `<ChatInput/>` `<ChatMessageList/>` | AI 知心朋友 |
+| `jobseeker/` | `<ResumeSection/>` `<ResumeEditor/>` `<ResumeExport/>` | 简历块 |
+| `jobseeker/` | `<JournalCard/>` `<JournalEditor/>` `<JournalRating/>` | 行业日记 |
+| `jobseeker/` | `<EmotionDistribution/>` `<EmotionCareCard/>` | 情绪视图 |
+| `jobseeker/` | `<PlanTimeline/>` `<PlanMilestoneCard/>` | 规划执行 |
+| `jobseeker/` | `<InterviewRealtime/>` `<InterviewPersonaPicker/>` | AI 面试 |
+| `jobseeker/` | `<OfferCompare/>` `<OfferNegotiateForm/>` `<OfferScoreCard/>` | Offer |
+| `jobseeker/` | `<MemoryTimeline/>` `<MemoryEvidenceList/>` | AI 理解的我 |
+| `jobseeker/` | `<ProactiveToast/>` | 主动 push |
+
+### Shared (复用 v9.0 + 增加 v9.1)
+
+| Domain | Count | Notes |
+|---|---|---|
+| `ui/` | 30+ | Button/Card/Input/Select/Dialog/Tabs/Toast/Tooltip/Badge |
+| `shared/` | 15+ | EmptyState/LoadingShell/ErrorBoundary/MetricStat |
+| `charts/` | 6 | Tremor KPI/BarChart/LineChart/DonutChart |
+
+### Employer (v9.0)
+
+- `mothership/`: HandoffCard, MatchDetailCard, PipelineStage
+- `mind/`: JDGenerator, CandidateRankList
+- `hr/`: ToneTrainer, BiasAuditResult, StrategyShoutout, JDMarketing
+- `compliance/`: FakeCredentialDetector, PolicyExplainer
+- `jd/`: Generator, MarketingDashboard
+- `compare/`: CandidateCompare, RoleCompare
+- `cost/`: CostBreakdownChart, CostAlertBadge
+- `features/`: FeatureFlagToggle, FeatureCatalog
+- … 共 31 个 domain
+
+### Admin (v9.0 + 增加)
+
+- `admin/`: ResourceList, ResourceForm, AuditTable
+- `audit/`: AuditLogTable, AuditTimeline
+- `feature-flags/`: FlagEditor, FlagAuditTrail
+- `experiments/`: ExperimentCard, ABTestDetail
+
+### Storybook 共 150 stories — 主要目录
+
+- `components/ui/*.stories.tsx` (30+)
+- `components/charts/*.stories.tsx` (6)
+- `components/jobseeker/*.stories.tsx` (25+)
+- `components/mothership/*.stories.tsx` (20+)
+- `components/hr/*.stories.tsx` (10+)
+- `components/compliance/*.stories.tsx` (5+)
+- `components/admin/*.stories.tsx` (15+)
+- `components/mind/*.stories.tsx` (10+)
+- … 跨 47 个目录
+
+### 用法 (约定)
+
+```tsx
+// 1. import
+import { Button } from "@/components/ui/button";
+
+// 2. 用 design token (Tailwind 已经映射 --color-primary 到 bg-primary)
+<Button className="bg-primary text-primary-foreground">Save</Button>
+
+// 3. 域组件
+import { ProactiveBanner } from "@/components/jobseeker/ProactiveBanner";
+<ProactiveBanner items={nudges} locale={locale} />
+```
+
+### 测试
+
+- Storybook stories 充当 visual test (`npm run storybook:test` → Chromatic 视觉回归)。
+- Domain components 加 Playwright `tests/jobseeker-v91.spec.ts` (7 paths)。

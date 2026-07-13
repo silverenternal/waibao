@@ -1,5 +1,5 @@
 site_name: 招聘智能体
-site_description: v9.0 - 前端整体重做达到企业级 (Refine + shadcn/admin + Tremor + Open WebUI + OpenResume)
+site_description: v9.1 - Jobseeker 端整体重做完成 (Refine + shadcn-admin + Tremor + Open WebUI + OpenResume + Cal.com)
 site_author: waibao
 
 repo_name: silverenternal/waibao

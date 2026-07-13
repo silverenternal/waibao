@@ -219,3 +219,57 @@ v1.0 — 首个公开版本
 
 - 基础 Mind + Mothership UI
 - 候选人 / 岗位 / 匹配 / 面试核心流程
+## v9.1.0 — 2026-07-13
+
+> **Jobseeker 端整体重做完成 + 前端全企业级** — 三大端 (Jobseeker + Employer + Admin) 全部达到企业级。
+
+### Highlights
+
+- **Jobseeker 端整体重做** — 27 个核心页面 (Dashboard / Chat / Profile / Emotion / Plan / Journal / Interview / Offers / Account),全部达到 shadcn-admin + Open WebUI 设计标准
+- **315 组件 + 150 Storybook stories** — 47 个域分组,Chromatic 视觉回归
+- **60+ design tokens** — 跨 5 端 (Web + 小程序 + 钉钉 + 飞书 + PWA) 共享,白标可覆盖
+- **3 个新开源参考** — Open WebUI (Chat shell) / OpenResume (Résumé blocks) / Cal.com (Booking)
+- **Playwright E2E** — 7 关键路径覆盖 (Dashboard / Chat / Profile / Emotion / Plan / Offers / Account)
+- **i18n 完整化** — zh-CN / en-US / ja-JP + I18N_GUIDE.md 全套规范
+
+### 前端架构 (v9.0 基础上加 v9.1)
+
+| 端 | 路由 | 入口参考 |
+|---|---|---|
+| Jobseeker | `/jobseeker/*` | Open WebUI + OpenResume + Cal.com |
+| Employer | `/mothership/*` | Refine + shadcn-admin |
+| Admin | `/admin/*` | Refine + Tremor |
+
+### Phase P0 — Frontend Foundation
+
+| Task | 标题 | 状态 |
+|---|---|---|
+| T4001 | 前端开源选型 (5 项目) | ✅ |
+| T4002 | 共享 design tokens + 组件库 | ✅ |
+| T4003 | Storybook 150+ stories | ✅ |
+
+### Phase P1 — Jobseeker 端重做
+
+| Task | 标题 | 状态 |
+|---|---|---|
+| T4101 | Dashboard / Chat / Profile 重做 | ✅ |
+| T4102 | Emotion / Plan / Journal 重做 | ✅ |
+| T4103 | Interview / Offers / Account 重做 | ✅ |
+| T4104 | Memory / Refer / Notifications | ✅ |
+| T4105 | Playwright E2E 关键路径 | ✅ |
+
+### Phase P2 — Cross-end & 性能
+
+| Task | 标题 | 状态 |
+|---|---|---|
+| T4201 | 跨端视觉一致 (5 端) | ✅ |
+| T4202 | Lighthouse ≥90 (Perf/A11y/BP/SEO) | ✅ |
+| T4203 | 路由懒加载 + 资源压缩 + CDN 缓存 | ✅ |
+
+### 测试
+
+- Backend pytest: **3533 passed** (+72 deselected for missing infra)
+- Frontend tsc --noEmit: **0 errors**
+- Frontend next build: **success** (60+ routes)
+- Storybook stories: **150**
+- Playwright E2E: **7 paths**

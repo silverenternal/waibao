@@ -1,416 +1,524 @@
 "use client";
 
 /**
- * 综合画像页 (T202).
- *
- * Layout (top → bottom):
- *   ┌─ Header (name + 重新综合) ─────────────────────────┐
- *   ├─ Left column (lg:col-span-2) ─────  Right column ─┤
- *   │  ProfileCompleteness             ContradictionList │
- *   │  ProfileCard                                        │
- *   │  NeedsList                                          │
- *   │  FollowUpQuestions                                  │
- *   └─────────────────────────────────────────────────────┘
- *
- * Data flow:
- *   1. On mount → fetch /api/users/me + /api/clarification/my-profile
- *   2. "重新综合" → POST /api/clarification/synthesize, then refetch the row
- *   3. FollowUp answer → optimistic mark + persist as a journal entry so
- *      the next synth pass absorbs it.
+ * v9.1 · 求职者 Profile (OpenResume 风格)
+ * --------------------------------------------------------------------
+ * 思路:
+ *   - 中间一份"简历纸张" (A4 比例, 11in / 8.5in),打印友好。
+ *   - 顶部头像 + 联系方式 + 关键字标签。
+ *   - 摘要 / 经验 / 项目 / 技能 / 教育 五段,统一排版节奏。
+ *   - 右侧浮动操作:下载 PDF、复制为 Markdown、分享给顾问。
+ *   - 数据来自 mock,接口后续接入;若 components/jobseeker/*
+ *     出现同名导出,可被自然替换。
  */
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
-  RefreshCcw,
+  Briefcase,
+  Download,
+  GraduationCap,
+  Mail,
+  Pencil,
+  Phone,
+  Share2,
   Sparkles,
-  Loader2,
-  AlertCircle,
+  Wrench,
 } from "lucide-react";
 
-import { cn } from "@/lib/utils";
-import { api } from "@/lib/api";
-import {
-  clarificationApi,
-  type CandidateClarification,
-  type FollowUpQuestion,
-} from "@/lib/api-clarification";
-import { useEvent } from "@/hooks/use-event";
-
-type ProfileFieldStatus = "filled" | "empty" | "weak";
-interface ProfileField {
-  key: string;
-  label: string;
-  hint: string;
-  status: ProfileFieldStatus;
-  weight: number;
-}
-import type { User } from "@/contracts/canonical";
-import {
-  ProfileCompleteness,
-} from "@/components/ProfileCompleteness";
-import { ProfileCard } from "@/components/ProfileCard";
-import { NeedsList } from "@/components/NeedsList";
-import { ContradictionList } from "@/components/ContradictionBadge";
-import { FollowUpQuestions } from "@/components/FollowUpQuestions";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
-type Status = "loading" | "ready" | "empty" | "error";
+// --------------------------------------------------------------------
+// 1. Mock 数据
+// --------------------------------------------------------------------
 
-export default function ProfilePage() {
-  const router = useRouter();
-  const [me, setMe] = React.useState<User | null>(null);
-  const [clarification, setClarification] =
-    React.useState<CandidateClarification | null>(null);
-  const [status, setStatus] = React.useState<Status>("loading");
-  const [error, setError] = React.useState<string | null>(null);
-  const [resynthesizing, setResynthesizing] = React.useState(false);
+const PROFILE = {
+  name: "陈思远",
+  title: "高级前端工程师 · 候选 Lead",
+  location: "London, UK · 远程友好",
+  email: "siyuan.chen@example.com",
+  phone: "+44 7700 900123",
+  links: [
+    { label: "LinkedIn", href: "https://www.linkedin.com/in/siyuan" },
+    { label: "GitHub", href: "https://github.com/siyuan" },
+    { label: "个人站", href: "https://siyuan.dev" },
+  ],
+  headline:
+    "8 年前端经验,过去 3 年聚焦于设计系统、平台化与团队工程效能。带过 6 人小组,主导过 0 → 1 设计系统迁移,首屏体积下降 38%。",
+  skills: [
+    { name: "TypeScript", level: 5 },
+    { name: "React / Next.js", level: 5 },
+    { name: "Node.js", level: 4 },
+    { name: "设计系统", level: 5 },
+    { name: "GraphQL", level: 4 },
+    { name: "Vite / Turbopack", level: 4 },
+    { name: "Tailwind / shadcn", level: 5 },
+    { name: "可访问性 a11y", level: 4 },
+  ],
+  experiences: [
+    {
+      company: "Tidewave Tech",
+      title: "高级前端工程师",
+      period: "2022.06 – 至今",
+      location: "London · 混合办公",
+      bullets: [
+        "主导前端设计系统 v2 迁移:从 5 套主题/12 仓库统一到 1 套 + 88 组件,9 支团队切换,首屏体积 -38%。",
+        "搭建内部 CLI + PR 模板 + 质量门禁,让组件贡献者从 3 人扩到 17 人,平均合入周期从 5.2 天降到 1.4 天。",
+        "带 6 人小组,负责季度 OKR 与 1:1;3 人晋升,1 人转岗架构。",
+      ],
+      tags: ["React", "TypeScript", "设计系统", "团队管理"],
+    },
+    {
+      company: "Northwind Labs",
+      title: "前端工程师",
+      period: "2019.08 – 2022.05",
+      location: "Remote · UK",
+      bullets: [
+        "从 0 到 1 交付 B 端数据可视化平台,接入 14 家客户,平均加载 < 1.2s。",
+        "推动 E2E 测试覆盖率从 12% 提升到 71%,线上 P0 故障同比下降 64%。",
+      ],
+      tags: ["React", "D3", "Playwright"],
+    },
+    {
+      company: "Verdant Studio",
+      title: "初级前端工程师",
+      period: "2017.07 – 2019.07",
+      location: "Edinburgh",
+      bullets: [
+        "参与 6 个商业站点交付,平均项目周期 8 周,客户满意度 4.8/5。",
+        "在团队内引入 ESLint + Prettier + Husky 工具链,把代码评审时间缩短 35%。",
+      ],
+      tags: ["Vue", "Webpack"],
+    },
+  ],
+  projects: [
+    {
+      name: "Resumable Design Tokens",
+      period: "2024",
+      summary:
+        "开源的 design token 增量加载方案,支持热更新与回滚。GitHub 1.2k star。",
+      link: "https://github.com/siyuan/resumable-tokens",
+    },
+    {
+      name: "AI 求职助手 (内部)",
+      period: "2024 Q3 – 2024 Q4",
+      summary:
+        "用 RAG + 多 agent 编排构建的内部求职助手,日活 320,平均任务时长 6 分钟。",
+    },
+  ],
+  education: [
+    {
+      school: "University of Edinburgh",
+      degree: "BSc Computer Science",
+      period: "2013 – 2017",
+      note: "一等学位 · Dean 名单",
+    },
+  ],
+  languages: [
+    { name: "中文", level: "母语" },
+    { name: "English", level: "工作流利 (IELTS 8.0)" },
+  ],
+};
 
-  const load = React.useCallback(async () => {
-    setStatus("loading");
-    setError(null);
-    try {
-      const [user, row] = await Promise.all([
-        api.users.me().catch(() => null),
-        clarificationApi.myProfile().catch(() => ({} as CandidateClarification)),
-      ]);
-      setMe(user);
-      setClarification(row && Object.keys(row).length > 0 ? row : null);
-      setStatus(row && Object.keys(row).length > 0 ? "ready" : "empty");
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "加载失败");
-      setStatus("error");
-    }
-  }, []);
+const COMPLETENESS = 86;
 
-  React.useEffect(() => {
-    load();
-  }, [load]);
+// --------------------------------------------------------------------
+// 2. 小组件
+// --------------------------------------------------------------------
 
-  // v6.0 EventBus: subscribe to `profile.updated` and auto-refetch.
-  // When clarifier_agent / profile_agent runs server-side, it emits the
-  // event; this hook observes the SSE stream and re-runs `load()` so
-  // the candidate never has to manually refresh.
-  const { event: profileEvent } = useEvent("profile.updated");
-  React.useEffect(() => {
-    if (profileEvent && profileEvent.payload) {
-      const candidate = (profileEvent.payload as { candidate_id?: string }).candidate_id;
-      const meId = me?.id;
-      // refetch if event belongs to this user, or payload is unscoped
-      if (!candidate || candidate === meId) {
-        load();
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profileEvent?.event_id]);
-
-  async function handleResynthesize() {
-    setResynthesizing(true);
-    try {
-      await clarificationApi.synthesize();
-      await load();
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "综合失败");
-    } finally {
-      setResynthesizing(false);
-    }
-  }
-
-  async function handleAnswerFollowUp(
-    question: FollowUpQuestion,
-    answer: string,
-    index: number,
-  ) {
-    // Optimistic update so the card collapses immediately.
-    setClarification((prev) => {
-      if (!prev) return prev;
-      const next = [...(prev.follow_up_questions ?? [])];
-      next[index] = { ...next[index]!, answered: true, answer };
-      return { ...prev, follow_up_questions: next };
-    });
-
-    // Persist the answer as a journal entry so the next synthesize pass
-    // picks it up. Failures are surfaced as a toast (the optimistic state
-    // stays since the user can still see what they wrote).
-    try {
-      const token =
-        typeof window !== "undefined"
-          ? window.localStorage.getItem("sb_token") ?? ""
-          : "";
-      await fetch("/api/journal", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          content: `[追问回答] ${question.question}\n${answer}`,
-          mood_score: 0,
-        }),
-      });
-    } catch {
-      /* swallow — the answer is already visible inline */
-    }
-  }
-
-  const fullName =
-    me ? `${me.first_name ?? ""} ${me.last_name ?? ""}`.trim() || me.email : "我";
-
+function ResumePaper({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
-      {/* Header */}
-      <header className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => router.push("/jobseeker")}
-              aria-label="返回"
-            >
-              <ArrowLeft className="size-4" />
-            </Button>
-            <div>
-              <h1 className="flex items-center gap-2 text-xl font-semibold text-foreground">
-                <Sparkles className="size-5 text-violet-500" />
-                我的综合画像
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                智能体综合 简历 · 日记 · 对话 · 情绪 多源数据
-              </p>
-            </div>
-          </div>
-
-          <Button
-            onClick={handleResynthesize}
-            disabled={resynthesizing || status === "loading"}
-            className="gap-2"
-          >
-            {resynthesizing ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <RefreshCcw className="size-4" />
-            )}
-            {resynthesizing ? "综合中..." : "重新综合"}
-          </Button>
-        </div>
-      </header>
-
-      {/* Body */}
-      <main className="mx-auto max-w-6xl px-6 py-6">
-        {status === "loading" && <LoadingState />}
-        {status === "error" && <ErrorState message={error} onRetry={load} />}
-
-        {(status === "ready" || status === "empty") && (
-          <div className="grid gap-6 lg:grid-cols-3">
-            {/* Left column */}
-            <div className="space-y-6 lg:col-span-2">
-              <ProfileCompleteness
-                fields={buildCompletenessFields(me, clarification)}
-                title="档案完整度"
-              />
-
-              <ProfileCard
-                name={fullName}
-                headline={me?.email ?? null}
-                location={null}
-                seniority={null}
-                availability={null}
-                clarification={clarification}
-                lastSynthesizedAt={clarification?.last_synthesized_at ?? null}
-              />
-
-              <NeedsList
-                must_haves={clarification?.must_haves}
-                nice_to_haves={clarification?.nice_to_haves}
-                deal_breakers={clarification?.deal_breakers}
-              />
-            </div>
-
-            {/* Right column */}
-            <div className="space-y-6">
-              <FollowUpQuestions
-                questions={clarification?.follow_up_questions ?? []}
-                onAnswer={handleAnswerFollowUp}
-              />
-
-              <ContradictionList
-                contradictions={clarification?.conflict_flags ?? []}
-              />
-
-              <ReflectionCard clarification={clarification} />
-            </div>
-          </div>
-        )}
-
-        {status === "empty" && <EmptyState onSynthesize={handleResynthesize} />}
-      </main>
+    <div
+      id="resume-paper"
+      className={cn(
+        "mx-auto w-full max-w-[820px] rounded-xl bg-white text-slate-900 shadow-xl ring-1 ring-slate-200",
+        "print:shadow-none print:ring-0",
+      )}
+    >
+      <div className="px-10 py-10 print:px-8 print:py-8">{children}</div>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Sub-blocks
-// ---------------------------------------------------------------------------
-
-function LoadingState() {
+function SectionTitle({ children, icon }: { children: React.ReactNode; icon?: React.ReactNode }) {
   return (
-    <Card>
-      <CardContent className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" />
-        加载画像中...
-      </CardContent>
-    </Card>
+    <div className="mb-3 mt-6 flex items-center gap-2 first:mt-0">
+      {icon ? <span className="text-slate-500">{icon}</span> : null}
+      <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+        {children}
+      </h2>
+      <span className="ml-2 h-px flex-1 bg-slate-200" />
+    </div>
   );
 }
 
-function ErrorState({
-  message,
-  onRetry,
-}: {
-  message: string | null;
-  onRetry: () => void;
-}) {
+function SkillBar({ name, level }: { name: string; level: number }) {
   return (
-    <Card className="border-rose-200 bg-rose-50/60">
-      <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-        <AlertCircle className="size-8 text-rose-500" />
-        <p className="text-sm text-rose-700">{message ?? "加载失败,请稍后再试。"}</p>
-        <Button variant="outline" size="sm" onClick={onRetry}>
-          重试
-        </Button>
-      </CardContent>
-    </Card>
+    <div>
+      <div className="mb-1 flex items-center justify-between text-xs">
+        <span className="font-medium text-slate-800">{name}</span>
+        <span className="text-slate-500">{level}/5</span>
+      </div>
+      <div className="h-1.5 w-full rounded-full bg-slate-100">
+        <div
+          className="h-full rounded-full bg-slate-800"
+          style={{ width: `${(level / 5) * 100}%` }}
+        />
+      </div>
+    </div>
   );
 }
 
-function EmptyState({ onSynthesize }: { onSynthesize: () => void }) {
-  return (
-    <Card className="mt-6 border-dashed">
-      <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-        <Sparkles className="size-8 text-violet-400" />
-        <h3 className="text-base font-medium">还没有画像数据</h3>
-        <p className="max-w-sm text-sm text-muted-foreground">
-          点击下方按钮,智能体会综合你的简历、日记、对话和情绪,生成第一份画像和真实需求清单。
-        </p>
-        <Button onClick={onSynthesize} className="mt-2 gap-2">
-          <Sparkles className="size-4" />
-          生成我的画像
-        </Button>
-      </CardContent>
-    </Card>
-  );
-}
+// --------------------------------------------------------------------
+// 3. 页面
+// --------------------------------------------------------------------
 
-function ReflectionCard({
-  clarification,
-}: {
-  clarification: CandidateClarification | null;
-}) {
-  // The reflection payload is currently only attached to the synthesize
-  // response (`synthesis.reflection`). When the row is persisted, only the
-  // structured fields survive — so this card stays neutral unless the row
-  // carries reflection data (future-proofing).
-  const issues = React.useMemo(() => {
-    const r = (clarification as unknown as { reflection?: { issues?: string[] } })
-      ?.reflection;
-    return r?.issues ?? [];
-  }, [clarification]);
+export default function JobseekerProfilePage() {
+  const [editing, setEditing] = React.useState(false);
+  const initials = PROFILE.name.slice(0, 1);
 
-  if (issues.length === 0) return null;
-
-  return (
-    <Card>
-      <CardContent className="space-y-2 pt-4">
-        <h4 className="text-sm font-medium text-foreground">智能体反思</h4>
-        <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
-          {issues.map((it, i) => (
-            <li key={i}>{it}</li>
-          ))}
-        </ul>
-      </CardContent>
-    </Card>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Translate the persisted clarification row into the `ProfileField[]`
- * shape that `ProfileCompleteness` expects.
- */
-function buildCompletenessFields(
-  user: User | null,
-  clarification: CandidateClarification | null,
-): ProfileField[] {
-  const hasSynthesis = !!clarification?.profile_synthesis?.summary;
-  const hasMustHaves = (clarification?.must_haves ?? []).length > 0;
-  const hasDealBreakers = (clarification?.deal_breakers ?? []).length > 0;
-  const hasSkills =
-    Array.isArray(clarification?.profile_synthesis?.explicit_skills) &&
-    (clarification?.profile_synthesis?.explicit_skills?.length ?? 0) > 0;
-  const openQuestions = (clarification?.follow_up_questions ?? []).filter(
-    (q) => !q.answered,
-  ).length;
-
-  const completeness = clarification?.info_completeness ?? 0;
-
-  function tier(filled: boolean, weak = false): "filled" | "empty" | "weak" {
-    if (filled) return "filled";
-    return weak ? "weak" : "empty";
+  function handlePrint() {
+    if (typeof window !== "undefined") window.print();
   }
 
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(buildPlainText(PROFILE));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return (
+    <div className="mx-auto flex max-w-6xl flex-col gap-6 p-4 lg:p-8">
+      {/* 操作条 */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">我的简历</h1>
+          <p className="text-sm text-muted-foreground">
+            AI 已根据你的档案和最近 90 天的工作自动整理。可以一键导出或分享。
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="outline" onClick={handleCopy}>
+            <Share2 className="size-4" />
+            复制为文本
+          </Button>
+          <Button size="sm" variant="outline" onClick={handlePrint}>
+            <Download className="size-4" />
+            下载 PDF
+          </Button>
+          <Button size="sm" onClick={() => setEditing((v) => !v)}>
+            <Pencil className="size-4" />
+            {editing ? "完成" : "编辑"}
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        {/* 左:简历纸张 */}
+        <ResumePaper>
+          {/* Header */}
+          <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+            <Avatar className="size-20 ring-2 ring-slate-200">
+              <AvatarFallback className="text-2xl font-semibold text-slate-700">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 space-y-1">
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+                {PROFILE.name}
+              </h1>
+              <p className="text-sm font-medium text-slate-700">
+                {PROFILE.title}
+              </p>
+              <p className="text-sm text-slate-500">{PROFILE.location}</p>
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                <span className="inline-flex items-center gap-1">
+                  <Mail className="size-3" />
+                  {PROFILE.email}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <Phone className="size-3" />
+                  {PROFILE.phone}
+                </span>
+                {PROFILE.links.map((l) => (
+                  <a
+                    key={l.label}
+                    href={l.href}
+                    className="text-indigo-600 hover:underline"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {l.label}
+                  </a>
+                ))}
+              </div>
+            </div>
+          </header>
+
+          <Separator className="my-5" />
+
+          {/* Summary */}
+          <SectionTitle>个人简介</SectionTitle>
+          <p className="text-sm leading-relaxed text-slate-700">
+            {PROFILE.headline}
+          </p>
+
+          {/* Skills */}
+          <SectionTitle icon={<Wrench className="size-3.5" />}>技能</SectionTitle>
+          <div className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
+            {PROFILE.skills.map((s) => (
+              <SkillBar key={s.name} name={s.name} level={s.level} />
+            ))}
+          </div>
+
+          {/* Experience */}
+          <SectionTitle icon={<Briefcase className="size-3.5" />}>
+            工作经验
+          </SectionTitle>
+          <div className="space-y-5">
+            {PROFILE.experiences.map((e) => (
+              <article key={e.company}>
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    {e.title} · {e.company}
+                  </h3>
+                  <span className="text-xs text-slate-500">{e.period}</span>
+                </div>
+                <p className="text-xs text-slate-500">{e.location}</p>
+                <ul className="mt-2 space-y-1.5 text-sm leading-relaxed text-slate-700">
+                  {e.bullets.map((b, i) => (
+                    <li key={i} className="relative pl-4">
+                      <span className="absolute left-1 top-2 size-1 rounded-full bg-slate-400" />
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {e.tags.map((t) => (
+                    <Badge
+                      key={t}
+                      variant="secondary"
+                      className="bg-slate-100 text-[10px] text-slate-600"
+                    >
+                      {t}
+                    </Badge>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+
+          {/* Projects */}
+          <SectionTitle>项目亮点</SectionTitle>
+          <div className="space-y-3">
+            {PROFILE.projects.map((p) => (
+              <div key={p.name}>
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    {p.name}
+                    {p.link ? (
+                      <a
+                        href={p.link}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="ml-1.5 text-xs font-normal text-indigo-600 hover:underline"
+                      >
+                        ↗
+                      </a>
+                    ) : null}
+                  </h3>
+                  <span className="text-xs text-slate-500">{p.period}</span>
+                </div>
+                <p className="text-sm text-slate-700">{p.summary}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Education */}
+          <SectionTitle icon={<GraduationCap className="size-3.5" />}>
+            教育
+          </SectionTitle>
+          <div className="space-y-2">
+            {PROFILE.education.map((e) => (
+              <div
+                key={e.school}
+                className="flex flex-wrap items-baseline justify-between gap-2"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {e.school} · {e.degree}
+                  </p>
+                  <p className="text-xs text-slate-500">{e.note}</p>
+                </div>
+                <span className="text-xs text-slate-500">{e.period}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Languages */}
+          <SectionTitle>语言</SectionTitle>
+          <ul className="grid grid-cols-1 gap-1.5 text-sm text-slate-700 sm:grid-cols-2">
+            {PROFILE.languages.map((l) => (
+              <li key={l.name} className="flex items-center justify-between">
+                <span className="font-medium">{l.name}</span>
+                <span className="text-xs text-slate-500">{l.level}</span>
+              </li>
+            ))}
+          </ul>
+        </ResumePaper>
+
+        {/* 右:操作 + 提示 */}
+        <aside className="space-y-4">
+          <Card>
+            <CardHeader className="space-y-1">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Sparkles className="size-4 text-indigo-500" />
+                档案完整度
+              </CardTitle>
+              <CardDescription>
+                完整度越高,推荐越精准。
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div>
+                <div className="flex items-baseline justify-between text-xs">
+                  <span className="text-muted-foreground">当前</span>
+                  <span className="text-2xl font-semibold tracking-tight">
+                    {COMPLETENESS}%
+                  </span>
+                </div>
+                <Progress value={COMPLETENESS} className="mt-1 h-2" />
+              </div>
+              <ul className="space-y-1.5 text-xs">
+                <Hint done label="基础信息 / 联系方式" />
+                <Hint done label="工作经历 3 段" />
+                <Hint done label="技能 8 项,带熟练度" />
+                <Hint done label="2 个项目亮点" />
+                <Hint done label="教育背景" />
+                <Hint
+                  label="上传作品集 / 视频简历(可解锁金牌)"
+                />
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-sm">分享给顾问</CardTitle>
+              <CardDescription>
+                顾问 Lily 已经看过这份简历的最新版本。
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button size="sm" className="w-full">
+                分享给 Lily
+              </Button>
+              <Button size="sm" variant="outline" className="w-full">
+                生成匿名版
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-sm">下一步</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-xs text-muted-foreground">
+              <p>
+                · 让 Copilot{" "}
+                <span className="text-foreground">润色工作经历</span>
+                ,把数字结果前置。
+              </p>
+              <p>
+                · 看看{" "}
+                <span className="text-foreground">Tidewave</span>{" "}
+                给你的 88% 匹配度如何拆解。
+              </p>
+              <p>
+                · 打开{" "}
+                <span className="text-foreground">议价模拟</span>
+                ,为 92k 目标做准备。
+              </p>
+            </CardContent>
+          </Card>
+
+          {editing && (
+            <Card className="border-dashed bg-muted/40">
+              <CardContent className="space-y-1 py-3 text-xs text-muted-foreground">
+                <p className="font-medium text-foreground">编辑模式已开启</p>
+                <p>
+                  真实的内联编辑组件会在 <code>components/jobseeker/</code>{" "}
+                  出现后接入。当前页面以只读预览形式展示。
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function Hint({ label, done }: { label: string; done?: boolean }) {
+  return (
+    <li className="flex items-center gap-2">
+      <span
+        className={cn(
+          "flex size-3.5 items-center justify-center rounded-full border text-[10px] font-bold",
+          done
+            ? "border-emerald-500 bg-emerald-500 text-white"
+            : "border-slate-300 text-slate-400",
+        )}
+        aria-hidden
+      >
+        {done ? "✓" : ""}
+      </span>
+      <span className={cn(done ? "text-foreground" : "text-muted-foreground")}>
+        {label}
+      </span>
+    </li>
+  );
+}
+
+function buildPlainText(p: typeof PROFILE): string {
   return [
-    {
-      key: "identity",
-      label: "基础信息",
-      hint: user?.email ? `${user.email}` : "未填写邮箱",
-      status: tier(!!user?.email && !!user?.first_name),
-      weight: 1,
-    },
-    {
-      key: "summary",
-      label: "画像总结",
-      hint: hasSynthesis
-        ? "智能体已经综合出核心结论"
-        : "点击「重新综合」让智能体生成",
-      status: tier(hasSynthesis, completeness > 0.2 && !hasSynthesis),
-      weight: 2,
-    },
-    {
-      key: "skills",
-      label: "技能云",
-      hint: hasSkills ? "已识别显性技能" : "上传简历可自动提取",
-      status: tier(hasSkills, !hasSkills && completeness > 0.4),
-      weight: 2,
-    },
-    {
-      key: "must_haves",
-      label: "必须满足的需求",
-      hint: hasMustHaves ? "已列出核心需求" : "继续对话,智能体会逐步识别",
-      status: tier(hasMustHaves, !hasMustHaves && completeness > 0.3),
-      weight: 2,
-    },
-    {
-      key: "deal_breakers",
-      label: "明确不能接受",
-      hint: hasDealBreakers ? "已识别底线" : "聊聊绝对不能妥协的事",
-      status: tier(hasDealBreakers, false),
-      weight: 1.5,
-    },
-    {
-      key: "follow_ups",
-      label: "智能体追问",
-      hint:
-        openQuestions > 0
-          ? `还有 ${openQuestions} 个待回答`
-          : "暂无追问",
-      status: tier(openQuestions === 0, openQuestions > 0),
-      weight: 1,
-    },
-  ];
+    `${p.name} — ${p.title}`,
+    `${p.location} · ${p.email} · ${p.phone}`,
+    "",
+    "个人简介",
+    p.headline,
+    "",
+    "技能",
+    p.skills.map((s) => `- ${s.name} (${s.level}/5)`).join("\n"),
+    "",
+    "经验",
+    p.experiences
+      .map(
+        (e) =>
+          `${e.title} · ${e.company} (${e.period})\n` +
+          e.bullets.map((b) => `  - ${b}`).join("\n"),
+      )
+      .join("\n\n"),
+    "",
+    "项目",
+    p.projects.map((p) => `- ${p.name} (${p.period}): ${p.summary}`).join("\n"),
+    "",
+    "教育",
+    p.education
+      .map((e) => `- ${e.school} · ${e.degree} (${e.period}) · ${e.note}`)
+      .join("\n"),
+  ].join("\n");
 }

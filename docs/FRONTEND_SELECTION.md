@@ -881,3 +881,38 @@ design-system/               token、theme、icons、motion、a11y
 - Phase 2 垂直切片完成后复审 Refine 集成深度；
 - Phase 3 完成后复审 Chat 组件边界；
 - v9.0 GA 前重新冻结上游版本与许可证快照。
+
+---
+
+## v9.1 — Jobseeker 端选型补完
+
+| 参考项目 | URL | 借鉴 |
+|---|---|---|
+| Refine | https://refine.dev | admin / Resource hooks / refine.tsx |
+| shadcn-admin | https://github.com/satnaing/shadcn-admin | mothership layout |
+| Tremor | https://tremor.so | KPI/AreaChart 图表 |
+| **Open WebUI** | https://github.com/open-webui/open-webui | **jobseeker chat shell (会话 / 侧栏 / Streaming)** |
+| **OpenResume** | https://github.com/xitanggg/open-resume | **jobseeker résumé blocks / 可拖拽 / 打印** |
+| **Cal.com** | https://github.com/calcom/cal.com | **面试 booking / 时间槽 / 时区** |
+
+### Jobseeker 关键页面映射
+
+| 我们的页面 | Open Source 参考 | 借用的设计模式 |
+|---|---|---|
+| `/jobseeker` (Dashboard) | Open WebUI + shadcn | 侧栏+主区+ProactiveBanner |
+| `/jobseeker/chat` | Open WebUI | 会话流 + Streaming + Input 工具栏 |
+| `/jobseeker/profile` | OpenResume | 块化简历 + 打印样式 |
+| `/jobseeker/interview` | Cal.com | 时间槽选择 + tz-aware |
+| `/jobseeker/offers/compare` | shadcn admin | 表格 + 评分卡 |
+| `/jobseeker/journal` | Open WebUI + Tremor | 时间轴 + 评分趋势 |
+
+### 为什么不用某个库作为黑盒
+
+我们刻意 **吸收设计模式** 而 **不直接 npm install**:
+
+- Refine 太重——我们只需 Resource hooks,自己写了 1/10。
+- shadcn/ui 是 CLI copy-paste,符合"我们持有代码"原则。
+- Tremor 图表改造为 `components/charts/*`(避开其定制 Tailwind preset 冲突)。
+- Open WebUI 的 chat 流是 Svelte,直接翻译到 React (`<ChatBubble/>` + SSE)。
+- OpenResume 的 PDF 输出改为 `@react-pdf/renderer`(纯 Node)。
+- Cal.com 完整部署太重,只取 `<TimeSlotPicker/>` 思想。
