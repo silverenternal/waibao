@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<!--
+  存储策略:
+    - hot:   本地 SSD (最近 30 天)
+    - cold:  S3  (30 天 - 1 年)
+  数据自动从 hot 迁移到 cold, 1 年后自动删除.
+-->
+<clickhouse>
+    <storage_configuration>
+        <disks>
+            <default>
+                <keep_free_space_bytes>0</keep_free_space_bytes>
+            </default>
+            <hot_ssd>
+                <path>/var/lib/clickhouse/hot/</path>
+            </hot_ssd>
+            <cold_s3>
+                <type>s3</type>
+                <endpoint>https://s3.amazonaws.com/waibao-clickhouse-cold/</endpoint>
+                <access_key_id>REPLACE_WITH_S3_KEY</access_key_id>
+                <secret_access_key>REPLACE_WITH_S3_SECRET</secret_access_key>
+                <metadata_path>/var/lib/clickhouse/disks/cold_s3/</metadata_path>
+            </cold_s3>
+        </disks>
+        <policies>
+            <tiered>
+                <volumes>
+                    <hot>
+                        <disk>hot_ssd</disk>
+                        <max_data_part_size_bytes>1073741824</max_data_part_size_bytes>
+                    </hot>
+                    <cold>
+                        <disk>cold_s3</disk>
+                    </cold>
+                </volumes>
+                <move_factor>0.2</move_factor>
+            </tiered>
+        </policies>
+    </storage_configuration>
+</clickhouse>

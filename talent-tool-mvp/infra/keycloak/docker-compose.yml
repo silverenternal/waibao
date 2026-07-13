@@ -1,0 +1,87 @@
+version: "3.8"
+
+# T2901 - Keycloak (self-hosted IdP) + 5 IdP federation (Okta / Azure AD /
+# Google Workspace / DingTalk / Feishu / WeCom).
+#
+# 启动:
+#   docker compose -f infra/keycloak/docker-compose.yml up -d
+#
+# 服务:
+#   - postgres: Keycloak 后端存储
+#   - keycloak: Keycloak 26.x (Quarkus) — 暴露 8080 (HTTP) / 8443 (HTTPS)
+#
+# 配置:
+#   - 启动后访问 http://localhost:8080 用 admin/admin 登录
+#   - 自动导入 realm 配置: ./realm-export.json (RecruitTechSSO realm)
+#   - 5 IdP 通过 "Identity Providers" 接入 Keycloak (SAML/OIDC)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: keycloak-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak}
+    volumes:
+      - keycloak-postgres-data:/var/lib/postgresql/data
+    networks:
+      - keycloak-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: keycloak
+    restart: unless-stopped
+    command: ["start-dev", "--import-realm", "--http-port=8080", "--hostname-strict=false"]
+    environment:
+      # === Database ===
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak}
+
+      # === Admin ===
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+
+      # === Realm bootstrap ===
+      KEYCLOAK_IMPORT: /opt/keycloak/data/import/recruittech-realm.json
+
+      # === Logging ===
+      KC_LOG_LEVEL: info
+
+      # === Production-grade toggles (dev off) ===
+      KC_HEALTH_ENABLED: "true"
+    volumes:
+      - ./realm-export.json:/opt/keycloak/data/import/recruittech-realm.json:ro
+    ports:
+      - "8080:8080"   # HTTP (dev)
+      - "8443:8443"   # HTTPS (prod, requires KC_HTTPS_KEY_STORE / PASSWORD)
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - keycloak-net
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && grep -q '200 OK' <&3"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Reverse proxy: in production, terminate TLS at the edge (Nginx /
+  # CloudFront). For dev we expose Keycloak directly on 8080.
+
+volumes:
+  keycloak-postgres-data:
+    driver: local
+
+networks:
+  keycloak-net:
+    driver: bridge

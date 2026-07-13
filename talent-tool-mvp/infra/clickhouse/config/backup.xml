@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<!--
+  S3 备份配置:
+    - S3 桶: s3://waibao-clickhouse-backup/<env>/<shard>/
+    - 保留: 30 天
+    - 频率: 由 clickhouse-backup sidecar 调度 (默认每天凌晨 3 点)
+-->
+<clickhouse>
+    <backups>
+        <default>
+            <endpoint>https://s3.amazonaws.com/waibao-clickhouse-backup/</endpoint>
+            <access_key_id>REPLACE_WITH_S3_KEY</access_key_id>
+            <secret_access_key>REPLACE_WITH_S3_SECRET</secret_access_key>
+            <compression>zstd</compression>
+            <compression_level>9</compression_level>
+        </default>
+    </backups>
+</clickhouse>

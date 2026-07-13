@@ -1,0 +1,41 @@
+# ============================================================
+# T3001 — LLaMA-Factory QLoRA 训练模板: 偏见审查 (bias_review)
+# 用法: llamafactory-cli train /workspace/config/bias_review.yaml
+# 数据集由 backend/services/training/dataset_prep.py 产出到 /workspace/data
+# ============================================================
+### model
+model_name_or_path: Qwen/Qwen2.5-7B-Instruct
+
+### method
+stage: sft
+do_train: true
+finetuning_type: lora
+lora_rank: 8
+lora_alpha: 16
+lora_dropout: 0.05
+lora_target: all
+quantization_bit: 4          # QLoRA
+
+### dataset
+dataset: bias_review
+dataset_dir: /workspace/data
+template: qwen
+cutoff_len: 2048
+overwrite_cache: true
+preprocessing_num_workers: 8
+
+### output
+output_dir: /workspace/out/bias_review
+logging_steps: 10
+save_steps: 100
+plot_loss: true
+overwrite_output_dir: true
+
+### train
+per_device_train_batch_size: 4
+gradient_accumulation_steps: 4
+learning_rate: 2.0e-4
+num_train_epochs: 3.0
+lr_scheduler_type: cosine
+warmup_ratio: 0.1
+bf16: true

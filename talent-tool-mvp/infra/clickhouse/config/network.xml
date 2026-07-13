@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<clickhouse>
+    <!--
+      限流: 防止 ETL 跑满带宽.
+      总带宽 1 Gbps, ETL 阶段 200 Mbps.
+    -->
+    <total_memory_profiler_step>4194304</total_memory_profiler_step>
+</clickhouse>

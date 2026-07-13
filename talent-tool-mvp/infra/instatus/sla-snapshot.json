@@ -1,0 +1,14 @@
+{
+  "generated_by": "waibao.sla_monitor",
+  "services": ["api", "llm", "storage", "webhook", "database"],
+  "indicator_mapping": {
+    "api":      "Public API & Authentication",
+    "llm":      "LLM Inference (multi-provider)",
+    "storage":  "Object Storage & File Uploads",
+    "webhook":  "Outbound Webhooks & Integrations",
+    "database": "Primary Database (Postgres + Supabase)"
+  },
+  "default_target_uptime": 0.999,
+  "sync_interval_seconds": 60,
+  "comments": "Snapshot is refreshed by the backend /api/admin/sla/report/download companion cron. See docs/STATUS_PAGE.md."
+}

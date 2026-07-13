@@ -1,0 +1,197 @@
+{
+  "realm": "RecruitTechSSO",
+  "enabled": true,
+  "displayName": "RecruitTech Enterprise SSO",
+  "displayNameHtml": "<strong>RecruitTech</strong> Enterprise SSO",
+  "accessTokenLifespan": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "waitIncrementSeconds": 60,
+  "quickLoginCheckMilliSeconds": 1000,
+  "maxDeltaTimeSeconds": 43200,
+  "failureFactor": 30,
+  "roles": {
+    "realm": [
+      {"name": "talent_partner", "description": "Internal talent partner"},
+      {"name": "client", "description": "External hiring manager"},
+      {"name": "admin", "description": "Platform administrator"},
+      {"name": "uma_authorization", "description": "${role_uma_authorization}"}
+    ]
+  },
+  "defaultRole": {
+    "name": "talent_partner"
+  },
+  "clients": [
+    {
+      "clientId": "recruittech-web",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "${RECROITTECH_WEB_CLIENT_SECRET:-web-secret-dev}",
+      "redirectUris": [
+        "http://localhost:3000/*",
+        "https://app.recruittech.com/*"
+      ],
+      "webOrigins": ["*"],
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocol": "openid-connect"
+    },
+    {
+      "clientId": "recruittech-saml-sp",
+      "enabled": true,
+      "protocol": "saml",
+      "redirectUris": [
+        "http://localhost:8000/api/auth/sso/okta/callback",
+        "https://app.recruittech.com/api/auth/sso/okta/callback"
+      ],
+      "attributes": {
+        "saml.assertion.signature": "true",
+        "saml.server.signature": "true",
+        "saml.client.signature": "false",
+        "saml_name_id_format": "emailAddress"
+      }
+    }
+  ],
+  "identityProviders": [
+    {
+      "alias": "okta",
+      "displayName": "Okta",
+      "providerId": "saml",
+      "enabled": true,
+      "config": {
+        "singleSignOnServiceUrl": "${OKTA_SSO_URL:-https://example.okta.com/app/recruittech/sso/saml}",
+        "singleLogoutServiceUrl": "${OKTA_SLO_URL:-}",
+        "entityId": "${OKTA_ENTITY_ID:-http://www.okta.com/exk_example}",
+        "nameIDPolicyFormat": "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
+        "signatureAlgorithm": "RSA_SHA256",
+        "wantAssertionsSigned": "true",
+        "wantAssertionsEncrypted": "false",
+        "postBindingAuthnRequest": "true",
+        "postBindingResponse": "true"
+      }
+    },
+    {
+      "alias": "azure-ad",
+      "displayName": "Microsoft Entra ID",
+      "providerId": "oidc",
+      "enabled": true,
+      "config": {
+        "authorizationUrl": "https://login.microsoftonline.com/${AZURE_TENANT_ID:-common}/oauth2/v2.0/authorize",
+        "tokenUrl": "https://login.microsoftonline.com/${AZURE_TENANT_ID:-common}/oauth2/v2.0/token",
+        "userInfoUrl": "https://graph.microsoft.com/oidc/userinfo",
+        "clientId": "${AZURE_CLIENT_ID:-}",
+        "clientSecret": "${AZURE_CLIENT_SECRET:-}",
+        "defaultScope": "openid email profile",
+        "validateSignature": "true"
+      }
+    },
+    {
+      "alias": "google",
+      "displayName": "Google Workspace",
+      "providerId": "oidc",
+      "enabled": true,
+      "config": {
+        "authorizationUrl": "https://accounts.google.com/o/oauth2/v2/auth",
+        "tokenUrl": "https://oauth2.googleapis.com/token",
+        "userInfoUrl": "https://openidconnect.googleapis.com/v1/userinfo",
+        "clientId": "${GOOGLE_CLIENT_ID:-}",
+        "clientSecret": "${GOOGLE_CLIENT_SECRET:-}",
+        "defaultScope": "openid email profile",
+        "validateSignature": "true"
+      }
+    },
+    {
+      "alias": "dingtalk",
+      "displayName": "DingTalk",
+      "providerId": "oidc",
+      "enabled": true,
+      "config": {
+        "authorizationUrl": "https://api.dingtalk.com/v1.0/oauth/authorize",
+        "tokenUrl": "https://api.dingtalk.com/v1.0/oauth/userAccessToken",
+        "userInfoUrl": "https://api.dingtalk.com/v1.0/contact/users/me",
+        "clientId": "${DINGTALK_APP_KEY:-}",
+        "clientSecret": "${DINGTALK_APP_SECRET:-}",
+        "defaultScope": "openid email profile",
+        "validateSignature": "false"
+      }
+    },
+    {
+      "alias": "feishu",
+      "displayName": "Feishu",
+      "providerId": "oidc",
+      "enabled": true,
+      "config": {
+        "authorizationUrl": "https://open.feishu.cn/open-apis/authen/v2/index",
+        "tokenUrl": "https://open.feishu.cn/open-apis/authen/v2/access_token",
+        "userInfoUrl": "https://open.feishu.cn/open-apis/authen/v2/user_info",
+        "clientId": "${FEISHU_APP_ID:-}",
+        "clientSecret": "${FEISHU_APP_SECRET:-}",
+        "defaultScope": "openid email profile contact:user.id:readonly",
+        "validateSignature": "false"
+      }
+    },
+    {
+      "alias": "wecom",
+      "displayName": "WeCom",
+      "providerId": "oidc",
+      "enabled": true,
+      "config": {
+        "authorizationUrl": "https://login.work.weixin.qq.com/wwlogin/sso/oauth2/authorize",
+        "tokenUrl": "https://qyapi.weixin.qq.com/cgi-bin/auth/getuserinfo",
+        "userInfoUrl": "https://qyapi.weixin.qq.com/cgi-bin/auth/getuserdetail",
+        "clientId": "${WECOM_CORP_ID:-}",
+        "clientSecret": "${WECOM_CORP_SECRET:-}",
+        "defaultScope": "openid email profile snsapi_privateinfo",
+        "validateSignature": "false"
+      }
+    }
+  ],
+  "identityProviderMappers": [
+    {
+      "name": "email-from-okta",
+      "identityProviderAlias": "okta",
+      "identityProviderMapper": "saml-user-attribute-idp-mapper",
+      "config": {
+        "user.attribute.name": "email",
+        "saml.attribute.name": "Email",
+        "syncMode": "INHERIT"
+      }
+    },
+    {
+      "name": "firstname-from-okta",
+      "identityProviderAlias": "okta",
+      "identityProviderMapper": "saml-user-attribute-idp-mapper",
+      "config": {
+        "user.attribute.name": "firstName",
+        "saml.attribute.name": "FirstName"
+      }
+    },
+    {
+      "name": "lastname-from-okta",
+      "identityProviderAlias": "okta",
+      "identityProviderMapper": "saml-user-attribute-idp-mapper",
+      "config": {
+        "user.attribute.name": "lastName",
+        "saml.attribute.name": "LastName"
+      }
+    }
+  ],
+  "eventsConfig": {
+    "eventsEnabled": true,
+    "eventsListeners": ["jboss-logging"],
+    "adminEventsEnabled": true,
+    "adminEventsDetailsEnabled": true
+  }
+}

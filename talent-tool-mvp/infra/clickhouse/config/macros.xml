@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<!-- 集群级 macro, 主 config.xml 已写默认, 这里是占位. -->
+<clickhouse>
+    <macros>
+        <shard>1</shard>
+        <replica>1</replica>
+    </macros>
+</clickhouse>

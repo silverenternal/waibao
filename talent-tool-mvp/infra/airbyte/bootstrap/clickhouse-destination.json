@@ -1,0 +1,19 @@
+{
+  "_comment": "T2801 — ClickHouse destination. Airbyte 会自动建表 (按源表 schema) 并批量 insert.",
+  "destinationDefinitionId": "ce0d828e-1dc4-496c-b122-2da42e637e48",
+  "name": "ClickHouse (waibao warehouse)",
+  "dockerRepository": "airbyte/destination-clickhouse",
+  "dockerImageTag": "0.2.4",
+  "documentationUrl": "https://docs.airbyte.com/integrations/destinations/clickhouse",
+  "connectionConfiguration": {
+    "host": "clickhouse-shard1-replica1",
+    "port": 8123,
+    "database": "warehouse",
+    "username": "etl",
+    "password": "etl_change_me",
+    "ssl": false,
+    "tunnel_method": {"tunnel_method": "NO_TUNNEL"}
+  },
+  "workspaceId": "REPLACE_WITH_AIRBYTE_WORKSPACE_ID",
+  "destinationId": "REPLACE_WITH_AIRBYTE_DESTINATION_ID"
+}

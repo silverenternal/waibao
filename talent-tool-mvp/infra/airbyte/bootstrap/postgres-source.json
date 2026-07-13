@@ -1,0 +1,25 @@
+{
+  "_comment": "T2801 — Supabase Postgres source (用 wal2json / logical replication 做 CDC). 在 Airbyte UI 导入即可.",
+  "sourceDefinitionId": "decd338e-5647-4c0b-adf4-da0e75f5a750",
+  "name": "Supabase Postgres (CDC)",
+  "dockerRepository": "airbyte/source-postgres",
+  "dockerImageTag": "3.3.5",
+  "documentationUrl": "https://docs.airbyte.com/integrations/sources/postgres",
+  "connectionConfiguration": {
+    "host": "supabase-db",
+    "port": 5432,
+    "database": "postgres",
+    "username": "postgres",
+    "password": "postgres",
+    "schemas": ["public"],
+    "replication_method": {
+      "method": "CDC",
+      "replication_slot": "airbyte_waibao_slot",
+      "publication": "airbyte_publication"
+    },
+    "ssl_mode": {"mode": "disable"},
+    "tunnel_method": {"tunnel_method": "NO_TUNNEL"}
+  },
+  "workspaceId": "REPLACE_WITH_AIRBYTE_WORKSPACE_ID",
+  "sourceId": "REPLACE_WITH_AIRBYTE_SOURCE_ID"
+}

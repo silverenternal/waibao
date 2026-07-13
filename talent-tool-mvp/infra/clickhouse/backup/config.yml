@@ -1,0 +1,53 @@
+# clickhouse-backup 配置 (T2801)
+# 见 https://github.com/Altinity/clickhouse-backup
+
+general:
+  remote_storage: s3
+  max_file_size: 1073741824
+  enable_az_partitioning: true
+  concurrency: 4
+
+clickhouse:
+  host: clickhouse-shard1-replica1
+  port: 9000
+  username: clickhouse
+  password: ""
+  skip_setup: false
+  timeout: 5m
+
+s3:
+  access_key: ""
+  secret_key: ""
+  bucket: "waibao-clickhouse-backup"
+  region: "us-east-1"
+  endpoint: ""
+  path: "prod/cluster-1"
+  disable_ssl: false
+  compression_format: zstd
+  compression_level: 9
+
+backup:
+  name: "daily-{now}"
+  retention:
+    keep_local: 3
+    keep_remote: 30
+    delete_source: false
+    backups_to_keep_local: 3
+    backups_to_keep_remote: 30
+  schedule:
+    - name: daily
+      cron: "0 3 * * *"
+      command: "create"
+    - name: upload
+      cron: "15 3 * * *"
+      command: "upload"
+    - name: prune
+      cron: "30 3 * * *"
+      command: "delete local"
+    - name: cleanup
+      cron: "0 4 * * 0"
+      command: "prune remote --retention 30d"
+
+restore:
+  drop_existing: false
+  ignore_errors: false

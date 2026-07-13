@@ -1,0 +1,183 @@
+# ============================================================
+# T2801 — ClickHouse 数据仓库 (3 副本 + 分片 + Zookeeper + S3 备份)
+# 选型理由:
+#   - 列式存储: 聚合查询比 Postgres 快 100-1000x
+#   - 多副本: Zookeeper 协调,保证 HA
+#   - 1 年保留: TTL 策略自动清理
+#   - S3 备份: 跨 region 灾备
+# ============================================================
+version: "3.9"
+
+x-clickhouse-common: &clickhouse-common
+  image: clickhouse/clickhouse-server:24.3
+  restart: always
+  ulimits:
+    nofile:
+      soft: 262144
+      hard: 262144
+  cap_add:
+    - SYS_NICE
+    - NET_ADMIN
+    - IPC_LOCK
+  environment:
+    CLICKHOUSE_DB: warehouse
+    CLICKHOUSE_USER: ${CLICKHOUSE_USER:-clickhouse}
+    CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse}
+    CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+  volumes:
+    - ./config/config.xml:/etc/clickhouse-server/config.d/config.xml:ro
+    - ./config/macros.xml:/etc/clickhouse-server/config.d/macros.xml:ro
+    - ./config/network.xml:/etc/clickhouse-server/config.d/network.xml:ro
+    - ./config/storage.xml:/etc/clickhouse-server/config.d/storage.xml:ro
+    - ./config/backup.xml:/etc/clickhouse-server/config.d/backup.xml:ro
+    - ./config/users.xml:/etc/clickhouse-server/users.d/users.xml:ro
+    - ./macros/shard-1:/etc/clickhouse-server/macros.d:ro
+    - clickhouse_data:/var/lib/clickhouse
+    - clickhouse_logs:/var/log/clickhouse-server
+  healthcheck:
+    test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8123/ping"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+    start_period: 30s
+  networks:
+    - clickhouse-net
+
+services:
+  # ---------------- Zookeeper (3 节点用于 ClickHouse 副本协调) ----------------
+  zoo1:
+    image: zookeeper:3.9
+    hostname: zoo1
+    restart: always
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_SERVERS: server.1=zoo1:2888:3888;2181 server.2=zoo2:2888:3888;2181 server.3=zoo3:2888:3888;2181
+      ZOO_4LW_COMMANDS_WHITELIST: "*"
+    volumes:
+      - zoo1_data:/data
+      - zoo1_datalog:/datalog
+    networks:
+      - clickhouse-net
+
+  zoo2:
+    image: zookeeper:3.9
+    hostname: zoo2
+    restart: always
+    environment:
+      ZOO_MY_ID: 2
+      ZOO_SERVERS: server.1=zoo1:2888:3888;2181 server.2=zoo2:2888:3888;2181 server.3=zoo3:2888:3888;2181
+      ZOO_4LW_COMMANDS_WHITELIST: "*"
+    volumes:
+      - zoo2_data:/data
+      - zoo2_datalog:/datalog
+    networks:
+      - clickhouse-net
+
+  zoo3:
+    image: zookeeper:3.9
+    hostname: zoo3
+    restart: always
+    environment:
+      ZOO_MY_ID: 3
+      ZOO_SERVERS: server.1=zoo1:2888:3888;2181 server.2=zoo2:2888:3888;2181 server.3=zoo3:2888:3888;2181
+      ZOO_4LW_COMMANDS_WHITELIST: "*"
+    volumes:
+      - zoo3_data:/data
+      - zoo3_datalog:/datalog
+    networks:
+      - clickhouse-net
+
+  # ---------------- ClickHouse Shard 1 (3 副本) ----------------
+  clickhouse-shard1-replica1:
+    <<: *clickhouse-common
+    hostname: ch-s1-r1
+    container_name: clickhouse-s1-r1
+    ports:
+      - "8123:8123"   # HTTP
+      - "9000:9000"   # Native (clickhouse-driver)
+      - "9009:9009"   # Inter-server replication
+    depends_on:
+      - zoo1
+      - zoo2
+      - zoo3
+
+  clickhouse-shard1-replica2:
+    <<: *clickhouse-common
+    hostname: ch-s1-r2
+    container_name: clickhouse-s1-r2
+    ports:
+      - "8124:8123"
+      - "9001:9000"
+      - "9010:9009"
+    depends_on:
+      - zoo1
+      - zoo2
+      - zoo3
+
+  clickhouse-shard1-replica3:
+    <<: *clickhouse-common
+    hostname: ch-s1-r3
+    container_name: clickhouse-s1-r3
+    ports:
+      - "8125:8123"
+      - "9002:9000"
+      - "9011:9009"
+    depends_on:
+      - zoo1
+      - zoo2
+      - zoo3
+
+  # ---------------- ClickHouse Keeper (新) ----------------
+  # 注: 上面使用经典 Zookeeper. 若要 ClickHouse Keeper (内置, 无 ZK 依赖),
+  # 可改为 image: clickhouse/clickhouse-keeper 并调整 <keeper_path>.
+
+  # ---------------- Backup sidecar (定时把数据备份到 S3) ----------------
+  clickhouse-backup:
+    image: altinity/clickhouse-backup:2.4.2
+    restart: always
+    depends_on:
+      - clickhouse-shard1-replica1
+    environment:
+      CLICKHOUSE_HOST: clickhouse-shard1-replica1
+      CLICKHOUSE_PORT: 9000
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-clickhouse}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse}
+      S3_BUCKET: ${CLICKHOUSE_BACKUP_S3_BUCKET:-waibao-clickhouse-backup}
+      S3_REGION: ${CLICKHOUSE_BACKUP_S3_REGION:-us-east-1}
+      S3_ACCESS_KEY: ${CLICKHOUSE_BACKUP_S3_ACCESS_KEY:-}
+      S3_SECRET_KEY: ${CLICKHOUSE_BACKUP_S3_SECRET_KEY:-}
+    volumes:
+      - ./backup:/etc/clickhouse-backup
+      - backup_data:/var/lib/clickhouse-backup
+    networks:
+      - clickhouse-net
+
+  # ---------------- Prometheus exporter (可选) ----------------
+  clickhouse-exporter:
+    image: f1yegor/clickhouse_exporter:1.0.0
+    restart: always
+    depends_on:
+      - clickhouse-shard1-replica1
+    environment:
+      CLICKHOUSE_URL: clickhouse-shard1-replica1:8123
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-clickhouse}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse}
+    ports:
+      - "9116:9116"
+    networks:
+      - clickhouse-net
+
+volumes:
+  clickhouse_data:
+  clickhouse_logs:
+  zoo1_data:
+  zoo1_datalog:
+  zoo2_data:
+  zoo2_datalog:
+  zoo3_data:
+  zoo3_datalog:
+  backup_data:
+
+networks:
+  clickhouse-net:
+    driver: bridge

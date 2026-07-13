@@ -1,0 +1,153 @@
+# ============================================================
+# T2801 — Airbyte OSS ETL
+# 链路: Supabase Postgres (CDC) --[Airbyte]--> ClickHouse
+# ============================================================
+# 启动: docker compose -f infra/airbyte/docker-compose.yml up -d
+# 入口: http://localhost:8000 (api-server)
+#       http://localhost:8001 (webapp/UI, 需 build)
+#
+# 在 UI 里创建:
+#   1. Source  = Postgres (Supabase CDC, 用 logical replication)
+#   2. Destination = ClickHouse
+#   3. Connection = 启每小时全量+增量, 同步 5 张表到 ClickHouse
+# ============================================================
+version: "3.8"
+
+x-airbyte-common: &airbyte-common
+  image: airbyte/server:0.50.33
+  container_name: airbyte-${SERV:-server}
+  restart: always
+  environment:
+    - AIRBYTE_VERSION=0.50.33
+    - AIRBYTE_ROLE=${SERV:-server}
+    - DATABASE_URL=${DATABASE_URL}
+    - WORKSPACE_ROOT=/tmp/workspace
+    - TRACKING_STRATEGY=logging
+    - INTERNAL_API_HOST=${INTERNAL_API_HOST:-airbyte-server}
+    - CONFIG_DATABASE_PASSWORD=${CONFIG_DATABASE_PASSWORD:-airbyte_pass}
+    - CONFIG_DATABASE_URL=${CONFIG_DATABASE_URL:-jdbc:postgresql://airbyte-db:5432/airbyte}
+    - RUN_DATABASE_URL=${RUN_DATABASE_URL:-jdbc:postgresql://airbyte-db:5432/airbyte}
+    - JOB_DATABASE_URL=${JOB_DATABASE_URL:-jdbc:postgresql://airbyte-db:5432/airbyte}
+    - WAIT_BEFORE_HOSTS=${WAIT_BEFORE_HOSTS:-airbyte-server:8001}
+  depends_on:
+    - airbyte-db
+
+services:
+  # ---------------- 元数据库 (Postgres) ----------------
+  airbyte-db:
+    image: postgres:13-alpine
+    container_name: airbyte-db
+    restart: always
+    environment:
+      POSTGRES_USER: airbyte
+      POSTGRES_PASSWORD: airbyte_pass
+      POSTGRES_DB: airbyte
+    volumes:
+      - airbyte_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airbyte -d airbyte"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    networks:
+      - airbyte-net
+
+  # ---------------- Airbyte Server (API + sync) ----------------
+  airbyte-server:
+    <<: *airbyte-common
+    image: airbyte/server:0.50.33
+    container_name: airbyte-server
+    ports:
+      - "8001:8001"   # API
+      - "8000:8000"   # Internal
+    environment:
+      - SERV=server
+    networks:
+      - airbyte-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8001/api/v1/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  # ---------------- Airbyte Worker (跑 sync jobs) ----------------
+  airbyte-worker:
+    <<: *airbyte-common
+    image: airbyte/server:0.50.33
+    container_name: airbyte-worker
+    environment:
+      - SERV=worker
+    networks:
+      - airbyte-net
+    depends_on:
+      - airbyte-server
+
+  # ---------------- Temporal (Airbyte 0.50+ 改用 Temporal 调度) ----------------
+  airbyte-temporal:
+    image: temporalio/auto-setup:1.18.0
+    container_name: airbyte-temporal
+    restart: always
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=airbyte
+      - POSTGRES_PWD=airbyte_pass
+      - POSTGRES_SEEDS=airbyte
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development.yaml
+    networks:
+      - airbyte-net
+
+  # ---------------- Airbyte Webapp (UI) ----------------
+  airbyte-webapp:
+    image: airbyte/webapp:0.50.33
+    container_name: airbyte-webapp
+    restart: always
+    ports:
+      - "8000:80"     # 可改其它端口
+    environment:
+      - AIRBYTE_URL=http://airbyte-server:8001
+    depends_on:
+      - airbyte-server
+    networks:
+      - airbyte-net
+
+  # ---------------- Airbyte MinIO (内嵌 S3, 存 sync 中间数据) ----------------
+  airbyte-minio:
+    image: minio/minio:RELEASE.2024-04-18T19-09-19Z
+    container_name: airbyte-minio
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio_user
+      MINIO_ROOT_PASSWORD: minio_pass
+    volumes:
+      - airbyte_minio_data:/data
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Console
+    networks:
+      - airbyte-net
+
+  airbyte-minio-init:
+    image: minio/mc:RELEASE.2024-04-18T16-11-55Z
+    container_name: airbyte-minio-init
+    depends_on:
+      - airbyte-minio
+    networks:
+      - airbyte-net
+    entrypoint: /bin/sh
+    command: >
+      -c "
+      mc alias set local http://airbyte-minio:9000 minio_user minio_pass &&
+      mc mb -p local/airbyte-bucket &&
+      echo 'minio init done'
+      "
+
+volumes:
+  airbyte_db_data:
+  airbyte_minio_data:
+
+networks:
+  airbyte-net:
+    driver: bridge

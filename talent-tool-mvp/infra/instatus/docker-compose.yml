@@ -1,0 +1,95 @@
+# T2604 — Instatus (self-hosted status page) for status.waibao.cn
+#
+# Phase-1 delivery uses the open-source Instatus "Open Status Page" image
+# (https://github.com/instatushq/Open-Status-Page) so we own uptime of our
+# public status surface. Synced with backend/services/platform/sla_monitor.py
+# via the /api/sync endpoint described below.
+#
+# Five monitored services map to PLATFORM_SERVICES constants in sla_monitor:
+#   api, llm, storage, webhook, database
+#
+# Run:
+#   docker compose -f infra/instatus/docker-compose.yml --env-file .env up -d
+
+version: "3.9"
+
+services:
+  statuspage:
+    image: instatushq/open-status-page:latest
+    restart: unless-stopped
+    container_name: waibao-statuspage
+    environment:
+      DATABASE_URL: postgresql://statuspage:statuspage@statuspage-db:5432/statuspage
+      NEXTAUTH_URL: https://status.waibao.cn
+      NEXTAUTH_SECRET: ${STATUS_PAGE_AUTH_SECRET}
+      SECRET: ${STATUS_PAGE_ENCRYPTION_KEY}
+      VIRTUAL_HOST: status.waibao.cn
+      LE_EMAIL: ops@waibao.cn
+    depends_on:
+      - statuspage-db
+    networks:
+      - statuspage-net
+    labels:
+      - "com.waibao.role=status-page"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "127.0.0.1:8088:3000"
+
+  statuspage-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    container_name: waibao-statuspage-db
+    environment:
+      POSTGRES_DB: statuspage
+      POSTGRES_USER: statuspage
+      POSTGRES_PASSWORD: statuspage
+    volumes:
+      - statuspage-db-data:/var/lib/postgresql/data
+    networks:
+      - statuspage-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U statuspage"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # Interval-based bridge: pulls from sla_monitor's summary endpoint and
+  # mirrors aggregate state into the status page components. Runs every
+  # 60 seconds. Errors are logged and never raised.
+  sla-bridge:
+    image: curlimages/curl:8.8.0
+    restart: unless-stopped
+    container_name: waibao-statuspage-bridge
+    depends_on:
+      - statuspage
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        "while true; do
+            curl -fsS -X POST \
+              -H 'Content-Type: application/json' \
+              -H 'X-Sync-Token: $${STATUS_PAGE_SYNC_TOKEN}' \
+              --data @/etc/sla-snapshot.json \
+              http://statuspage:3000/api/sync || \
+              echo 'sla-bridge sync failed' >&2;
+            sleep 60;
+        done"
+    environment:
+      STATUS_PAGE_SYNC_TOKEN: ${STATUS_PAGE_SYNC_TOKEN}
+    networks:
+      - statuspage-net
+    volumes:
+      - ./sla-snapshot.json:/etc/sla-snapshot.json:ro
+
+networks:
+  statuspage-net:
+    driver: bridge
+    name: waibao-status
+
+volumes:
+  statuspage-db-data:
+    name: waibao-status-db

@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<clickhouse>
+    <macros>
+        <shard>1</shard>
+        <replica>replica3</replica>
+        <cluster>waibao_cluster</cluster>
+    </macros>
+</clickhouse>

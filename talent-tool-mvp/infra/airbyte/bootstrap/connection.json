@@ -1,0 +1,99 @@
+{
+  "_comment": "T2801 — 同步 Connection 配置. Streams 是要同步到 ClickHouse 的源表.",
+  "name": "Supabase -> ClickHouse (hourly)",
+  "sourceId": "REPLACE_WITH_AIRBYTE_SOURCE_ID",
+  "destinationId": "REPLACE_WITH_AIRBYTE_DESTINATION_ID",
+  "status": "active",
+  "syncCatalog": {
+    "streams": [
+      {
+        "stream": {
+          "name": "candidates",
+          "namespace": "public",
+          "jsonSchema": {"type": "object"},
+          "supportedSyncModes": ["full_refresh", "incremental"],
+          "defaultCursorField": ["updated_at"],
+          "sourceDefinedCursor": true
+        },
+        "config": {
+          "syncMode": "incremental",
+          "cursorField": ["updated_at"],
+          "destinationSyncMode": "append",
+          "primaryKey": [["id"]]
+        }
+      },
+      {
+        "stream": {
+          "name": "jobs",
+          "namespace": "public",
+          "jsonSchema": {"type": "object"},
+          "supportedSyncModes": ["full_refresh", "incremental"],
+          "defaultCursorField": ["updated_at"],
+          "sourceDefinedCursor": true
+        },
+        "config": {
+          "syncMode": "incremental",
+          "cursorField": ["updated_at"],
+          "destinationSyncMode": "append",
+          "primaryKey": [["id"]]
+        }
+      },
+      {
+        "stream": {
+          "name": "matches",
+          "namespace": "public",
+          "jsonSchema": {"type": "object"},
+          "supportedSyncModes": ["full_refresh", "incremental"],
+          "defaultCursorField": ["created_at"],
+          "sourceDefinedCursor": true
+        },
+        "config": {
+          "syncMode": "incremental",
+          "cursorField": ["created_at"],
+          "destinationSyncMode": "append",
+          "primaryKey": [["id"]]
+        }
+      },
+      {
+        "stream": {
+          "name": "applications",
+          "namespace": "public",
+          "jsonSchema": {"type": "object"},
+          "supportedSyncModes": ["full_refresh", "incremental"],
+          "defaultCursorField": ["updated_at"],
+          "sourceDefinedCursor": true
+        },
+        "config": {
+          "syncMode": "incremental",
+          "cursorField": ["updated_at"],
+          "destinationSyncMode": "append",
+          "primaryKey": [["id"]]
+        }
+      },
+      {
+        "stream": {
+          "name": "tickets",
+          "namespace": "public",
+          "jsonSchema": {"type": "object"},
+          "supportedSyncModes": ["full_refresh", "incremental"],
+          "defaultCursorField": ["updated_at"],
+          "sourceDefinedCursor": true
+        },
+        "config": {
+          "syncMode": "incremental",
+          "cursorField": ["updated_at"],
+          "destinationSyncMode": "append",
+          "primaryKey": [["id"]]
+        }
+      }
+    ]
+  },
+  "schedule": {
+    "units": 1,
+    "timeUnit": "hours"
+  },
+  "namespaceDefinition": "source",
+  "namespaceFormat": "${SOURCE_NAMESPACE}",
+  "prefix": "raw_",
+  "geography": "auto"
+}

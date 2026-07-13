@@ -1,0 +1,96 @@
+# ============================================================
+# T3001 — LoRA Fine-tuning 训练环境 (LLaMA-Factory + vLLM)
+# 选型理由 (Phase 1):
+#   - LLaMA-Factory (45k+ stars): 统一 SFT/LoRA/QLoRA/DPO, YAML 驱动, 支持
+#     Qwen2.5 / Llama-3 全家桶, 内置 dataset_info.json 数据协议
+#   - QLoRA (4bit): 单卡 24GB 即可微调 7B, 显存友好, 适合国内 A10/4090
+#   - vLLM: 训练产物以 OpenAI 兼容协议 serve, --enable-lora 多适配器热挂载
+#
+# 用法:
+#   1. 准备数据:  python -m services.training.scripts.prepare_all  (或 API 触发)
+#   2. 训练:      docker compose -f infra/training/docker-compose.yml run --rm trainer \
+#                   llamafactory-cli train /workspace/out/<task>/train_config.yaml
+#   3. 部署:      docker compose -f infra/training/docker-compose.yml up -d vllm
+#
+# 需要 NVIDIA Container Toolkit (nvidia-docker2)。
+# ============================================================
+version: "3.9"
+
+x-gpu-deploy: &gpu-deploy
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu]
+
+services:
+  # -------- 训练容器 (LLaMA-Factory) --------
+  trainer:
+    image: hiyouga/llamafactory:latest
+    <<: *gpu-deploy
+    runtime: nvidia
+    shm_size: "16gb"
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      HF_HOME: /workspace/hf_cache
+      HF_ENDPOINT: ${HF_ENDPOINT:-https://hf-mirror.com}   # 国内镜像加速
+      WANDB_DISABLED: "true"
+      TRANSFORMERS_OFFLINE: "0"
+    volumes:
+      - ./config:/workspace/config:ro          # 训练 YAML 模板
+      - lora_datasets:/workspace/data          # dataset_prep 产物 (dataset_info.json + *.json)
+      - lora_output:/workspace/out             # adapter 产物
+      - hf_cache:/workspace/hf_cache           # 模型权重缓存
+      - model_weights:/workspace/models        # 本地模型权重 (可选离线)
+    working_dir: /workspace
+    # 默认不常驻: 用 `docker compose run --rm trainer ...` 触发一次性训练
+    command: ["sleep", "infinity"]
+    profiles: ["train"]
+
+  # -------- 推理服务 (vLLM, OpenAI 兼容, 多 LoRA) --------
+  vllm:
+    image: vllm/vllm-openai:latest
+    <<: *gpu-deploy
+    runtime: nvidia
+    shm_size: "16gb"
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      HF_HOME: /root/.cache/huggingface
+      HF_ENDPOINT: ${HF_ENDPOINT:-https://hf-mirror.com}
+      VLLM_ALLOW_RUNTIME_LORA_UPDATING: "True"   # 允许 /v1/load_lora_adapter 热挂载
+    volumes:
+      - lora_output:/workspace/out:ro
+      - hf_cache:/root/.cache/huggingface
+    ports:
+      - "${VLLM_PORT:-8001}:8000"
+    command:
+      - --model
+      - ${BASE_MODEL:-Qwen/Qwen2.5-7B-Instruct}
+      - --enable-lora
+      - --max-loras
+      - "8"
+      - --max-lora-rank
+      - "16"
+      - --lora-modules
+      - resume_scoring-v1=/workspace/out/resume_scoring
+      - bias_review-v1=/workspace/out/bias_review
+      - hrbp_summary-v1=/workspace/out/hrbp_summary
+      - --gpu-memory-utilization
+      - "0.90"
+      - --max-model-len
+      - "4096"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; urllib.request.urlopen('http://localhost:8000/health'); "]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+    restart: unless-stopped
+
+volumes:
+  lora_datasets:
+  lora_output:
+  hf_cache:
+  model_weights:
