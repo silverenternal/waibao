@@ -28,7 +28,7 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   return r.json();
 }
 
-export default function WorkflowsAdminPage(): JSX.Element {
+export default function WorkflowsAdminPage(): React.JSX.Element {
   const router = useRouter();
   const [workflows, setWorkflows] = React.useState<WorkflowRecord[]>([]);
   const [templates, setTemplates] = React.useState<TemplateSummary[]>([]);

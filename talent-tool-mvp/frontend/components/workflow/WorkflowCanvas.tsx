@@ -81,7 +81,7 @@ function describe(config: Record<string, unknown>, type: string): string {
   return "";
 }
 
-export function WorkflowCanvas(props: WorkflowCanvasProps): JSX.Element {
+export function WorkflowCanvas(props: WorkflowCanvasProps): React.JSX.Element {
   const canvasRef = React.useRef<HTMLDivElement>(null);
   const [dragOver, setDragOver] = React.useState(false);
   const [pendingFrom, setPendingFrom] =

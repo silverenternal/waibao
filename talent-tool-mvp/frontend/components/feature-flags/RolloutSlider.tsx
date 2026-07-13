@@ -21,7 +21,7 @@ export interface RolloutSliderProps {
 
 const DEFAULT_PRESETS = [0, 10, 25, 50, 100];
 
-export function RolloutSlider(props: RolloutSliderProps): JSX.Element {
+export function RolloutSlider(props: RolloutSliderProps): React.JSX.Element {
   const {
     value,
     onChange,

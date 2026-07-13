@@ -27,7 +27,7 @@ const STATUS_COLOR: Record<string, string> = {
   cancelled: "bg-slate-300 text-slate-700",
 };
 
-export function WorkflowRunMonitor(props: WorkflowRunMonitorProps): JSX.Element {
+export function WorkflowRunMonitor(props: WorkflowRunMonitorProps): React.JSX.Element {
   const [decision, setDecision] = React.useState("approved");
 
   if (!props.run) {

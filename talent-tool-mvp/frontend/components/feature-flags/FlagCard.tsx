@@ -43,7 +43,7 @@ export interface FlagCardProps {
   saving?: boolean;
 }
 
-export function FlagCard(props: FlagCardProps): JSX.Element {
+export function FlagCard(props: FlagCardProps): React.JSX.Element {
   const { flag, overrides, onSave, onAddOverride, onRemoveOverride, onDelete, saving } = props;
   const [rollout, setRollout] = React.useState<number>(flag.rollout_percent);
   const [enabled, setEnabled] = React.useState<boolean>(flag.enabled);

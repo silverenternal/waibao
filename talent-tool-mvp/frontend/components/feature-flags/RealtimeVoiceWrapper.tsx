@@ -25,7 +25,7 @@ export interface RealtimeVoiceWrapperProps {
   children: React.ReactNode;
 }
 
-export function RealtimeVoiceWrapper(props: RealtimeVoiceWrapperProps): JSX.Element {
+export function RealtimeVoiceWrapper(props: RealtimeVoiceWrapperProps): React.JSX.Element {
   const {
     userId,
     orgId,

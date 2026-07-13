@@ -49,7 +49,7 @@ function ensurePositions(def: WorkflowDefinition): CanvasNode[] {
   }));
 }
 
-export default function WorkflowEditorPage(): JSX.Element {
+export default function WorkflowEditorPage(): React.JSX.Element {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const workflowId = Number(params.id);

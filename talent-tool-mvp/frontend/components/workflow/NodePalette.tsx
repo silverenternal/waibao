@@ -155,7 +155,7 @@ interface NodePaletteProps {
   onAddTrigger?: (eventName: string) => void;
 }
 
-export function NodePalette(props: NodePaletteProps): JSX.Element {
+export function NodePalette(props: NodePaletteProps): React.JSX.Element {
   const grouped = React.useMemo(() => {
     const buckets: Record<string, PaletteItem[]> = {};
     const all = [...TRIGGERS, ...AGENTS, ...ACTIONS, ...STRUCTURAL];

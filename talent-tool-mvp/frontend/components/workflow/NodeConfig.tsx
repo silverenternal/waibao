@@ -44,7 +44,7 @@ function objectFromPairs(pairs: KVPair[]): Record<string, unknown> {
   return out;
 }
 
-export function NodeConfig(props: NodeConfigProps): JSX.Element {
+export function NodeConfig(props: NodeConfigProps): React.JSX.Element {
   const [advanced, setAdvanced] = React.useState(false);
   const [json, setJson] = React.useState<string>("{}");
   const [pairs, setPairs] = React.useState<KVPair[]>([]);

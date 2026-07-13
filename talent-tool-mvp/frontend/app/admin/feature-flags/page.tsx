@@ -35,7 +35,7 @@ async function api(path: string, init?: RequestInit): Promise<any> {
   return r.json();
 }
 
-export default function FeatureFlagsAdminPage(): JSX.Element {
+export default function FeatureFlagsAdminPage(): React.JSX.Element {
   const [flags, setFlags] = React.useState<FlagRecord[]>([]);
   const [overrides, setOverrides] = React.useState<Record<string, FlagOverride[]>>({});
   const [audit, setAudit] = React.useState<AuditEntry[]>([]);
