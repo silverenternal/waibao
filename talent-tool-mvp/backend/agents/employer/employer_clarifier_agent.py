@@ -10,6 +10,7 @@ from datetime import datetime
 from uuid import uuid4
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
+from agents.prompts import get_prompt as _get_prompt
 from agents.toolkit import llm_call
 from eventbus import emit
 
@@ -61,7 +62,7 @@ class EmployerClarifierAgent(BaseAgent):
         try:
             raw = await llm_call(
                 self.llm or LLMClient(),
-                EMPLOYER_CLARIFIER_PROMPT.format(
+                _get_prompt("employer_clarifier_agent", "system", default=EMPLOYER_CLARIFIER_PROMPT).format(
                     brief=json.dumps(brief, ensure_ascii=False)[:1500],
                     spec=json.dumps(spec, ensure_ascii=False)[:1500],
                     compliance=json.dumps(compliance, ensure_ascii=False)[:800],

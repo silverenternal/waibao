@@ -12,6 +12,7 @@ from uuid import uuid4
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
 from agents.llm_extractor import detect_emotion
+from agents.prompts import get_prompt as _get_prompt
 from eventbus import emit
 
 logger = logging.getLogger("recruittech.agents.jobseeker.emotion")
@@ -39,12 +40,22 @@ class EmotionAgent(BaseAgent):
     description = "情感接收 + 共情回应(1.4)"
     required_personas = ("jobseeker", "talent_partner", "admin")
 
+    @property
+    def system_prompt(self) -> str:
+        """Persona system prompt — resolved at call time from Config Center."""
+        return _get_prompt("emotion_agent", "system", default=SYSTEM_PROMPT)
+
     async def _handle(self, agent_input: AgentInput) -> AgentOutput:
         text = agent_input.text
         ctx = agent_input.context or {}
 
         # 从 memory 取最近的对话上下文(增强情绪连贯性)
         history = ctx.get("recent_conversations", [])
+
+        # 0. resolve persona prompt (hot-editable via Config Center) — the
+        #    detect_emotion extractor uses its own analytic prompt; this one
+        #    governs the conversational persona/voice, surfaced for future use.
+        _ = self.system_prompt
 
         # 1. LLM 情绪分析(一次调用同时拿分析+回应)
         result = await detect_emotion(self.llm or LLMClient(), text, history)

@@ -8,6 +8,7 @@ import json
 import logging
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
+from agents.prompts import get_prompt as _get_prompt
 from agents.toolkit import llm_call
 from eventbus import emit
 
@@ -44,7 +45,7 @@ class MultiPartyAgent(BaseAgent):
         try:
             raw = await llm_call(
                 self.llm or LLMClient(),
-                MULTIPARTY_PROMPT.format(inputs=json.dumps(inputs, ensure_ascii=False)[:3000]),
+                _get_prompt("multi_party_agent", "system", default=MULTIPARTY_PROMPT).format(inputs=json.dumps(inputs, ensure_ascii=False)[:3000]),
                 system="你擅长多方意见汇总和冲突调解。",
                 json_mode=True,
             )

@@ -23,6 +23,7 @@ from datetime import datetime
 from uuid import uuid4
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
+from agents.prompts import get_prompt as _get_prompt
 from agents.toolkit import llm_call
 from services.compliance_service import verify_credential_against_lookup
 from eventbus import emit
@@ -124,7 +125,7 @@ class ComplianceAgent(BaseAgent):
             raw = await llm_call(
                 self.llm or LLMClient(),
                 "请审核",
-                system=COMPLIANCE_PROMPT.format(
+                system=_get_prompt("compliance_agent", "system", default=COMPLIANCE_PROMPT).format(
                     ocr=json.dumps(ocr_data, ensure_ascii=False),
                     verify=json.dumps(verify, ensure_ascii=False),
                 ),

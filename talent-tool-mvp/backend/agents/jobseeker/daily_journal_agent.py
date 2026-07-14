@@ -10,6 +10,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
+from agents.prompts import get_prompt as _get_prompt
 from agents.toolkit import llm_call
 from eventbus import emit
 
@@ -55,7 +56,7 @@ class DailyJournalAgent(BaseAgent):
         except Exception as e:
             logger.debug("journal evaluator import failed: %s", e)
             system_prompt = "你是一位有 10 年经验的职业教练,语言温暖但一针见血。"
-            user_msg = JOURNAL_PROMPT.format(text=text)
+            user_msg = _get_prompt("daily_journal_agent", "system", default=JOURNAL_PROMPT).format(text=text)
 
         raw = await llm_call(
             self.llm or LLMClient(), user_msg, system=system_prompt, json_mode=True

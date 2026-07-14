@@ -16,6 +16,7 @@ from datetime import datetime
 from uuid import uuid4
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
+from agents.prompts import get_prompt as _get_prompt
 from agents.toolkit import llm_call, search_web
 from eventbus import emit
 
@@ -250,7 +251,7 @@ class CareerPlannerAgent(BaseAgent):
         learning = await fetch_learning_resources(profile_skill_names, overall_limit=10)
 
         # 3. 调 LLM 生成规划
-        system = PLANNER_PROMPT.format(
+        system = _get_prompt("career_planner_agent", "system", default=PLANNER_PROMPT).format(
             profile=json.dumps(profile, ensure_ascii=False),
             needs=json.dumps(needs, ensure_ascii=False),
             market=json.dumps(_serialize_market_insights(market), ensure_ascii=False)[:2000],

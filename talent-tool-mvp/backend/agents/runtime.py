@@ -141,6 +141,7 @@ class AgentOutput:
     success: bool = True
     error: Optional[str] = None
     reasoning_chain: list[dict] = field(default_factory=list)  # 推理步骤(对用户可见)
+    degraded: bool = False  # v10.0 T5001: True when served via gateway fallback path
 
 
 @dataclass
@@ -171,6 +172,30 @@ class BaseAgent(ABC):
         # 静默吞掉其他未来扩展 kwargs (兼容不同 agent 的自定义参数)
         for k, v in kwargs.items():
             setattr(self, k, v)
+
+    # ---- v10.0 T5001: contract + hot-reloadable prompt ----
+
+    @property
+    def contract(self):
+        """强类型契约 (AgentGateway 用其校验 input/output)。
+
+        默认基于 agent 的 name/version/description/required_personas 生成通用
+        契约;子类可覆盖以声明专用的 input_model / output_model。
+        """
+        from agents.contracts import AgentContract
+
+        return AgentContract(
+            name=self.name,
+            version=self.version,
+            description=self.description,
+            required_personas=tuple(self.required_personas or ()),
+        )
+
+    def system_prompt(self, key: str = "system", default: str = "") -> str:
+        """从 ConfigCenter 读取本 agent 的 prompt (支持热更新),回退到内置默认。"""
+        from agents.prompts import get_prompt
+
+        return get_prompt(self.name, key, default=default)
 
     # ---- Tool 注册 ----
 

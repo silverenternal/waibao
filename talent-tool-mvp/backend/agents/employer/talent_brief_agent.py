@@ -6,6 +6,7 @@ import logging
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
 from agents.llm_extractor import detect_biases
+from agents.prompts import get_prompt as _get_prompt
 
 logger = logging.getLogger("recruittech.agents.employer.talent_brief")
 
@@ -34,6 +35,7 @@ class TalentBriefAgent(BaseAgent):
 
     async def _handle(self, agent_input: AgentInput) -> AgentOutput:
         text = agent_input.text
+        ctx = agent_input.context or {}
 
         # 1. 偏见检测(LLM 自己发现,不靠关键词)
         bias_result = await detect_biases(self.llm or LLMClient(), text)
@@ -68,7 +70,7 @@ class TalentBriefAgent(BaseAgent):
             raw = await llm_call(
                 self.llm or LLMClient(),
                 text + "\n\n参考偏见分析:\n" + json.dumps(bias_result, ensure_ascii=False)[:1500],
-                system=SYSTEM,
+                system=_get_prompt("talent_brief_agent", "system", default=SYSTEM),
                 json_mode=True,
             )
             result = json.loads(raw)

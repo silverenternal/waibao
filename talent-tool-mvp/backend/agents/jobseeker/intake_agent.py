@@ -8,6 +8,7 @@ import json
 import logging
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
+from agents.prompts import get_prompt as _get_prompt
 from agents.toolkit import llm_call
 from services.profile_extractor import extract_profile_from_text, extract_profile_from_url
 from eventbus import emit
@@ -57,7 +58,7 @@ class IntakeAgent(BaseAgent):
             completion += 0.1
         completion = min(1.0, completion)
 
-        system = INTAKE_PROMPT
+        system = _get_prompt("intake_agent", "system", default=INTAKE_PROMPT)
         user_msg = f"建档完成度: {completion:.0%}\n已抽取: {json.dumps(extracted, ensure_ascii=False)[:500]}"
         raw = await llm_call(self.llm or LLMClient(), user_msg, system=system, json_mode=True)
         try:

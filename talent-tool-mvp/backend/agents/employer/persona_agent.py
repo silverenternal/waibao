@@ -13,6 +13,7 @@ import json
 import logging
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
+from agents.prompts import get_prompt as _get_prompt
 from agents.toolkit import llm_call
 from eventbus import emit
 from services.persona_memory import (
@@ -80,7 +81,7 @@ class PersonaAgent(BaseAgent):
             except Exception as e:  # noqa: BLE001
                 logger.warning(f"persona_agent load prefs failed: {e}")
 
-        system = HR_PERSONA_SYSTEM
+        system = _get_prompt("persona_agent", "system", default=HR_PERSONA_SYSTEM)
         if prefs_block:
             system += "\n\n" + prefs_block
 

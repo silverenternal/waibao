@@ -10,6 +10,7 @@ from datetime import datetime
 from uuid import uuid4
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
+from agents.prompts import get_prompt as _get_prompt
 from agents.toolkit import llm_call
 from eventbus import emit
 
@@ -59,7 +60,7 @@ class MutualEvaluatorAgent(BaseAgent):
             raw = await llm_call(
                 self.llm or LLMClient(),
                 "整合",
-                system=MUTUAL_EVAL_PROMPT.format(
+                system=_get_prompt("mutual_evaluator", "system", default=MUTUAL_EVAL_PROMPT).format(
                     c_skill=s(cand, "skill"), c_comm=s(cand, "communication"),
                     c_culture=s(cand, "culture"), c_potential=s(cand, "potential"),
                     c_comment=cand.get("comment", ""),

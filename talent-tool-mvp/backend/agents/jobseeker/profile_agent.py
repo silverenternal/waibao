@@ -12,6 +12,7 @@ import logging
 from typing import Any
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
+from agents.prompts import get_prompt as _get_prompt
 from agents.toolkit import llm_call
 from eventbus import emit
 
@@ -274,7 +275,7 @@ class ProfileAgent(BaseAgent):
         if video_analysis and "_error" in video_analysis:
             video_notice = f"\n(注:视频简历分析失败 — {video_analysis.get('_error', '未知错误')})"
 
-        system = PROFILE_INTAKE_PROMPT
+        system = _get_prompt("profile_agent", "system", default=PROFILE_INTAKE_PROMPT)
         user_msg = f"已有画像: {json.dumps(existing, ensure_ascii=False)}\n用户新输入: {text}{ocr_notice}"
 
         raw = await llm_call(self.llm or LLMClient(), user_msg, system=system, json_mode=True)

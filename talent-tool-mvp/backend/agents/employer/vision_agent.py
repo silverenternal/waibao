@@ -10,6 +10,7 @@ from datetime import datetime
 from uuid import uuid4
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
+from agents.prompts import get_prompt as _get_prompt
 from agents.toolkit import llm_call
 from eventbus import emit
 
@@ -46,7 +47,7 @@ class VisionAgent(BaseAgent):
 
         raw = await llm_call(
             self.llm or LLMClient(),
-            VISION_PROMPT.format(text=text),
+            _get_prompt("vision_agent", "system", default=VISION_PROMPT).format(text=text),
             system="你是顶级战略顾问,擅长把老板的口述结构化为可落地的 4 层战略。",
             json_mode=True,
         )

@@ -14,6 +14,7 @@ import logging
 from typing import Any
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
+from agents.prompts import get_prompt as _get_prompt
 from agents.toolkit import llm_call
 from eventbus import emit
 
@@ -190,7 +191,7 @@ class HRServiceAgent(BaseAgent):
         try:
             raw = await llm_call(
                 self.llm or LLMClient(),
-                HR_SERVICE_PROMPT.format(text=text, stage=stage),
+                _get_prompt("hr_service_agent", "system", default=HR_SERVICE_PROMPT).format(text=text, stage=stage),
                 system="你是温情专业的 HR 助手。",
                 json_mode=True,
             )

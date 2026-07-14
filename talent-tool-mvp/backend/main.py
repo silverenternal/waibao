@@ -15,16 +15,25 @@ from setup import init_observability
 
 init_observability()
 
+# v10.0 T5003: OpenAPI tag 分类 (docs 导航结构化)
+from api.openapi_tags import openapi_tags_metadata  # noqa: E402
+
 
 app = FastAPI(
     title="RecruitTech API",
     description="Recruitment platform backend — Mothership engine",
     version="0.1.0",
     lifespan=lifespan,
+    openapi_tags=openapi_tags_metadata(),
 )
 
 # T1606: 集中初始化 middleware / handlers / metrics / OTel instrumentation
 setup_application(app)
+
+# v10.0 T5003: 统一错误处理 (ServiceError/APIError/422/500) + OpenAPI 契约治理
+from api.middleware import install_standard_chain  # noqa: E402
+
+install_standard_chain(app)
 
 # T3505: auto-wire service gates onto every /api/* router. Must run
 # before any app.include_router(...) call below.

@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-from .service_catalog import (
+from ..service_catalog import (  # type: ignore[attr-defined]
     PlanTier,
     Service,
     ServiceCategory,
@@ -132,6 +132,16 @@ def invalidate_cache(prefix: Optional[str] = None) -> None:
 # Supabase helper (lazy)
 # ---------------------------------------------------------------------------
 def _supabase():
+    # Tests monkeypatch the *package* attribute ``service_toggle._supabase``
+    # (see tests/test_service_toggle*.py).  Resolve through the package so that
+    # such a patch is honoured by every method in here.  Falls back to the
+    # default ``get_supabase_admin`` lookup when no override is installed.
+    import sys
+
+    pkg = sys.modules.get("services.platform.service_toggle")
+    override = getattr(pkg, "_supabase", None) if pkg is not None else None
+    if override is not None and override is not _supabase:
+        return override()
     from api.deps import get_supabase_admin
 
     return get_supabase_admin()

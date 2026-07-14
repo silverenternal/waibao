@@ -10,6 +10,7 @@ from datetime import datetime
 from uuid import uuid4
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
+from agents.prompts import get_prompt as _get_prompt
 from agents.toolkit import llm_call
 from eventbus import emit
 
@@ -50,7 +51,7 @@ class PolicyAgent(BaseAgent):
             try:
                 raw = await llm_call(
                     self.llm or LLMClient(),
-                    POLICY_PROMPT.format(text=text, task_type="upload"),
+                    _get_prompt("policy_agent", "system", default=POLICY_PROMPT).format(text=text, task_type="upload"),
                     system="你是 HR 制度专家。",
                     json_mode=True,
                 )

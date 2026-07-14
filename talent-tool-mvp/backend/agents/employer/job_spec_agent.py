@@ -8,6 +8,7 @@ import json
 import logging
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
+from agents.prompts import get_prompt as _get_prompt
 from agents.toolkit import llm_call
 from eventbus import emit
 
@@ -52,7 +53,7 @@ class JobSpecAgent(BaseAgent):
         try:
             raw = await llm_call(
                 self.llm or LLMClient(),
-                JOB_SPEC_PROMPT.format(text=text),
+                _get_prompt("job_spec_agent", "system", default=JOB_SPEC_PROMPT).format(text=text),
                 system="你是有 15 年经验的招聘专家,熟悉各行业 JD 套路。",
                 json_mode=True,
             )
