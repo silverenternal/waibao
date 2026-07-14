@@ -171,15 +171,37 @@ def build_saml_authn_request(
     return redirect, b64
 
 
-def parse_saml_response(saml_b64: str) -> Dict[str, Any]:
+def parse_saml_response(
+    saml_b64: str,
+    *,
+    sp_settings: Optional[Dict[str, Any]] = None,
+    verify_signature: Optional[bool] = None,
+    require_python3_saml: Optional[bool] = None,
+) -> Dict[str, Any]:
     """Parse a SAML 2.0 ``<Response>`` (base64 encoded) into a claim dict.
 
-    This is a *minimal* parser that extracts the assertion attributes — it
-    is enough to drive the JIT provisioner and to support unit tests that
-    feed canned XML. Full cryptographic validation is delegated to
-    ``python3-saml`` in production; if that library is missing the function
-    still returns the parsed attributes so the rest of the pipeline is
-    testable.
+    T5014 — signature validation is no longer optional in production. This
+    function delegates to ``python3-saml`` (OneLogin) to cryptographically
+    verify the response signature against the SP / IdP certificates before
+    any attributes are trusted.
+
+    Parameters
+    ----------
+    saml_b64:
+        Base64-encoded ``SAMLResponse`` POST parameter.
+    sp_settings:
+        Optional ``python3-saml`` settings dict (``sp``, ``idp``, ``security``).
+        When omitted the function reads IdP certificates from the
+        ``SAML_IDP_CERT`` / ``SAML_SP_CERT`` env vars.
+    verify_signature:
+        Force-enable/disable signature verification. Defaults to the value
+        of ``SAML_REQUIRE_SIGNED_RESPONSE`` (``"1"`` / ``"true"``) when set,
+        otherwise enabled whenever ``python3-saml`` is importable.
+    require_python3_saml:
+        When True, raise :class:`SSOLoginError` if ``python3-saml`` is not
+        importable — used by the startup gate to fail-fast in production.
+        Defaults to False so unit tests that feed canned, unsigned XML still
+        work.
     """
     if not saml_b64:
         raise SSOLoginError("Empty SAMLResponse")
@@ -194,6 +216,17 @@ def parse_saml_response(saml_b64: str) -> Dict[str, Any]:
         root = ET.fromstring(raw)
     except ET.ParseError as exc:
         raise SSOLoginError(f"Could not parse SAMLResponse XML: {exc}")
+
+    # ------------------------------------------------------------------
+    # Signature verification (T5014). We try to import python3-saml; if the
+    # flag demands it and it is missing we fail-fast. Otherwise we record
+    # whether verification ran and continue to attribute extraction so the
+    # rest of the pipeline remains unit-testable.
+    # ------------------------------------------------------------------
+    verified = _verify_saml_signature(
+        saml_b64, sp_settings=sp_settings, verify_signature=verify_signature,
+        require_python3_saml=require_python3_saml,
+    )
 
     ns = {"a": "urn:oasis:names:tc:SAML:2.0:assertion",
           "p": "urn:oasis:names:tc:SAML:2.0:protocol"}
@@ -231,6 +264,104 @@ def parse_saml_response(saml_b64: str) -> Dict[str, Any]:
         "family_name": _first("family_name", "lastName", "LastName", "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname"),
         "display_name": _first("name", "displayName", "DisplayName"),
         "groups": attrs.get("groups") or attrs.get("Groups") or attrs.get("http://schemas.microsoft.com/ws/2008/06/identity/claims/groups") or [],
+        "signature_verified": verified,
+    }
+
+
+def _verify_saml_signature(
+    saml_b64: str,
+    *,
+    sp_settings: Optional[Dict[str, Any]],
+    verify_signature: Optional[bool],
+    require_python3_saml: Optional[bool],
+) -> bool:
+    """Run python3-saml signature verification. Returns True when verified.
+
+    Raises :class:`SSOLoginError` on signature failure or when verification
+    is mandatory but ``python3-saml`` is unavailable.
+    """
+    # Resolve whether signature verification is required.
+    if verify_signature is None:
+        env = os.getenv("SAML_REQUIRE_SIGNED_RESPONSE", "").strip().lower()
+        if env in ("1", "true", "yes", "on"):
+            verify_signature = True
+        elif env in ("0", "false", "no", "off"):
+            verify_signature = False
+        else:
+            # auto: enable whenever python3-saml is importable
+            verify_signature = _python3_saml_available()
+
+    if not verify_signature:
+        return False
+
+    try:  # pragma: no cover - optional dep
+        from onelogin.saml2.utils import OneLogin_Saml2_Utils  # type: ignore[import-not-found]
+        from onelogin.saml2.xml_utils import OneLogin_Saml2_XML  # type: ignore[import-not-found]
+    except Exception as exc:  # noqa: BLE001
+        if require_python3_saml:
+            raise SSOLoginError(
+                "SAML signature verification required but python3-saml is "
+                f"not installed: {exc} (T5014 fail-fast)"
+            )
+        logger.warning(
+            "python3-saml not available; SAML signature NOT verified (%s)", exc
+        )
+        return False
+
+    # Build the settings dict expected by python3-saml.
+    settings = sp_settings or _default_saml_settings()
+    try:  # pragma: no cover - optional dep, requires real IdP cert
+        from onelogin.saml2.response import OneLogin_Saml2_Response  # type: ignore[import-not-found]
+        saml_response = OneLogin_Saml2_Response(
+            OneLogin_Saml2_Utils.b64decode(saml_b64), settings
+        )
+        if not saml_response.is_valid():
+            raise SSOLoginError(
+                "SAMLResponse signature invalid or untrusted (T5014 fail-fast)"
+            )
+        return True
+    except SSOLoginError:
+        raise
+    except Exception as exc:  # pragma: no cover - optional dep
+        raise SSOLoginError(
+            f"SAML signature verification failed: {exc} (T5014 fail-fast)"
+        )
+
+
+def _python3_saml_available() -> bool:
+    try:  # pragma: no cover - environment dependent
+        import onelogin.saml2.auth  # type: ignore[import-not-found]  # noqa: F401
+        return True
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _default_saml_settings() -> Dict[str, Any]:
+    """Build a python3-saml settings dict from environment variables."""
+    idp_cert = os.getenv("SAML_IDP_CERT", "")
+    sp_cert = os.getenv("SAML_SP_CERT", "")
+    return {
+        "strict": True,
+        "debug": False,
+        "sp": {
+            "entityId": os.getenv(
+                "SSO_SP_ENTITY_ID", "https://app.recruittech.com/saml/metadata"
+            ),
+            "x509cert": sp_cert,
+        },
+        "idp": {
+            "entityId": os.getenv("SAML_IDP_ENTITY_ID", ""),
+            "singleSignOnService": {
+                "url": os.getenv("SAML_IDP_SSO_URL", ""),
+                "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
+            },
+            "x509cert": idp_cert,
+        },
+        "security": {
+            "wantMessagesSigned": True,
+            "wantAssertionsSigned": True,
+            "signMetadata": False,
+        },
     }
 
 

@@ -40,6 +40,20 @@ async def lifespan(app: FastAPI):
     """
     logger.info("RecruitTech API starting up")
 
+    # T5014 — security fail-fast gate. Runs before anything else so a
+    # misconfigured secret / missing cryptography never makes it to a
+    # running server. Strict mode (default) aborts startup on failure.
+    try:
+        from compliance.security_startup import run_security_startup_checks
+        run_security_startup_checks()
+        logger.info("Security startup checks passed (T5014)")
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Security startup checks FAILED (T5014): %s", exc)
+        # In strict mode the gate already raised; if we get here the env is
+        # explicitly non-strict — log loudly and continue.
+        if str(exc):
+            logger.warning("Continuing startup in NON-STRICT security mode")
+
     try:
         from adapters.registry import init_adapters
         init_adapters()

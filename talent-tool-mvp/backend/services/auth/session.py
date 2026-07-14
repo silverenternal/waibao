@@ -35,12 +35,92 @@ logger = logging.getLogger("recruittech.auth.session")
 ACCESS_TOKEN_TTL = int(os.getenv("SSO_ACCESS_TOKEN_TTL", "900"))        # 15 min
 REFRESH_TOKEN_TTL = int(os.getenv("SSO_REFRESH_TOKEN_TTL", str(30 * 24 * 60 * 60)))  # 30 d
 
-JWT_SECRET = os.getenv(
-    "SSO_JWT_SECRET",
-    os.getenv("SUPABASE_JWT_SECRET", "super-secret-jwt-token-with-at-least-32-characters-long"),
-)
 JWT_ALG = "HS256"
 JWT_ISSUER = "waibao-sso"
+
+# T5014 — Known-weak / placeholder JWT secrets that must NEVER be accepted in
+# any environment. These are the literal defaults shipped by Supabase templates,
+# tutorials and our own legacy code; using them in production lets any attacker
+# forge access tokens.
+WEAK_JWT_SECRETS: frozenset[str] = frozenset(
+    {
+        "super-secret-jwt-token-with-at-least-32-characters-long",
+        "your-super-secret-jwt-token-with-at-least-32-characters-long",
+        "change-me-to-a-real-secret",
+        "secret",
+        "changeme",
+        "test-secret",
+        "not-secret",
+        "replace-this-with-a-real-secret",
+    }
+)
+
+JWT_SECRET_ENV_VARS = ("SSO_JWT_SECRET", "SUPABASE_JWT_SECRET")
+MIN_JWT_SECRET_LEN = 32
+
+
+class JWTSecretError(RuntimeError):
+    """Raised at startup when the JWT signing secret is missing / weak.
+
+    T5014 — fail-fast: we refuse to mint or verify tokens rather than
+    silently falling back to a hard-coded default that any attacker knows.
+    """
+
+
+def _read_jwt_secret_env() -> str:
+    """Return the raw (possibly empty) secret configured via env vars."""
+    for var in JWT_SECRET_ENV_VARS:
+        val = os.getenv(var)
+        if val:
+            return val
+    return ""
+
+
+def resolve_jwt_secret() -> str:
+    """Resolve and validate the JWT signing secret.
+
+    Raises :class:`JWTSecretError` when:
+      * no secret is configured at all (no fallback default)
+      * the secret is shorter than ``MIN_JWT_SECRET_LEN`` (32 chars)
+      * the secret is on the :data:`WEAK_JWT_SECRETS` block-list
+
+    The resolved secret is cached in module-level ``JWT_SECRET`` so the rest
+    of the module keeps reading a plain string.
+    """
+    global JWT_SECRET
+    raw = _read_jwt_secret_env()
+    if not raw:
+        raise JWTSecretError(
+            "JWT signing secret is not configured. Set one of "
+            f"{', '.join(JWT_SECRET_ENV_VARS)} to a random string of at "
+            f"least {MIN_JWT_SECRET_LEN} characters. "
+            "Refusing to start with no secret (T5014 fail-fast)."
+        )
+    if len(raw) < MIN_JWT_SECRET_LEN:
+        raise JWTSecretError(
+            f"JWT signing secret is too short ({len(raw)} chars < "
+            f"{MIN_JWT_SECRET_LEN} required). Generate a stronger secret. "
+            "(T5014 fail-fast)."
+        )
+    if raw in WEAK_JWT_SECRETS:
+        raise JWTSecretError(
+            "JWT signing secret matches a known weak / placeholder value "
+            f"({raw[:8]}…). Rotate to a fresh random secret. "
+            "(T5014 fail-fast)."
+        )
+    JWT_SECRET = raw
+    return JWT_SECRET
+
+
+# Best-effort initial resolution at import time. We never raise at import
+# (that would break `import *` in tests / tooling) — instead the first
+# SessionManager construction and the startup gate enforce the check.
+try:
+    JWT_SECRET = resolve_jwt_secret()
+except JWTSecretError:
+    # Keep the module importable; the startup gate + SessionManager will
+    # surface the error loudly when the app actually tries to use it.
+    JWT_SECRET = ""
 
 
 # ---------------------------------------------------------------------------
@@ -185,6 +265,15 @@ class SessionManager:
     """Mint, refresh and revoke SSO sessions."""
 
     def __init__(self, store: Optional[SessionStore] = None) -> None:
+        # T5014 fail-fast: refuse to construct a manager that would sign
+        # tokens with a missing/weak secret. Tests opt out by passing an
+        # explicit secret via the ``SSO_JWT_SECRET`` env var.
+        resolve_jwt_secret()
+        if not JWT_SECRET:
+            raise JWTSecretError(
+                "Cannot construct SessionManager: JWT signing secret is "
+                "not configured (T5014 fail-fast)."
+            )
         self.store = store or SessionStore()
 
     # -- public API -----------------------------------------------------
@@ -255,10 +344,12 @@ class SessionManager:
 
     def verify_access_token(self, token: str) -> Optional[Dict[str, Any]]:
         """Return the JWT claims, or ``None`` on failure."""
+        # T5014: never verify against an unresolved secret.
+        secret = JWT_SECRET or resolve_jwt_secret()
         try:
             return jwt.decode(
                 token,
-                JWT_SECRET,
+                secret,
                 algorithms=[JWT_ALG],
                 options={"verify_aud": False},
                 issuer=JWT_ISSUER,
@@ -290,7 +381,9 @@ class SessionManager:
             "exp": now + ACCESS_TOKEN_TTL,
             "jti": str(uuid.uuid4()),
         }
-        return jwt.encode(claims, JWT_SECRET, algorithm=JWT_ALG)
+        # T5014: never mint against an unresolved secret.
+        secret = JWT_SECRET or resolve_jwt_secret()
+        return jwt.encode(claims, secret, algorithm=JWT_ALG)
 
 
 # ---------------------------------------------------------------------------
@@ -332,4 +425,9 @@ __all__ = [
     "SessionStore",
     "SessionManager",
     "get_session_manager",
+    "JWT_SECRET_ENV_VARS",
+    "MIN_JWT_SECRET_LEN",
+    "WEAK_JWT_SECRETS",
+    "JWTSecretError",
+    "resolve_jwt_secret",
 ]

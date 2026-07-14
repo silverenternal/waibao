@@ -30,6 +30,9 @@ from .data_residency import (
 from .encryption import (
     PIIEncryptor,
     get_pii_encryptor,
+    reset_pii_encryptor,
+    assert_cryptography_available,
+    CryptographyUnavailableError,
 )
 from .policies import (
     PolicyBundle,

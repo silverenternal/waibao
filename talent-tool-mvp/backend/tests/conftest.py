@@ -43,3 +43,8 @@ def env(monkeypatch):
     monkeypatch.setenv("SUPABASE_URL", "http://localhost")
     monkeypatch.setenv("SUPABASE_KEY", "mock")
     monkeypatch.setenv("SUPABASE_SERVICE_KEY", "mock")
+    # T5014 — provide a valid (non-weak, ≥32 char) JWT signing secret so the
+    # security fail-fast gate does not abort SessionManager construction in
+    # tests. SECURITY_STARTUP_STRICT=0 keeps the gate non-fatal in CI.
+    monkeypatch.setenv("SSO_JWT_SECRET", "ci-test-jwt-secret-0123456789-abcdef-GHIJKL")
+    monkeypatch.setenv("SECURITY_STARTUP_STRICT", "0")
