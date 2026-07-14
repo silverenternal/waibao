@@ -35,6 +35,11 @@ class RetrievalConfig:
     score_threshold: float = 0.0
     qdrant_url: str | None = None
     qdrant_api_key: str | None = None
+    # When True, every Qdrant collection is namespaced per-tenant
+    # (`{base}_{tenant_id}`) and the in-memory store partitions by
+    # tenant_id. This is the v10.0 default — multi-tenant isolation is
+    # mandatory, never optional in production.
+    multi_tenant: bool = True
 
 
 # ----------------------------------------------------------------------
@@ -44,8 +49,12 @@ class RetrievalConfig:
 class InMemoryStore:
     """Minimal in-memory vector store for tests and offline runs.
 
-    Each entry is `(chunk_id, document_id, document_name, collection_id, position,
-    content, vector, metadata)`.  Cosine similarity + BM25 scoring.
+    Each entry is `(chunk_id, document_id, document_name, collection_id, tenant_id,
+    position, content, vector, metadata)`.  Cosine similarity + BM25 scoring.
+
+    When a ``tenant_id`` is supplied to a search, entries are filtered to
+    that tenant first — this mirrors the Qdrant payload filter used in
+    production and guarantees multi-tenant isolation in the offline path.
     """
 
     def __init__(self) -> None:
@@ -60,16 +69,23 @@ class InMemoryStore:
         else:
             self._entries = [e for e in self._entries if e["collection_id"] != collection_id]
 
+    def clear_tenant(self, tenant_id: uuid.UUID) -> None:
+        self._entries = [e for e in self._entries if e.get("tenant_id") != tenant_id]
+
     def vector_search(
         self,
         query_vec: list[float],
         collection_id: uuid.UUID,
         top_k: int,
+        *,
+        tenant_id: uuid.UUID | None = None,
     ) -> list[dict[str, Any]]:
         scored: list[tuple[float, dict[str, Any]]] = []
         qn = _norm(query_vec)
         for e in self._entries:
             if e["collection_id"] != collection_id:
+                continue
+            if tenant_id is not None and e.get("tenant_id") != tenant_id:
                 continue
             v = e["vector"]
             vn = _norm(v)
@@ -88,10 +104,16 @@ class InMemoryStore:
         query: str,
         collection_id: uuid.UUID,
         top_k: int,
+        *,
+        tenant_id: uuid.UUID | None = None,
         k1: float = 1.5,
         b: float = 0.75,
     ) -> list[dict[str, Any]]:
-        docs = [e for e in self._entries if e["collection_id"] == collection_id]
+        docs = [
+            e for e in self._entries
+            if e["collection_id"] == collection_id
+            and (tenant_id is None or e.get("tenant_id") == tenant_id)
+        ]
         if not docs:
             return []
         terms = _tokenize(query)
@@ -145,15 +167,47 @@ def _qdrant_client(url: str, api_key: str | None):
         return None
 
 
-def _qdrant_search(client, collection: str, vector: list[float], top_k: int):
+def tenant_collection(base: str, tenant_id: uuid.UUID | str | None) -> str:
+    """Return the physical Qdrant collection name for a tenant.
+
+    Collection names are namespaced as ``{base}_{sanitized_tenant}`` so two
+    tenants sharing the same logical collection never see each other's
+    vectors.  When ``tenant_id`` is None the base name is returned unchanged
+    (single-tenant / legacy mode).
+    """
+    if tenant_id is None:
+        return base
+    t = str(tenant_id).replace("-", "")
+    return f"{base}_{t}"
+
+
+def _qdrant_search(
+    client,
+    collection: str,
+    vector: list[float],
+    top_k: int,
+    *,
+    tenant_id: uuid.UUID | None = None,
+):
     try:
         from qdrant_client.http import models as qm  # type: ignore
     except Exception:  # noqa: BLE001
         return []
     try:
+        query_filter = None
+        if tenant_id is not None:
+            query_filter = qm.Filter(
+                must=[
+                    qm.FieldCondition(
+                        key="tenant_id",
+                        match=qm.MatchValue(value=str(tenant_id)),
+                    )
+                ]
+            )
         hits = client.search(
             collection_name=collection,
             query_vector=vector,
+            query_filter=query_filter,
             limit=top_k,
             with_payload=True,
         )
@@ -167,6 +221,7 @@ def _qdrant_search(client, collection: str, vector: list[float], top_k: int):
             "document_id": uuid.UUID(payload["document_id"]) if payload.get("document_id") else uuid.uuid4(),
             "document_name": payload.get("document_name", ""),
             "collection_id": uuid.UUID(payload["collection_id"]) if payload.get("collection_id") else uuid.uuid4(),
+            "tenant_id": uuid.UUID(payload["tenant_id"]) if payload.get("tenant_id") else tenant_id,
             "position": int(payload.get("position", 0)),
             "content": payload.get("content", ""),
             "vector": vector,
@@ -208,6 +263,7 @@ class Retriever:
         embedding: list[float],
         metadata: dict[str, Any] | None = None,
         qdrant_collection: str | None = None,
+        tenant_id: uuid.UUID | str | None = None,
     ) -> None:
         meta = dict(metadata or {})
         entry = {
@@ -215,6 +271,7 @@ class Retriever:
             "document_id": document_id,
             "document_name": document_name,
             "collection_id": collection_id,
+            "tenant_id": tenant_id,
             "position": position,
             "content": content,
             "vector": embedding,
@@ -222,11 +279,13 @@ class Retriever:
         }
         self._inmem.upsert(entry)
 
-        if self._qdrant is not None and qdrant_collection:
+        # Resolve the physical (tenant-namespaced) collection name.
+        physical_collection = self._resolve_collection(qdrant_collection, tenant_id)
+        if self._qdrant is not None and physical_collection:
             try:
                 from qdrant_client.http import models as qm  # type: ignore
                 self._qdrant.upsert(
-                    collection_name=qdrant_collection,
+                    collection_name=physical_collection,
                     points=[
                         qm.PointStruct(
                             id=str(chunk_id),
@@ -236,6 +295,7 @@ class Retriever:
                                 "document_id": str(document_id),
                                 "document_name": document_name,
                                 "collection_id": str(collection_id),
+                                "tenant_id": str(tenant_id) if tenant_id is not None else None,
                                 "position": position,
                                 "content": content,
                                 "metadata": meta,
@@ -251,6 +311,20 @@ class Retriever:
     def clear_collection(self, collection_id: uuid.UUID) -> None:
         self._inmem.clear(collection_id)
 
+    def clear_tenant(self, tenant_id: uuid.UUID) -> None:
+        self._inmem.clear_tenant(tenant_id)
+
+    def _resolve_collection(
+        self,
+        qdrant_collection: str | None,
+        tenant_id: uuid.UUID | str | None,
+    ) -> str | None:
+        if qdrant_collection is None:
+            return None
+        if not self.config.multi_tenant:
+            return qdrant_collection
+        return tenant_collection(qdrant_collection, tenant_id)
+
     # ------------------------------------------------------------------
     # Retrieval
     # ------------------------------------------------------------------
@@ -262,16 +336,22 @@ class Retriever:
         *,
         top_k: int | None = None,
         qdrant_collection: str | None = None,
+        tenant_id: uuid.UUID | str | None = None,
     ) -> list[RetrievedChunk]:
         cfg = self.config
         k = top_k or cfg.top_k
+        physical_collection = self._resolve_collection(qdrant_collection, tenant_id)
         if cfg.mode == RetrievalMode.VECTOR:
-            hits = self._vector_search(query_embedding, collection_id, k, qdrant_collection)
+            hits = self._vector_search(
+                query_embedding, collection_id, k, physical_collection, tenant_id
+            )
         elif cfg.mode == RetrievalMode.BM25:
-            hits = self._bm25_search(query, collection_id, k, qdrant_collection)
+            hits = self._bm25_search(
+                query, collection_id, k, physical_collection, tenant_id
+            )
         else:
             hits = self._hybrid_search(
-                query, query_embedding, collection_id, k, qdrant_collection
+                query, query_embedding, collection_id, k, physical_collection, tenant_id
             )
 
         out: list[RetrievedChunk] = []
@@ -297,12 +377,18 @@ class Retriever:
         collection_id: uuid.UUID,
         top_k: int,
         qdrant_collection: str | None,
+        tenant_id: uuid.UUID | None = None,
     ) -> list[dict[str, Any]]:
         if self._qdrant is not None and qdrant_collection:
-            hits = _qdrant_search(self._qdrant, qdrant_collection, query_embedding, top_k)
+            hits = _qdrant_search(
+                self._qdrant, qdrant_collection, query_embedding, top_k,
+                tenant_id=tenant_id,
+            )
             if hits:
                 return hits
-        return self._inmem.vector_search(query_embedding, collection_id, top_k)
+        return self._inmem.vector_search(
+            query_embedding, collection_id, top_k, tenant_id=tenant_id
+        )
 
     def _bm25_search(
         self,
@@ -310,9 +396,12 @@ class Retriever:
         collection_id: uuid.UUID,
         top_k: int,
         qdrant_collection: str | None,
+        tenant_id: uuid.UUID | None = None,
     ) -> list[dict[str, Any]]:
         # Qdrant has no native BM25 — fall back to in-memory implementation
-        return self._inmem.bm25_search(query, collection_id, top_k)
+        return self._inmem.bm25_search(
+            query, collection_id, top_k, tenant_id=tenant_id
+        )
 
     def _hybrid_search(
         self,
@@ -321,9 +410,14 @@ class Retriever:
         collection_id: uuid.UUID,
         top_k: int,
         qdrant_collection: str | None,
+        tenant_id: uuid.UUID | None = None,
     ) -> list[dict[str, Any]]:
-        v_hits = self._vector_search(query_embedding, collection_id, top_k * 2, qdrant_collection)
-        b_hits = self._bm25_search(query, collection_id, top_k * 2, qdrant_collection)
+        v_hits = self._vector_search(
+            query_embedding, collection_id, top_k * 2, qdrant_collection, tenant_id
+        )
+        b_hits = self._bm25_search(
+            query, collection_id, top_k * 2, qdrant_collection, tenant_id
+        )
         return _rrf_fuse(
             [v_hits, b_hits],
             weights=[self.config.vector_weight, self.config.bm25_weight],

@@ -199,8 +199,24 @@ class JITProvisioner:
         default_org_slug: Optional[str] = None,
         default_org_name: Optional[str] = None,
         default_org_role: str = "member",
-        link_by_email: bool = True,
+        link_by_email: bool = False,
+        allowed_domains: Optional[list[str]] = None,
     ) -> None:
+        """v10.0 T5018 — JIT governance hardening.
+
+        ``link_by_email`` now defaults to **False**.  Linking an SSO identity
+        to a pre-existing account purely by email match is an account-takeover
+        vector (register the victim's email at a rogue IdP, then SSO in).
+        Operators who understand the risk and want the convenience can opt
+        back in by setting ``SSO_JIT_LINK_BY_EMAIL=1`` or passing
+        ``link_by_email=True``.
+
+        ``allowed_domains`` is an optional email-domain allow-list (e.g.
+        ``["acme.com"]``).  When set, JIT provisioning refuses any email whose
+        domain is not on the list — so a private deployment only ever admits
+        its own workforce.  Defaults to the ``SSO_JIT_ALLOWED_DOMAINS`` env
+        var (comma-separated) or ``None`` (no restriction).
+        """
         self.store = store
         self.default_org_slug = default_org_slug or os.getenv(
             "SSO_DEFAULT_ORG_SLUG", "default"
@@ -209,12 +225,29 @@ class JITProvisioner:
             "SSO_DEFAULT_ORG_NAME", "RecruitTech"
         )
         self.default_org_role = default_org_role
-        self.link_by_email = link_by_email
+        # T5018: default off; env opt-in.
+        self.link_by_email = link_by_email or os.getenv(
+            "SSO_JIT_LINK_BY_EMAIL", "0"
+        ).lower() in ("1", "true", "yes")
+        env_domains = os.getenv("SSO_JIT_ALLOWED_DOMAINS", "").strip()
+        self.allowed_domains: Optional[set[str]] = (
+            allowed_domains
+            if allowed_domains is not None
+            else ({d.strip().lower().lstrip("@") for d in env_domains.split(",") if d.strip()}
+                  if env_domains else None)
+        )
 
     def provision(self, claims: SSOCallbackClaims) -> JITResult:
         """Run the JIT flow and return a :class:`JITResult`."""
         if not claims.email or not claims.subject:
             raise ValueError("Claims missing email/subject")
+        # T5018: enforce the email-domain allow-list before any provisioning.
+        if self.allowed_domains is not None:
+            domain = claims.email.rsplit("@", 1)[-1].lower() if "@" in claims.email else ""
+            if domain not in self.allowed_domains:
+                raise PermissionError(
+                    f"email domain '{domain}' not in JIT allowed domains"
+                )
 
         # 1. Identity → user
         user = self.store.get_by_sso(claims.provider, claims.subject)

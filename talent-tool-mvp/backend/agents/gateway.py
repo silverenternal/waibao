@@ -64,6 +64,37 @@ class AgentGateway:
         # simple last-good-response cache for degradation, keyed by agent+user
         self._degradation_cache: dict[str, AgentOutputModel] = {}
         self._metrics: dict[str, dict[str, int]] = {}
+        # v10.0 T5018 — default governance applied to *every* agent run unless
+        # the caller overrides them.  This is what makes prompt-injection
+        # protection cover all 16 agents without each call site opting in.
+        self._default_injection_guard: Any = None
+        self._default_pii_policy: Any = None
+        self._governance_enabled: bool = True
+        try:
+            from agents.governance import InjectionGuard, PIIPolicy
+            self._default_injection_guard = InjectionGuard()
+            self._default_pii_policy = PIIPolicy()
+        except Exception:  # pragma: no cover — governance always importable
+            pass
+
+    # ---- default governance (T5018) -------------------------------------
+    def set_governance_defaults(
+        self,
+        *,
+        injection_guard: Any = None,
+        pii_policy: Any = None,
+        enabled: bool = True,
+    ) -> None:
+        """Override the default injection / PII guards (test / tuning hook)."""
+        if injection_guard is not None:
+            self._default_injection_guard = injection_guard
+        if pii_policy is not None:
+            self._default_pii_policy = pii_policy
+        self._governance_enabled = enabled
+
+    @property
+    def governance_enabled(self) -> bool:
+        return self._governance_enabled
 
     # ---- singleton ------------------------------------------------------
     @classmethod
@@ -170,18 +201,27 @@ class AgentGateway:
             return self._fail(agent_name, request_id, err, start, raise_on_error)
 
         # 3b. governance pre-flight (PII + injection) ---------------------
+        # T5018: apply the default guards (covering all 16 agents) when the
+        # caller has not supplied overrides.  A caller can still pass its own
+        # guard, or disable governance globally via set_governance_defaults.
         in_text = getattr(validated_in, "text", "") or ""
-        if injection_guard is not None:
+        eff_guard = injection_guard if injection_guard is not None else (
+            self._default_injection_guard if self._governance_enabled else None
+        )
+        eff_pii = pii_policy if pii_policy is not None else (
+            self._default_pii_policy if self._governance_enabled else None
+        )
+        if eff_guard is not None:
             try:
-                injection_guard.enforce(in_text)
+                eff_guard.enforce(in_text)
             except ServiceError as exc:
                 self._emit("agent.governance.blocked",
                            {"agent": agent_name, "request_id": request_id,
                             "reason": "injection", "code": exc.code_value})
                 return self._fail(agent_name, request_id, exc, start, raise_on_error)
-        if pii_policy is not None:
+        if eff_pii is not None:
             try:
-                scrubbed, findings = pii_policy.apply(in_text)
+                scrubbed, findings = eff_pii.apply(in_text)
             except ServiceError as exc:
                 self._emit("agent.governance.blocked",
                            {"agent": agent_name, "request_id": request_id,

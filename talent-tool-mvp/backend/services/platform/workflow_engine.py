@@ -137,13 +137,74 @@ class InMemoryWorkflowStore:
 
 
 # ---------------------------------------------------------------------------
+# Cycle detection (T5024)
+# ---------------------------------------------------------------------------
+
+class CycleError(ValueError):
+    """Raised when a workflow definition contains a cycle."""
+
+
+def detect_cycles(workflow: "WorkflowDefinition") -> None:
+    """Raise :class:`CycleError` if the workflow graph has a back-edge.
+
+    Uses iterative DFS with a tri-colour marking. Each conditional branch
+    is treated as a separate edge — a cycle through *any* branch is fatal
+    because the engine would loop forever.
+    """
+    adj: Dict[str, List[str]] = {n.id: [] for n in workflow.nodes}
+    for edge in workflow.edges:
+        adj.setdefault(edge.from_node, []).append(edge.to_node)
+
+    WHITE, GRAY, BLACK = 0, 1, 2
+    color: Dict[str, int] = {nid: WHITE for nid in adj}
+
+    def dfs(start: str) -> None:
+        stack: List[tuple[str, int]] = [(start, 0)]
+        color[start] = GRAY
+        path: List[str] = [start]
+        while stack:
+            node, i = stack[-1]
+            neighbours = adj.get(node, [])
+            if i >= len(neighbours):
+                color[node] = BLACK
+                stack.pop()
+                path.pop()
+                continue
+            stack[-1] = (node, i + 1)
+            nxt = neighbours[i]
+            if color.get(nxt, WHITE) == GRAY:
+                cycle = path[path.index(nxt):] + [nxt] if nxt in path else [nxt]
+                raise CycleError(f"cycle detected: {' -> '.join(cycle)}")
+            if color.get(nxt, WHITE) == WHITE:
+                color[nxt] = GRAY
+                stack.append((nxt, 0))
+                path.append(nxt)
+
+    for nid in adj:
+        if color[nid] == WHITE:
+            dfs(nid)
+
+
+# ---------------------------------------------------------------------------
 # Engine
 # ---------------------------------------------------------------------------
 
 class WorkflowEngine:
-    def __init__(self, store: InMemoryWorkflowStore | None = None) -> None:
+    def __init__(
+        self,
+        store: InMemoryWorkflowStore | None = None,
+        *,
+        node_timeout_s: float = 30.0,
+        node_retries: int = 2,
+        record_metrics: bool = True,
+    ) -> None:
         self.store = store or InMemoryWorkflowStore()
         self._registry: Dict[str, WorkflowDefinition] = {}
+        # T5024 — per-node hard timeout + bounded retry.
+        self.node_timeout_s = node_timeout_s
+        self.node_retries = node_retries
+        self.record_metrics = record_metrics
+        self.metrics: Dict[str, Dict[str, Any]] = {}
 
     # ------------------------------------------------------------------
     # Definition registry
@@ -210,6 +271,7 @@ class WorkflowEngine:
     # ------------------------------------------------------------------
     async def _run(self, workflow: WorkflowDefinition, input: Any,
                    result: WorkflowResult) -> None:
+        detect_cycles(workflow)  # T5024 — fail fast on cyclic graphs
         adj = self._build_adjacency(workflow)
         node_map = {n.id: n for n in workflow.nodes}
         start = workflow.start_node or (workflow.nodes[0].id if workflow.nodes else None)
@@ -230,12 +292,30 @@ class WorkflowEngine:
         ctx = NodeContext(workflow_run_id=result.run_id,
                           variables=result.variables, input=input)
 
-        try:
-            output = await handler.execute(node.config, ctx)
-        except Exception as exc:  # noqa: BLE001
-            result.error = f"node {node.id} ({node.type}) failed: {exc}"
-            raise
+        # T5024 — per-node hard timeout + bounded retry.
+        attempts = max(1, self.node_retries + 1)
+        output: Any = None
+        last_exc: Optional[Exception] = None
+        for attempt in range(1, attempts + 1):
+            try:
+                output = await asyncio.wait_for(
+                    handler.execute(node.config, ctx),
+                    timeout=self.node_timeout_s,
+                )
+                last_exc = None
+                break
+            except asyncio.TimeoutError as exc:
+                last_exc = exc
+                self._record_metric(node_id, "timeout", attempt)
+            except Exception as exc:  # noqa: BLE001
+                last_exc = exc
+                self._record_metric(node_id, "error", attempt)
+            # retry until attempts exhausted
+        if last_exc is not None:
+            result.error = f"node {node.id} ({node.type}) failed after {attempts} attempts: {last_exc}"
+            raise result.error if isinstance(result.error, Exception) else RuntimeError(result.error)
 
+        self._record_metric(node_id, "completed", attempts)
         result.nodes_executed.append(node_id)
         result.variables[f"_node_output__{node_id}"] = output
         ctx.last_output = output
@@ -263,6 +343,15 @@ class WorkflowEngine:
                                                    edge.to_node, next_input, result)
         result.output = next_input
         return next_input
+
+    def _record_metric(self, node_id: str, event: str, attempt: int) -> None:
+        if not self.record_metrics:
+            return
+        bucket = self.metrics.setdefault(node_id, {"completed": 0, "timeout": 0, "error": 0,
+                                                   "attempts": 0})
+        if event in bucket:
+            bucket[event] += 1
+        bucket["attempts"] += attempt
 
     def _build_adjacency(self, workflow: WorkflowDefinition) -> Dict[str, List[Edge]]:
         adj: Dict[str, List[Edge]] = {n.id: [] for n in workflow.nodes}

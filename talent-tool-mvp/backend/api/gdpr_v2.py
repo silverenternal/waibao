@@ -50,6 +50,19 @@ from services.platform.consent import (
     PIPL_CROSS_BORDER_DISCLOSURE,
 )
 from services.platform.crypto import encrypt as crypto_encrypt
+from services.compliance.ccpa import (
+    CCPAService,
+    DO_NOT_SELL,
+    DO_NOT_SHARE,
+    OPT_OUT_SIGNALS,
+    PI_CATEGORIES,
+    get_ccpa_service,
+)
+from services.compliance.data_export import (
+    DataExportService,
+    DictExportSource,
+    get_data_export_service,
+)
 
 logger = logging.getLogger("waibao.gdpr_v2")
 router = APIRouter(prefix="/api/gdpr-v2", tags=["gdpr_v2"])
@@ -719,6 +732,229 @@ async def report_breach(
         },
     )
     return {"id": breach_id, "notification_window_hours": breach_hours}
+
+
+# ===========================================================================
+# Art. 15 — dedicated structured export (portable bundle w/ PIPL declaration)
+# ===========================================================================
+@router.get("/access")
+@audit_pii("export", "user", pii_fields=["email", "name", "resume"], data_classification="sensitive")
+async def access_export(
+    request: Request,
+    user: CurrentUser = Depends(get_current_user),
+    target_user_id: str | None = Query(None),
+    region: str | None = Query(None, description="override detected region (EU|CN|CA)"),
+    fmt: str = Query("json", description="json | jsonl"),
+):
+    """Art. 15 right of access — a structured, self-describing export bundle.
+
+    Distinct from the older :http:post:`/portability` shape: this returns the
+    :mod:`services.compliance.data_export` bundle which carries a manifest
+    (CCPA categories + GDPR lawful basis per collection) and, for CN-region
+    subjects, the PIPL cross-border transfer declaration.
+    """
+    target = target_user_id or str(user.id)
+    role = getattr(user, "role", None)
+    if target != str(user.id) and role not in {"admin", "compliance"}:
+        raise HTTPException(status_code=403, detail="admin/compliance only")
+    svc = get_data_export_service()
+    # If the default singleton has no real source, fall back to building the
+    # bundle from Supabase so the endpoint is useful in dev without boot config.
+    if isinstance(svc.source, DictExportSource) and not svc.source.collections():
+        _hydrate_export_source_from_supabase(svc, target)
+    detected = region or _region_from_request(request, user)
+    try:
+        bundle = svc.export(target, region=detected, fmt=fmt, include_audit=False)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    audit(
+        action="export",
+        resource="user",
+        resource_id=target,
+        pii_fields=["email", "name", "phone", "resume"],
+        lawful_basis="gdpr_contract",
+        data_classification="sensitive",
+        actor=str(user.id),
+        actor_role=role,
+        tenant_id=getattr(user, "tenant_id", None),
+        metadata={
+            "endpoint": "access",
+            "region": detected,
+            "format": fmt,
+            "pipl_declaration": bundle.pipl_cross_border is not None,
+            "integrity_sha256": bundle.integrity_sha256,
+        },
+    )
+    return bundle.to_dict()
+
+
+def _hydrate_export_source_from_supabase(svc: DataExportService, target: str) -> None:
+    """Populate the in-memory dict source from Supabase (dev convenience)."""
+    sb = _sb()
+    if sb is None:
+        return
+    for t in ["users", "journal_entries", "messages", "tickets", "saved_jobs",
+              "subscriptions", "notifications", "interview_sessions", "feedback",
+              "consent_records"]:
+        try:
+            res = sb.table(t).select("*").eq("user_id", target).execute()
+            rows = res.data or []
+            if rows:
+                svc.source.add(t, target, rows)  # type: ignore[union-attr]
+        except Exception:  # noqa: BLE001
+            continue
+
+
+# ===========================================================================
+# CCPA / CPRA endpoints (Do Not Sell / Share + verifiable consumer requests)
+# ===========================================================================
+class CCPAOptOutBody(BaseModel):
+    do_not_sell: bool = True
+    do_not_share: bool = True
+    source: str = "web"
+
+
+class CCPARequestCreate(BaseModel):
+    request_type: str = Field(..., description="know|delete|correct|opt_out")
+    acted_on_behalf_of: str | None = Field(None, description="authorised agent name")
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class CCPAVerifyBody(BaseModel):
+    token: str
+
+
+@router.get("/ccpa/status")
+@audit_pii("read", "ccpa_opt_out")
+async def ccpa_get_opt_out(
+    request: Request,
+    user: CurrentUser = Depends(get_current_user),
+):
+    """Return the caller's Do-Not-Sell / Do-Not-Share preference (default: not opted out)."""
+    svc = get_ccpa_service()
+    pref = svc.get_opt_out(str(user.id), getattr(user, "tenant_id", None))
+    # Honour the Sec-GPC header opportunistically on read too.
+    gpc = request.headers.get("Sec-GPC") or request.headers.get("sec-gpc")
+    if gpc:
+        svc.apply_gpc_header(str(user.id), gpc, getattr(user, "tenant_id", None))
+        pref = svc.get_opt_out(str(user.id), getattr(user, "tenant_id", None))
+    return pref.to_dict()
+
+
+@router.post("/ccpa/opt-out")
+@audit_pii("update", "ccpa_opt_out", data_classification="sensitive")
+async def ccpa_assert_opt_out(
+    body: CCPAOptOutBody,
+    request: Request,
+    user: CurrentUser = Depends(get_current_user),
+):
+    """The "Do Not Sell / Share My Personal Information" button."""
+    if body.source not in {"web", "gpc_header", "privacy_policy", "agent"}:
+        raise HTTPException(status_code=400, detail="invalid source")
+    svc = get_ccpa_service()
+    pref = svc.assert_opt_out(
+        str(user.id),
+        tenant_id=getattr(user, "tenant_id", None),
+        do_not_sell=body.do_not_sell,
+        do_not_share=body.do_not_share,
+        source=body.source,
+    )
+    audit(
+        action="update",
+        resource="ccpa_opt_out",
+        resource_id=str(user.id),
+        pii_fields=["email"],
+        lawful_basis="gdpr_consent",
+        data_classification="sensitive",
+        actor=str(user.id),
+        actor_role=getattr(user, "role", None),
+        tenant_id=getattr(user, "tenant_id", None),
+        metadata=pref.to_dict(),
+    )
+    return pref.to_dict()
+
+
+@router.get("/ccpa/pi-categories")
+async def ccpa_pi_categories(request: Request):
+    """Public catalog of the CPRA PI categories (§ 1798.140(v))."""
+    return {"categories": PI_CATEGORIES, "opt_out_signals": list(OPT_OUT_SIGNALS)}
+
+
+@router.post("/ccpa/request", status_code=status.HTTP_201_CREATED)
+@audit_pii("create", "ccpa_request", pii_fields=["email"])
+async def ccpa_create_request(
+    body: CCPARequestCreate,
+    request: Request,
+    user: CurrentUser = Depends(get_current_user),
+):
+    """Open a verifiable consumer request (know / delete / correct / opt_out)."""
+    svc = get_ccpa_service()
+    try:
+        req = svc.create_request(
+            str(user.id),
+            body.request_type,
+            tenant_id=getattr(user, "tenant_id", None),
+            acted_on_behalf_of=body.acted_on_behalf_of,
+            metadata=body.metadata,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    audit(
+        action="create",
+        resource="ccpa_request",
+        resource_id=req.id,
+        pii_fields=["email"],
+        lawful_basis="gdpr_consent",
+        actor=str(user.id),
+        actor_role=getattr(user, "role", None),
+        metadata={"request_type": req.request_type, "agent": body.acted_on_behalf_of},
+    )
+    # Mask the verification token in the response — it goes to the consumer's
+    # email, not back over the wire to the requester.
+    out = req.to_dict()
+    out["verify_token"] = None
+    return out
+
+
+@router.post("/ccpa/request/{request_id}/verify")
+@audit_pii("update", "ccpa_request", resource_id_arg="request_id", data_classification="sensitive")
+async def ccpa_verify_request(
+    request_id: str,
+    body: CCPAVerifyBody,
+    request: Request,
+    user: CurrentUser = Depends(get_current_user),
+):
+    svc = get_ccpa_service()
+    try:
+        req = svc.verify_request(request_id, body.token)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="request not found")
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="invalid verification token")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    audit(
+        action="update",
+        resource="ccpa_request",
+        resource_id=request_id,
+        actor=str(user.id),
+        metadata={"state": req.state, "due_at": req.due_at},
+    )
+    return req.to_dict()
+
+
+@router.get("/ccpa/request")
+@audit_pii("read", "ccpa_request")
+async def ccpa_list_requests(
+    request: Request,
+    user: CurrentUser = Depends(get_current_user),
+    limit: int = Query(50, ge=1, le=200),
+):
+    svc = get_ccpa_service()
+    role = getattr(user, "role", None)
+    target = None if role in {"admin", "compliance"} else str(user.id)
+    rows = svc.list_requests(target, limit=limit)
+    return {"items": [r.to_dict() for r in rows]}
 
 
 # ===========================================================================

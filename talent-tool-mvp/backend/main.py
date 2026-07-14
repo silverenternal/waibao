@@ -102,6 +102,7 @@ from api.realtime import router as realtime_router
 from api.two_way_match import router as two_way_match_router
 from api.evaluation import router as evaluation_router
 from api.gdpr import router as gdpr_router
+from api.breach import router as breach_router
 from api.journal import router as journal_router
 from api.emotion import router as emotion_router
 from api.vision import router as vision_router
@@ -205,6 +206,8 @@ app.include_router(
     tags=["admin-matching-quality"],
 )
 app.include_router(gdpr_router, prefix="/api/gdpr", tags=["compliance"])
+# v10.0 T5016: GDPR Art. 33/34 data-breach workflow
+app.include_router(breach_router)
 
 # T1201: Legal / Cookie / Privacy 文档 API
 from api.legal import router as legal_router

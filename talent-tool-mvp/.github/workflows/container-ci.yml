@@ -1,0 +1,121 @@
+name: Container & Supply-Chain CI
+
+# v10.0 T5019 — container hardening + supply-chain integrity gate.
+#
+# Runs on every PR + push and weekly:
+#   1. gitleaks        — scan history + working tree for committed secrets
+#   2. pip-compile     — assert backend/requirements.lock is not stale
+#   3. trivy (fs)      — CVE-scan the source tree (requirements + Dockerfile)
+#   4. trivy (image)   — build the Docker image and CVE-scan it (HIGH/CRITICAL fail)
+#   5. hadolint        — lint the Dockerfile against CIS Docker best practice
+#
+# The bandit + safety + detect-secrets jobs live in security.yml and remain
+# the source of truth for SAST + dependency-CVE scanning; this file layers
+# the container + lock-integrity controls on top.
+
+on:
+  push:
+    branches: [main, develop, master]
+  pull_request:
+    branches: [main, develop, master]
+  schedule:
+    - cron: "17 6 * * 1"   # weekly, off the :00 mark
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    name: Gitleaks (secret scan)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history — catch secrets buried in old commits
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Fail the job on any finding (override with .gitleaksignore for
+          # known false positives such as example tokens in docs).
+          GITLEAKS_ENABLE_COMMENTS: "true"
+
+  pip-compile-lock:
+    name: requirements.lock freshness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify lock is current
+        working-directory: backend
+        run: |
+          pip install --quiet pip-tools
+          # If requirements.lock does not exist yet, generate it so the check
+          # has something to compare against (first run after adoption).
+          if [ ! -f requirements.lock ]; then
+            echo "requirements.lock not committed yet — generating for comparison."
+            pip-compile --quiet --generate-hashes --no-header \
+              --output-file requirements.lock requirements.in
+          fi
+          pip-compile --quiet --generate-hashes --no-header --no-annotate \
+            --output-file requirements.lock.tmp requirements.in
+          if ! diff -q requirements.lock requirements.lock.tmp >/dev/null; then
+            echo "::error::requirements.lock is stale. Run backend/scripts/lock_requirements.sh and commit."
+            diff -u requirements.lock requirements.lock.tmp | head -40 || true
+            exit 1
+          fi
+          echo "requirements.lock is up to date."
+
+  trivy-fs:
+    name: Trivy (source + deps)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          # Fail on HIGH/CRITICAL with a known fix.  Tune via .trivyignore.
+          exit-code: "1"
+          format: sarif
+          output: trivy-fs.sarif
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-fs.sarif
+
+  trivy-image:
+    name: Trivy (container image)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        working-directory: backend
+        run: docker build -t recruittech-backend:ci .
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: recruittech-backend:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          format: table
+
+  hadolint:
+    name: Hadolint (Dockerfile)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: backend/Dockerfile
+          # DL3008: pin apt versions (we install from slim base — acceptable);
+          # DL3013: pin pip versions (handled by requirements.lock).
+          ignore: "DL3008,DL3013"

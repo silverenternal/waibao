@@ -249,9 +249,31 @@ async def cancel_run(run_id: str) -> Dict[str, Any]:
     return result.to_dict()
 
 
+@router.get("/runs/{run_id}/timeline")
+async def run_timeline(run_id: str) -> Dict[str, Any]:
+    """T5024 — return the per-run event timeline (started/completed/failed/
+    paused/retried/cancelled/resumed) for observability + debugging."""
+    timeline = get_run_timeline(run_id)
+    return {"run_id": run_id, "events": timeline}
+
+
 # ---------------------------------------------------------------------------
 # Helpers (private)
 # ---------------------------------------------------------------------------
+
+def get_run_timeline(run_id: str) -> List[Dict[str, Any]]:
+    """Return the recorded timeline for a run.
+
+    The persistence manager (T5024) keeps an in-memory timeline that the
+    engine emits to. When no timeline has been recorded yet we return an
+    empty list so callers can always render the panel.
+    """
+    try:
+        from services.platform.workflow_persistence import _global_timeline  # type: ignore
+    except Exception:  # noqa: BLE001
+        return []
+    return _global_timeline(run_id)
+
 
 def _definition_from_row(row: Dict[str, Any]) -> Optional[WorkflowDefinition]:
     raw = row.get("definition") or {}

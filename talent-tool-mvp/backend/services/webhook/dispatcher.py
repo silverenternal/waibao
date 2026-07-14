@@ -24,6 +24,14 @@ from .types import (
     WebhookEvent,
     WebhookPayload,
 )
+# v10.0 T5017 — SSRF guard (block private IP + post-DNS re-resolve check).
+try:
+    from services.security.ssrf import SSRFError, assert_safe_url
+    _SSRF_AVAILABLE = True
+except Exception:  # pragma: no cover — ssrf always importable; defensive only
+    SSRFError = ValueError  # type: ignore[assignment,misc]
+    assert_safe_url = None  # type: ignore[assignment]
+    _SSRF_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +91,21 @@ class WebhookDispatcher:
     # Config 管理
     # ------------------------------------------------------------------
     def register(self, cfg: WebhookConfig) -> None:
+        """Register a webhook config, rejecting SSRF-targeted URLs at the door.
+
+        A tenant who can set an arbitrary callback URL must never be able to
+        reach internal addresses (``169.254.169.254`` metadata, ``10.x``,
+        ``127.x``).  We run the textual :func:`assert_safe_url` check here so
+        the bad URL is refused before it is ever stored; :meth:`_deliver`
+        re-runs the check (including DNS resolution) at fire time to defeat
+        DNS-rebinding.
+        """
+        if _SSRF_AVAILABLE:
+            try:
+                assert_safe_url(cfg.url)
+            except SSRFError as exc:
+                logger.warning("webhook.register_blocked ssrf url=%s reason=%s", cfg.url, exc)
+                raise
         self._configs[cfg.id] = cfg
 
     def unregister(self, config_id: str) -> bool:
@@ -146,6 +169,19 @@ class WebhookDispatcher:
         for attempt in range(1, self.max_retries + 1):
             record.attempt = attempt
             record.last_attempt_at = datetime.now(tz=timezone.utc).isoformat()
+            # v10.0 T5017 — re-verify the URL on EVERY attempt.  The host may
+            # have been re-pointed at a private IP since registration (DNS
+            # rebinding).  This is the canonical SSRF mitigation: validate
+            # immediately before the outbound call.
+            if _SSRF_AVAILABLE:
+                try:
+                    assert_safe_url(cfg.url)
+                except SSRFError as exc:
+                    last_error = f"ssrf_blocked: {exc}"
+                    last_code = None
+                    record.last_error = last_error
+                    # SSRF is never retriable — dead-letter immediately.
+                    break
             try:
                 status_code, text = await self.transport(cfg.url, headers, body)
             except Exception as exc:  # 网络层异常

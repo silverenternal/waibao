@@ -44,6 +44,7 @@ import {
   ConsentSwitch,
   type PurposeDefinition,
 } from "@/components/privacy/ConsentSwitch";
+import { PrivacyRightsPanel } from "@/components/privacy/PrivacyRightsPanel";
 
 type Locale = "zh" | "en" | "ja";
 
@@ -551,6 +552,9 @@ export default function PrivacyV2Page() {
             </Button>
           </CardContent>
         </Card>
+        {/* Art. 15/17/20 + CCPA Do-Not-Sell — v10.0 T5016 upgrade */}
+        <PrivacyRightsPanel region={legalBasis?.template?.code ?? region} tokenHeader={tokenHeader} />
+
         {/* DSR history */}
         <Card>
           <CardHeader>

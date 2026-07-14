@@ -1,7 +1,53 @@
-__pycache__
-*.pyc
-.env
-.venv
-venv
+# v10.0 T5019 — keep the Docker build context lean + secret-free.
+# Anything matched here never enters the image (smaller, fewer CVEs, no secrets).
+
+# Python caches / venvs
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+.tox/
+
+# Tests / CI artefacts (not needed at runtime)
 tests/
-.pytest_cache
+**/test_*.py
+**/*_test.py
+conftest.py
+.pytest_cache/
+bandit-report.json
+safety-report.json
+sqlmap-output/
+.playwright/
+
+# Secrets / local config — must NEVER ship in the image
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+.claude/
+
+# VCS / docs / editor
+.git/
+.gitignore
+.gitattributes
+.github/
+docs/
+*.md
+.vscode/
+.idea/
+.DS_Store
+node_modules/
