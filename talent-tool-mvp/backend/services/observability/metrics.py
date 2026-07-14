@@ -65,6 +65,31 @@ def init_metrics() -> bool:
             "LLM 缓存命中率 (0-1)",
             registry=_REGISTRY,
         )
+        # T5004 / T5005 — resilience + distributed-state observability metrics.
+        # provider_mock_fallback_total{contract,reason}: how often a real call
+        # degraded to a mock provider (should be 0 in healthy prod).
+        _METRICS["provider_mock_fallback_total"] = Counter(
+            "provider_mock_fallback_total",
+            "Provider 调用降级到 mock 的次数 (生产应为 0)",
+            ["contract", "reason"],
+            registry=_REGISTRY,
+        )
+        # service_degraded_total{service,reason}: a feature flag / toggle
+        # served a degraded (fail-open/fail-closed) decision.
+        _METRICS["service_degraded_total"] = Counter(
+            "service_degraded_total",
+            "服务进入降级态的次数 (fail-open / fail-closed)",
+            ["service", "reason"],
+            registry=_REGISTRY,
+        )
+        # queue_lag_seconds{queue}: consumer lag for async queues (e.g.
+        # event bus) — surfaced as a gauge so dashboards alert on growth.
+        _METRICS["queue_lag_seconds"] = Gauge(
+            "queue_lag_seconds",
+            "队列消费延迟 (秒) — oldest unacked message age",
+            ["queue"],
+            registry=_REGISTRY,
+        )
         _ENABLED = True
         logger.info("metrics.init success")
         return True
@@ -138,6 +163,43 @@ def set_cache_hit_ratio(ratio: float) -> None:
         _METRICS["llm_cache_hit_ratio"].set(max(0.0, min(1.0, ratio)))
     except Exception:  # noqa: BLE001
         logger.exception("metrics.set_cache_hit_ratio_failed")
+
+
+# ---------------------------------------------------------------------------
+# T5004 / T5005 resilience + distributed-state metrics
+# ---------------------------------------------------------------------------
+def inc_mock_fallback(contract: str, reason: str = "no_key") -> None:
+    """A real provider call degraded to the mock path."""
+    if not _ENABLED:
+        return
+    try:
+        _METRICS["provider_mock_fallback_total"].labels(
+            contract=contract, reason=reason
+        ).inc()
+    except Exception:  # noqa: BLE001
+        logger.exception("metrics.inc_mock_fallback_failed")
+
+
+def inc_degraded(service: str, reason: str) -> None:
+    """A flag / toggle served a degraded decision (fail-open / fail-closed)."""
+    if not _ENABLED:
+        return
+    try:
+        _METRICS["service_degraded_total"].labels(
+            service=service, reason=reason
+        ).inc()
+    except Exception:  # noqa: BLE001
+        logger.exception("metrics.inc_degraded_failed")
+
+
+def set_queue_lag(queue: str, lag_seconds: float) -> None:
+    """Record the consumer lag (oldest unacked message age) for a queue."""
+    if not _ENABLED:
+        return
+    try:
+        _METRICS["queue_lag_seconds"].labels(queue=queue).set(max(0.0, lag_seconds))
+    except Exception:  # noqa: BLE001
+        logger.exception("metrics.set_queue_lag_failed")
 
 
 def metrics_asgi_app():

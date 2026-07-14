@@ -1,12 +1,18 @@
 """Mock provider fallback (registry 自动调用).
 
 不实现真实业务,仅保证 provider 协议完整,用于本地无 key 调试。
+
+v10.0 T5004 — MockProvider now declares a :class:`providers.contract.ProviderContract`
+with ``mock_enabled=True``. The registry uses the explicit
+``WAIBAO_PROVIDER_MOCK`` gate before any real caller receives mock data —
+production traffic must never silently degrade.
 """
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from typing import Any
 
+from .contract import ProviderContract
 from .exceptions import ProviderError
 
 
@@ -17,6 +23,15 @@ class MockProvider:
         self.contract = contract
         self.provider_name = f"mock_{contract}"
         self.channel = f"mock_{contract}"
+        # T5004: declare the unified contract. Mock providers are always
+        # mock_enabled; the registry enforces the gate before serving them.
+        self.provider_contract = ProviderContract(
+            name=self.provider_name,
+            contract_type=contract,
+            mock_enabled=True,
+            allow_mock_fallback=False,
+            vendor="mock",
+        )
 
     async def chat(self, messages: list[Any], **kwargs: Any) -> Any:  # type: ignore[no-untyped-def]
         from .llm.base import LLMResponse, Usage

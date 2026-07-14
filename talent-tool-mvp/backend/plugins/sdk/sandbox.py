@@ -255,19 +255,36 @@ class NetworkGuard:
     class is restored on exit. Only takes effect if ``allow`` is non-empty;
     pass ``allow=None`` to disable the guard entirely (not recommended in
     production).
+
+    v10.0 T5004 — ``mode`` adds an explicit deny-egress posture:
+
+    * ``mode="allowlist"`` (default, backward compatible) — only hosts in
+      ``allow`` may be reached; everything else is denied.
+    * ``mode="deny-all"`` — every outbound connection is refused, regardless
+      of ``allow``. This is the posture production should run plugins under;
+      it mirrors a container with ``--network=none``.
     """
 
-    def __init__(self, allow: Optional[Iterable[str]] = None) -> None:
+    MODE_ALLOWLIST = "allowlist"
+    MODE_DENY_ALL = "deny_all"
+
+    def __init__(self, allow: Optional[Iterable[str]] = None, *,
+                 mode: str = "allowlist") -> None:
         self.allow = set(allow or [])
+        self.mode = mode
         self._real_socket = None
+        self._real_create = None
         self._patched: List[Any] = []
 
     def __enter__(self) -> "NetworkGuard":
-        if not self.allow:
+        # deny_all is active even with an empty allow list; allowlist only
+        # activates when there is something to enforce.
+        if self.mode == self.MODE_ALLOWLIST and not self.allow:
             return self
         import socket  # local import — guard may not always be active
 
         self._real_socket = socket.socket
+        self._real_create = getattr(socket, "create_connection", None)
         guard = self
 
         class _GuardedSocket(socket.socket):  # type: ignore[misc]
@@ -281,9 +298,25 @@ class NetworkGuard:
 
         socket.socket = _GuardedSocket  # type: ignore[misc]
         self._patched.append(socket.socket)
+
+        if self._real_create is not None:
+            def _guarded_create_connection(address, *args, **kwargs):  # type: ignore[no-untyped-def]
+                host, *_ = address if isinstance(address, tuple) else (address,)
+                if not guard._is_allowed(str(host)):
+                    raise PermissionError(
+                        f"plugin network access denied to {host!r}"
+                    )
+                return guard._real_create(address, *args, **kwargs)  # type: ignore[misc]
+
+            socket.create_connection = _guarded_create_connection  # type: ignore[assignment]
+            self._patched.append(socket.create_connection)
+
         return self
 
     def _is_allowed(self, host: str) -> bool:
+        # deny_all refuses everything.
+        if self.mode == self.MODE_DENY_ALL:
+            return False
         for pattern in self.allow:
             if pattern == host:
                 return True
@@ -296,6 +329,8 @@ class NetworkGuard:
 
         if self._real_socket is not None:
             socket.socket = self._real_socket  # type: ignore[misc]
+        if self._real_create is not None:
+            socket.create_connection = self._real_create  # type: ignore[assignment]
 
 
 # ---------------------------------------------------------------------------
@@ -351,6 +386,10 @@ class SandboxConfig:
     file_descriptors: int = 64
     use_restricted_python: bool = True
     permissions: List[str] = field(default_factory=list)
+    # T5004: explicit network posture. "allowlist" preserves the legacy
+    # behaviour (deny unless in allow_network_hosts); "deny_all" refuses
+    # every outbound connection — the production-hardened default.
+    network_mode: str = "allowlist"
 
 
 class SandboxError(RuntimeError):
@@ -374,7 +413,12 @@ def sandboxed(config: SandboxConfig):
     if config.sandbox_dir:
         layers.append(FilesystemGuard(config.sandbox_dir))
     if config.allow_network_hosts is not None:
-        layers.append(NetworkGuard(allow=config.allow_network_hosts))
+        layers.append(
+            NetworkGuard(
+                allow=config.allow_network_hosts,
+                mode=config.network_mode,
+            )
+        )
 
     # Enter all guards.
     for layer in layers:
@@ -403,6 +447,121 @@ def compile_plugin_source(source: str, filename: str,
     return compile(source, filename, "exec")
 
 
+# ===========================================================================
+# v10.0 T5004 — Container sandbox (Docker) + network-level egress deny
+# ===========================================================================
+#
+# The in-process guards above are defence-in-depth. The audit's hardening
+# recommendation is that production plugins ALSO run inside an isolated
+# container with no egress. These helpers generate the Docker run spec and
+# the iptables deny-egress rules so a deployment script (or the plugin
+# runner) can apply them. They do NOT shell out themselves — that is the
+# operator's responsibility — so they are safe to import and unit-test in CI
+# without a Docker daemon.
+
+
+@dataclass
+class ContainerSandboxSpec:
+    """Declarative description of the Docker container a plugin should run in.
+
+    The runner turns this into a ``docker run`` invocation. Network is
+    ``none`` by default (no egress); CPU / memory caps mirror the in-process
+    :class:`ResourceLimiter`.
+    """
+
+    image: str = "waibao/plugin-runtime:slim"
+    network: str = "none"  # "none" => --network=none, no egress at all
+    cpu_quota: float = 1.0  # cores
+    memory_mb: int = 256
+    read_only_root: bool = True
+    no_new_privileges: bool = True
+    cap_drop_all: bool = True
+    user: str = "65534:65534"  # nobody:nobody
+    env: Dict[str, str] = field(default_factory=dict)
+    timeout_seconds: float = 30.0
+    workdir: str = "/plugin"
+
+    def to_docker_args(self) -> List[str]:
+        """Render the spec into a ``docker run`` argv list (without the
+        trailing image / command)."""
+        args: List[str] = [
+            "--rm",
+            f"--network={self.network}",
+            f"--cpus={self.cpu_quota}",
+            f"--memory={self.memory_mb}m",
+            f"--user={self.user}",
+            f"-w={self.workdir}",
+        ]
+        if self.read_only_root:
+            args.append("--read-only")
+        if self.no_new_privileges:
+            args.append("--security-opt=no-new-privileges")
+        if self.cap_drop_all:
+            args.append("--cap-drop=ALL")
+        # tmpfs so the plugin can still write scratch files even with a
+        # read-only rootfs.
+        args.append("--tmpfs=/tmp:rw,noexec,nosuid,size=64m")
+        for key, value in self.env.items():
+            args.append(f"-e={key}={value}")
+        return args
+
+
+def build_container_spec(config: SandboxConfig, *,
+                         image: str = "waibao/plugin-runtime:slim",
+                         env: Optional[Dict[str, str]] = None) -> ContainerSandboxSpec:
+    """Translate a :class:`SandboxConfig` into a :class:`ContainerSandboxSpec`.
+
+    When ``network_mode == "deny_all"`` the container gets ``--network=none``
+    (kernel-level egress block, stronger than the socket monkey-patch).
+    When ``network_mode == "allowlist"`` the container keeps the default
+    network and relies on the in-process :class:`NetworkGuard` for the
+    allow-list enforcement.
+    """
+    network = "none" if config.network_mode == NetworkGuard.MODE_DENY_ALL else "default"
+    return ContainerSandboxSpec(
+        image=image,
+        network=network,
+        cpu_quota=max(0.1, config.cpu_seconds / 10.0),  # coarse cores mapping
+        memory_mb=config.memory_mb,
+        env=dict(env or {}),
+        timeout_seconds=config.cpu_seconds,
+    )
+
+
+def egress_deny_iptables_rules(chain: str = "OUTPUT",
+                               except_lo: bool = True) -> List[str]:
+    """Return iptables rules that deny all outbound traffic.
+
+    Intended for the container's egress posture when ``--network=none`` is
+    not available (e.g. rootless Docker). The operator applies these inside
+    the plugin network namespace. ``except_lo`` keeps loopback working so
+    the plugin can still talk to a local sidecar if needed.
+
+    Returned as a list of argv strings (each element is one ``iptables``
+    invocation split on spaces) so callers can ``shlex.join`` or ``run``
+    them directly.
+    """
+    rules: List[str] = []
+    if except_lo:
+        rules.append(f"iptables -A {chain} -o lo -j ACCEPT")
+    # Deny everything else.
+    rules.append(f"iptables -A {chain} -j DROP")
+    return rules
+
+
+def apply_network_mode(config: SandboxConfig) -> str:
+    """Return the effective network posture for a sandbox config.
+
+    Public helper used by the runner / admin API to surface which posture a
+    plugin will execute under.
+    """
+    if config.network_mode == NetworkGuard.MODE_DENY_ALL:
+        return "deny_all"
+    if config.allow_network_hosts:
+        return "allowlist"
+    return "open"
+
+
 __all__ = [
     "DEFAULT_BLOCKED_MODULES",
     "RESTRICTED_BUILTINS_BLACKLIST",
@@ -416,4 +575,9 @@ __all__ = [
     "ResourceLimiter",
     "NetworkGuard",
     "FilesystemGuard",
+    # T5004
+    "ContainerSandboxSpec",
+    "build_container_spec",
+    "egress_deny_iptables_rules",
+    "apply_network_mode",
 ]

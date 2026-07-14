@@ -23,10 +23,12 @@ the existing app without breaking the 2000+ passing tests.
 from __future__ import annotations
 
 import logging
+import uuid
 from typing import Any, Optional
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 
 logger = logging.getLogger("recruittech.api.middleware")
 
@@ -35,8 +37,20 @@ logger = logging.getLogger("recruittech.api.middleware")
 # Unified error handlers
 # ===========================================================================
 def _error_body(code: str, message: str, *, details: Any = None,
-                retry_after: Optional[int] = None, path: Optional[str] = None) -> dict[str, Any]:
+                retry_after: Optional[int] = None, path: Optional[str] = None,
+                request_id: Optional[str] = None,
+                retryable: Optional[bool] = None) -> dict[str, Any]:
+    """Build the canonical v10.0 error envelope.
+
+    Every error body carries ``code``, ``message``, ``retryable`` and
+    ``request_id`` so clients can branch uniformly; ``details`` /
+    ``retry_after`` / ``path`` are included only when meaningful.
+    """
     err: dict[str, Any] = {"code": code, "message": message}
+    if retryable is not None:
+        err["retryable"] = retryable
+    if request_id is not None:
+        err["request_id"] = request_id
     if details:
         err["details"] = details
     if retry_after is not None:
@@ -46,13 +60,42 @@ def _error_body(code: str, message: str, *, details: Any = None,
     return {"error": err}
 
 
+def _resolve_request_id(request: Request) -> str:
+    """Return the request's correlation id (header or state-bound value).
+
+    Falls back to an empty string when none is present so the envelope field
+    is always populated.
+    """
+    rid = request.headers.get("x-request-id") or request.headers.get("X-Request-ID")
+    if not rid:
+        rid = getattr(request.state, "request_id", None)
+    return rid or ""
+
+
+def _retryable_for(code: str) -> bool:
+    """Best-effort retryable flag for ad-hoc (non-ServiceError) envelopes."""
+    from services.platform.errors import is_retryable
+    try:
+        from services.platform.errors import ServiceErrorCode
+        return is_retryable(ServiceErrorCode(code))
+    except Exception:  # noqa: BLE001 — unknown code, default not-retryable
+        return False
+
+
 def install_error_handlers(app: FastAPI) -> None:
-    """Install the canonical ServiceError / APIError / validation / 500 handlers."""
-    from services.platform.errors import ServiceError
+    """Install the canonical ServiceError / APIError / validation / 500 handlers.
+
+    Every response uses the unified v10.0 envelope::
+
+        {"error": {"code", "message", "retryable", "request_id",
+                   ["details"], ["retry_after"], ["path"]}}
+    """
+    from services.platform.errors import ServiceError, ServiceErrorCode
 
     @app.exception_handler(ServiceError)
     async def _service_error_handler(request: Request, exc: ServiceError):  # type: ignore[valid-type]
-        logger.info("ServiceError %s on %s: %s", exc.code_value, request.url.path, exc.message)
+        rid = exc.request_id or _resolve_request_id(request)
+        logger.info("ServiceError %s on %s: %s (rid=%s)", exc.code_value, request.url.path, exc.message, rid)
         return JSONResponse(
             status_code=exc.status_code,
             content=_error_body(
@@ -60,6 +103,8 @@ def install_error_handlers(app: FastAPI) -> None:
                 details=exc.details or None,
                 retry_after=exc.retry_after,
                 path=request.url.path,
+                request_id=rid,
+                retryable=exc.retryable,
             ),
             headers=exc.headers() or None,
         )
@@ -77,6 +122,8 @@ def install_error_handlers(app: FastAPI) -> None:
                     code, exc.detail,
                     details=exc.extra or None,
                     path=request.url.path,
+                    request_id=_resolve_request_id(request),
+                    retryable=_retryable_for(code),
                 ),
                 headers=exc.headers or None,
             )
@@ -94,10 +141,28 @@ def install_error_handlers(app: FastAPI) -> None:
                     "VALIDATION_ERROR", "Request validation failed",
                     details={"errors": _safe_errors(exc)},
                     path=request.url.path,
+                    request_id=_resolve_request_id(request),
+                    retryable=_retryable_for("VALIDATION_ERROR"),
                 ),
             )
     except Exception as exc:  # noqa: BLE001
         logger.debug("validation handler not installed: %s", exc)
+
+    # Catch-all for any uncaught exception → 500 with the same envelope.
+    @app.exception_handler(Exception)
+    async def _unhandled_handler(request: Request, exc: Exception):  # type: ignore[valid-type]
+        rid = _resolve_request_id(request)
+        logger.exception("Unhandled exception on %s (rid=%s): %s", request.url.path, rid, exc)
+        return JSONResponse(
+            status_code=500,
+            content=_error_body(
+                ServiceErrorCode.INTERNAL_ERROR.value,
+                "Internal service error",
+                path=request.url.path,
+                request_id=rid,
+                retryable=True,
+            ),
+        )
 
 
 def _safe_errors(exc: Any) -> list[dict[str, Any]]:
@@ -112,6 +177,40 @@ def _safe_errors(exc: Any) -> list[dict[str, Any]]:
         return out
     except Exception:  # noqa: BLE001
         return []
+
+
+# ===========================================================================
+# Request-id correlation middleware
+# ===========================================================================
+class RequestIdMiddleware(BaseHTTPMiddleware):
+    """Stamp every request with a correlation id.
+
+    Honours an inbound ``X-Request-ID`` header (so upstream gateways /
+    clients can propagate their own id) and otherwise mints one.  The value
+    is bound to ``request.state.request_id`` so the error handlers and any
+    logging can read it, and echoed back on the ``X-Request-ID`` response
+    header.
+    """
+
+    async def dispatch(self, request: Request, call_next):  # type: ignore[override]
+        rid = (
+            request.headers.get("x-request-id")
+            or request.headers.get("X-Request-ID")
+            or f"req_{uuid.uuid4().hex[:16]}"
+        )
+        request.state.request_id = rid
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = rid
+        return response
+
+
+def install_request_id_middleware(app: FastAPI) -> None:
+    """Wire the request-id middleware (idempotent)."""
+    # Avoid double-registration on hot-reload.
+    existing = {getattr(m.cls, "__name__", "") for m in app.user_middleware}
+    if RequestIdMiddleware.__name__ in existing:
+        return
+    app.add_middleware(RequestIdMiddleware)
 
 
 # ===========================================================================
@@ -186,10 +285,11 @@ def standard_dependencies(*, require_tenant: bool = True,
 # One-call installer
 # ===========================================================================
 def install_standard_chain(app: FastAPI) -> FastAPI:
-    """Install unified error handling + OpenAPI metadata on ``app``.
+    """Install unified error handling + request-id + OpenAPI metadata on ``app``.
 
     Call once in ``main.py`` after ``setup_application(app)``.  Idempotent.
     """
+    install_request_id_middleware(app)
     install_error_handlers(app)
     try:
         from api.openapi_tags import apply_openapi
@@ -201,7 +301,9 @@ def install_standard_chain(app: FastAPI) -> FastAPI:
 
 __all__ = [
     "install_error_handlers",
+    "install_request_id_middleware",
     "install_standard_chain",
+    "RequestIdMiddleware",
     "get_tenant_context",
     "quota_guard",
     "standard_dependencies",

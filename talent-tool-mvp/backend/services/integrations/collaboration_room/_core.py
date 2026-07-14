@@ -32,6 +32,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Iterable, Optional
 
+from services.platform.errors import swallow  # T5002: typed collapse of best-effort errors
+
 logger = logging.getLogger("recruittech.services.collaboration_room")
 
 # ---------------------------------------------------------------------------
@@ -711,10 +713,13 @@ def post_message(
                     {"user_id": uid, "room_id": room_id, "message_id": msg.id}
                     for uid in valid
                 ]
-                try:
-                    supabase.table("room_mentions").insert(mention_rows).execute()
-                except Exception as exc:  # noqa: BLE001
-                    logger.warning("failed to write room_mentions: %s", exc)
+                # T5002: best-effort mention fan-out — never let a notification
+                # write failure abort the message insert.
+                from services.platform.errors import safe_call
+                safe_call(
+                    lambda: supabase.table("room_mentions").insert(mention_rows).execute(),
+                    log=logger, message="failed to write room_mentions",
+                )
 
         return msg
 
@@ -1032,7 +1037,7 @@ def mark_read(supabase, room_id: str, *, user_id: str, at: Optional[str] = None)
 
 def _get_last_read_at(supabase, room_id: str, user_id: str) -> Optional[str]:
     """读取 member 的 last_read_at (供 metrics 用)."""
-    try:
+    def _read() -> Optional[str]:
         res = (
             supabase.table("room_members")
             .select("last_read_at")
@@ -1043,9 +1048,11 @@ def _get_last_read_at(supabase, room_id: str, user_id: str) -> Optional[str]:
         rows = res.data or []
         if rows:
             return rows[0].get("last_read_at")
-    except Exception:  # noqa: BLE001
-        pass
-    return None
+        return None
+
+    # T5002: typed collapse — best-effort read, default None on failure.
+    from services.platform.errors import safe_call
+    return safe_call(_read, default=None, log=logger, message="read last_read_at failed")
 
 
 def get_unread_count(supabase, room_id: str, *, user_id: str) -> int:

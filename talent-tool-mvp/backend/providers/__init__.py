@@ -23,6 +23,12 @@ from .exceptions import (
     TimeoutError,
     UpstreamUnavailableError,
 )
+from .contract import (  # v10.0 T5004 unified contract
+    MockGateError,
+    ProviderContract,
+    ProviderErrorKind,
+    make_contract,
+)
 
 __all__ = [
     "AuthError",
@@ -34,4 +40,9 @@ __all__ = [
     "RateLimitError",
     "TimeoutError",
     "UpstreamUnavailableError",
+    # T5004 unified contract
+    "ProviderContract",
+    "ProviderErrorKind",
+    "MockGateError",
+    "make_contract",
 ]

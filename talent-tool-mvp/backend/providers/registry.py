@@ -69,6 +69,54 @@ def _mock_provider(contract: str) -> Any:
 
 
 # ---------------------------------------------------------------------------
+# T5004 — explicit mock gate
+# ---------------------------------------------------------------------------
+def _mock_gate_open() -> bool:
+    """True only when the operator has explicitly opted into mocks.
+
+    Reads ``WAIBAO_PROVIDER_MOCK``. When closed (the default), serving a
+    mock provider to production traffic is a hard error unless the caller
+    passes ``allow_mock=True`` (e.g. tests / dev bootstrap).
+    """
+    return (os.getenv("WAIBAO_PROVIDER_MOCK", "") or "").strip().lower() in (
+        "1", "true", "yes", "on",
+    )
+
+
+def assert_mock_gate(allow_mock: bool = False) -> None:
+    """Raise :class:`MockGateError` if a mock would be served without opt-in.
+
+    Callers that intentionally want a mock (tests, local dev) pass
+    ``allow_mock=True`` to bypass. This closes the audit finding where a
+    missing key silently downgraded a real call to a mock.
+    """
+    if allow_mock:
+        return
+    if not _mock_gate_open():
+        from .contract import MockGateError
+
+        raise MockGateError(
+            "provider mock requested but WAIBAO_PROVIDER_MOCK is not set — "
+            "set WAIBAO_PROVIDER_MOCK=1 to opt into mocks, or configure real "
+            "provider credentials"
+        )
+
+
+def record_mock_fallback(contract: str, reason: str = "") -> None:
+    """Emit a Prometheus counter when a real call degrades to a mock.
+
+    Imported lazily so the registry stays import-light. Failures are
+    swallowed — metrics must never break the call path.
+    """
+    try:
+        from services.observability.metrics import inc_mock_fallback
+
+        inc_mock_fallback(contract=contract, reason=reason)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+# ---------------------------------------------------------------------------
 # LLM
 # ---------------------------------------------------------------------------
 def get_llm_provider() -> Any:

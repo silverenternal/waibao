@@ -120,6 +120,27 @@ def with_tenant(
         reset_tenant_context(token)
 
 
+@contextlib.contextmanager
+def tenant_context(ctx: TenantContext) -> Iterator[TenantContext]:
+    """Bind a pre-built :class:`TenantContext` for the duration of the block.
+
+    T5003: the explicit context-manager that replaces implicit middleware
+    binding for background workers / tests / scripts.  Use as::
+
+        ctx = TenantContext(tenant_id=..., user_id=..., role="admin")
+        with tenant_context(ctx):
+            ...  # service calls see this tenant via get_tenant_context()
+
+    For the more ergonomic "build + bind in one step" form see
+    :func:`with_tenant`.
+    """
+    token = set_tenant_context(ctx)
+    try:
+        yield ctx
+    finally:
+        reset_tenant_context(token)
+
+
 __all__ = [
     "TenantContext",
     "set_tenant_context",
@@ -127,4 +148,5 @@ __all__ = [
     "get_tenant_context",
     "get_tenant",
     "with_tenant",
+    "tenant_context",
 ]

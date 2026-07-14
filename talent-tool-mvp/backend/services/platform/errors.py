@@ -31,7 +31,7 @@ from __future__ import annotations
 
 import logging
 from enum import Enum
-from typing import Any, Mapping, Optional
+from typing import Any, Callable, Mapping, Optional
 
 logger = logging.getLogger("recruittech.platform.errors")
 
@@ -496,6 +496,11 @@ class ServiceError(Exception):
         ``details``.  Never include secrets here.
     cause:
         Optional originating exception, chained for logs.
+    request_id:
+        Optional correlation id surfaced in the error envelope so a single
+        failure can be traced end-to-end.  The API middleware fills this from
+        the ``X-Request-ID`` header (or mints one) at the boundary; services
+        may also set it explicitly via :meth:`with_request_id`.
     """
 
     def __init__(
@@ -507,6 +512,7 @@ class ServiceError(Exception):
         retry_after: Optional[int] = None,
         details: Optional[Mapping[str, Any]] = None,
         cause: Optional[BaseException] = None,
+        request_id: Optional[str] = None,
     ) -> None:
         self.code = self._coerce_code(code)
         if isinstance(self.code, ServiceErrorCode):
@@ -518,9 +524,15 @@ class ServiceError(Exception):
         self.retry_after = retry_after
         self.details: dict[str, Any] = dict(details or {})
         self.cause = cause
+        self.request_id = request_id
         super().__init__(self.message)
         if cause is not None:
             self.__cause__ = cause
+
+    def with_request_id(self, request_id: str) -> "ServiceError":
+        """Attach a correlation id (builder, returns self for chaining)."""
+        self.request_id = request_id
+        return self
 
     @staticmethod
     def _coerce_code(code: ServiceErrorCode | str) -> ServiceErrorCode | str:
@@ -541,17 +553,28 @@ class ServiceError(Exception):
 
     # ---- serialization ---------------------------------------------------
     def to_dict(self) -> dict[str, Any]:
-        body: dict[str, Any] = {
-            "error": {
-                "code": self.code_value,
-                "message": self.message,
-            }
+        """Canonical JSON body, v10.0 envelope.
+
+        Shape::
+
+            {"error": {"code", "message", "retryable", "request_id",
+                       ["details"], ["retry_after"]}}
+
+        ``retryable`` and ``request_id`` are always present so clients can
+        branch on them without truthiness checks; ``request_id`` is the empty
+        string until the API middleware stamps it.
+        """
+        err: dict[str, Any] = {
+            "code": self.code_value,
+            "message": self.message,
+            "retryable": self.retryable,
+            "request_id": self.request_id or "",
         }
         if self.details:
-            body["error"]["details"] = self.details
+            err["details"] = self.details
         if self.retry_after is not None:
-            body["error"]["retry_after"] = self.retry_after
-        return body
+            err["retry_after"] = self.retry_after
+        return {"error": err}
 
     def headers(self) -> dict[str, str]:
         h: dict[str, str] = {}
@@ -666,6 +689,79 @@ def error_response(
     return err.status_code, err.to_dict(), err.headers()
 
 
+# ===========================================================================
+# Helpers for "收口 except Exception" (collapse bare excepts)
+# ===========================================================================
+def safe_call(
+    fn: Callable[..., Any],
+    *args: Any,
+    default: Any = None,
+    log: Optional[logging.Logger] = None,
+    message: str = "Operation failed",
+    **kwargs: Any,
+) -> Any:
+    """Run ``fn(*args, **kwargs)``; on *any* exception return ``default``.
+
+    A typed replacement for the pervasive ``except Exception: pass`` pattern:
+    instead of swallowing errors silently it logs them (when a logger is
+    supplied) and returns a controlled default, so a failure never produces a
+    hidden ``None`` downstream.  Use only for genuinely best-effort side
+    effects (metrics, cache writes, fan-out notifications).
+    """
+    try:
+        return fn(*args, **kwargs)
+    except Exception as exc:  # noqa: BLE001 — intentional collapse point
+        if log is not None:
+            log.warning("%s: %s", message, exc, exc_info=False)
+        return default
+
+
+def swallow(
+    *,
+    default: Any = None,
+    log: Optional[logging.Logger] = None,
+    message: str = "Operation failed",
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    """Decorator form of :func:`safe_call`.
+
+    Example::
+
+        @swallow(log=logger, message="metrics emit failed")
+        def emit_metric(): ...
+    """
+    import functools
+
+    def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
+        @functools.wraps(fn)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            return safe_call(fn, *args, default=default, log=log,
+                             message=message, **kwargs)
+        return wrapper
+
+    return decorator
+
+
+def wrap_unexpected(
+    fn: Callable[..., Any],
+    *args: Any,
+    code: "ServiceErrorCode | str" = ServiceErrorCode.INTERNAL_ERROR,
+    message: str = "Unexpected error",
+    **kwargs: Any,
+) -> Any:
+    """Run ``fn``; re-raise any non-:class:`ServiceError` as a typed one.
+
+    Use to wrap the *boundary* of a service call so callers only ever see
+    :class:`ServiceError` (never a bare ``KeyError`` / ``ValueError``).
+    Already-typed :class:`ServiceError` exceptions pass through unchanged.
+    """
+    try:
+        return fn(*args, **kwargs)
+    except ServiceError:
+        raise
+    except Exception as exc:  # noqa: BLE001 — boundary translation
+        raise ServiceError(code, message, cause=exc) from exc
+
+
 __all__ = [
     "ServiceErrorCode",
     "ServiceError",
@@ -680,4 +776,7 @@ __all__ = [
     "message_for",
     "is_retryable",
     "error_response",
+    "safe_call",
+    "swallow",
+    "wrap_unexpected",
 ]

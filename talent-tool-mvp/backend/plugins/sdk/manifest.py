@@ -134,3 +134,201 @@ def load_entry_point(manifest: PluginManifest) -> Any:
     if not isinstance(cls, type):
         raise ManifestError(f"{module_name}.{attr} must be a class")
     return cls()
+
+
+# ===========================================================================
+# v10.0 T5004 — Manifest signature verification
+# ===========================================================================
+#
+# A signed plugin bundle ships a detached signature over the canonical
+# manifest bytes. The loader refuses to install a plugin whose signature
+# does not verify against the configured public key. This closes the audit
+# finding that a malicious plugin.yaml could be dropped into the plugins
+# directory and auto-loaded.
+
+import binascii
+import hashlib
+import hmac as _hmac
+
+
+class SignatureError(ManifestError):
+    """Raised when a plugin manifest signature is missing, malformed, or
+    does not verify against the trusted key."""
+
+
+# Algorithms we accept. ``ed25519`` is the default (asymmetric, modern);
+# ``hmac-sha256`` is the symmetric fallback for environments without the
+# ``cryptography`` package.
+SUPPORTED_SIG_ALGS = ("ed25519", "hmac-sha256")
+
+
+def _b64decode(value: str) -> bytes:
+    """URL-safe base64 decode with padding tolerance."""
+    import base64
+
+    try:
+        pad = "=" * (-len(value) % 4)
+        return base64.urlsafe_b64decode(value + pad)
+    except (binascii.Error, ValueError) as exc:
+        raise SignatureError(f"signature is not valid base64: {exc}") from exc
+
+
+def _b64encode(data: bytes) -> str:
+    import base64
+
+    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+
+
+def canonical_manifest_bytes(manifest: Any) -> bytes:
+    """Serialise a manifest to a deterministic byte string for signing.
+
+    We sort keys and emit compact JSON so that signing is reproducible across
+    machines / Python versions. ``manifest`` may be a :class:`PluginManifest`
+    or a raw dict (pre-parse).
+    """
+    import json
+
+    if isinstance(manifest, PluginManifest):
+        payload = {
+            "name": manifest.name,
+            "version": manifest.version,
+            "entry_point": manifest.entry_point,
+            "type": manifest.type,
+            "permissions": sorted(manifest.permissions),
+            "dependencies": sorted(manifest.dependencies),
+        }
+    elif isinstance(manifest, dict):
+        payload = {
+            "name": manifest.get("name"),
+            "version": manifest.get("version"),
+            "entry_point": manifest.get("entry_point") or manifest.get("entry"),
+            "type": manifest.get("type", "agent"),
+            "permissions": sorted(manifest.get("permissions") or []),
+            "dependencies": sorted(manifest.get("dependencies") or []),
+        }
+    else:
+        raise SignatureError(f"cannot canonicalise manifest of type {type(manifest)!r}")
+    return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+
+
+class SignatureVerifier:
+    """Verify detached plugin manifest signatures.
+
+    Construction:
+
+    * ``SignatureVerifier(public_key=<ed25519-pub-b64>)`` — asymmetric.
+    * ``SignatureVerifier(shared_key=<bytes-or-str>)`` — symmetric HMAC.
+
+    The verifier is deliberately stateless and side-effect free. It raises
+    :class:`SignatureError` on any verification failure and returns the
+    canonical bytes on success so callers can re-sign / log them.
+    """
+
+    def __init__(self, *, public_key: Optional[str] = None,
+                 shared_key: Optional[Any] = None,
+                 alg: Optional[str] = None) -> None:
+        self.public_key = public_key
+        self.shared_key = shared_key
+        if alg is None:
+            alg = "ed25519" if public_key else "hmac-sha256"
+        if alg not in SUPPORTED_SIG_ALGS:
+            raise SignatureError(f"unsupported signature alg {alg!r}")
+        if alg == "ed25519" and not public_key:
+            raise SignatureError("ed25519 verification requires public_key")
+        if alg == "hmac-sha256" and shared_key is None:
+            raise SignatureError("hmac-sha256 verification requires shared_key")
+        self.alg = alg
+
+    # ---- verification -----------------------------------------------------
+    def verify(self, manifest: Any, signature: str) -> bytes:
+        """Verify ``signature`` over ``manifest``.
+
+        Raises :class:`SignatureError` on failure. Returns the canonical
+        manifest bytes that were verified.
+        """
+        if not signature:
+            raise SignatureError("signature is empty")
+        payload = canonical_manifest_bytes(manifest)
+        sig_bytes = _b64decode(signature)
+        if self.alg == "ed25519":
+            self._verify_ed25519(payload, sig_bytes)
+        else:
+            self._verify_hmac(payload, sig_bytes)
+        return payload
+
+    def _verify_ed25519(self, payload: bytes, signature: bytes) -> None:
+        try:
+            from cryptography.exceptions import InvalidSignature  # type: ignore
+            from cryptography.hazmat.primitives.asymmetric.ed25519 import (  # type: ignore
+                Ed25519PublicKey,
+            )
+        except ImportError as exc:  # pragma: no cover
+            raise SignatureError(
+                "ed25519 verification requires the 'cryptography' package"
+            ) from exc
+        try:
+            pub_bytes = _b64decode(self.public_key)  # type: ignore[arg-type]
+            pub = Ed25519PublicKey.from_public_bytes(pub_bytes)
+            pub.verify(signature, payload)
+        except InvalidSignature as exc:
+            raise SignatureError("ed25519 signature did not verify") from exc
+        except (ValueError, TypeError) as exc:
+            raise SignatureError(f"ed25519 verification error: {exc}") from exc
+
+    def _verify_hmac(self, payload: bytes, signature: bytes) -> None:
+        key = self.shared_key
+        if isinstance(key, str):
+            key = key.encode("utf-8")
+        expected = _hmac.new(key, payload, hashlib.sha256).digest()
+        if not _hmac.compare_digest(expected, signature):
+            raise SignatureError("hmac-sha256 signature did not verify")
+
+    # ---- signing (for trusted publishers / tests) ------------------------
+    @staticmethod
+    def sign(manifest: Any, *, private_key: Any = None,
+             shared_key: Optional[Any] = None) -> str:
+        """Produce a detached signature for trusted publishers.
+
+        Either ``private_key`` (an Ed25519PrivateKey object or b64 string) or
+        ``shared_key`` (bytes/str) must be supplied. Returns the URL-safe
+        base64 signature string.
+        """
+        payload = canonical_manifest_bytes(manifest)
+        if private_key is not None:
+            try:
+                from cryptography.hazmat.primitives.asymmetric.ed25519 import (  # type: ignore
+                    Ed25519PrivateKey,
+                )
+            except ImportError as exc:  # pragma: no cover
+                raise SignatureError(
+                    "ed25519 signing requires the 'cryptography' package"
+                ) from exc
+            if isinstance(private_key, str):
+                # treat as raw b64 of the 32-byte seed first, else PEM
+                try:
+                    seed = _b64decode(private_key)
+                    key = Ed25519PrivateKey.from_private_bytes(seed)
+                except Exception:
+                    from cryptography.hazmat.primitives.serialization import (  # type: ignore
+                        load_pem_private_key,
+                    )
+                    key = load_pem_private_key(private_key.encode(), password=None)
+            else:
+                key = private_key
+            raw = key.sign(payload)
+            return _b64encode(raw)
+        if shared_key is not None:
+            key = shared_key.encode("utf-8") if isinstance(shared_key, str) else shared_key
+            raw = _hmac.new(key, payload, hashlib.sha256).digest()
+            return _b64encode(raw)
+        raise SignatureError("sign() requires private_key or shared_key")
+
+
+def require_signed_manifest(verifier: SignatureVerifier, manifest: Any,
+                            signature: str) -> bytes:
+    """Convenience wrapper used by the loader: verify or raise.
+
+    Returns the canonical bytes on success so callers can log exactly what
+    was attested.
+    """
+    return verifier.verify(manifest, signature)
