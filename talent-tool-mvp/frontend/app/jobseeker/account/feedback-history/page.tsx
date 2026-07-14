@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * T1106 — 用户反馈历史页.
@@ -73,77 +74,76 @@ export default function FeedbackHistoryPage() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">我的反馈历史</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          你提交过的所有反馈、评分和问卷都在这里。
-        </p>
-      </header>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>反馈记录</CardTitle>
-          <CardDescription>
-            最近 100 条,按时间倒序。你的反馈帮助我们改进产品。
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {data === null && !error && <LoadingSkeleton />}
-          {error && (
-            <p className="rounded-md bg-rose-50 p-3 text-sm text-rose-700">{error}</p>
-          )}
-          {data && data.length === 0 && (
-            <p className="rounded-md bg-muted/40 p-6 text-center text-sm text-muted-foreground">
-              暂无反馈记录。试试页面右下角的反馈按钮?
-            </p>
-          )}
-          {data && data.length > 0 && (
-            <ul className="space-y-3">
-              {data.map((row) => {
-                const cat = CATEGORY_LABEL[row.category] ?? CATEGORY_LABEL.other;
-                const Icon = cat.icon;
-                return (
-                  <li
-                    key={row.id}
-                    className="rounded-lg border p-4 transition-colors hover:bg-muted/30"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={cn(
-                            "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
-                            cat.color,
+    <ErrorBoundary>(<div className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
+        <header className="mb-6">
+          <h1 className="text-2xl font-bold tracking-tight">我的反馈历史</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            你提交过的所有反馈、评分和问卷都在这里。
+          </p>
+        </header>
+        <Card>
+          <CardHeader>
+            <CardTitle>反馈记录</CardTitle>
+            <CardDescription>
+              最近 100 条,按时间倒序。你的反馈帮助我们改进产品。
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {data === null && !error && <LoadingSkeleton />}
+            {error && (
+              <p className="rounded-md bg-rose-50 p-3 text-sm text-rose-700">{error}</p>
+            )}
+            {data && data.length === 0 && (
+              <p className="rounded-md bg-muted/40 p-6 text-center text-sm text-muted-foreground">
+                暂无反馈记录。试试页面右下角的反馈按钮?
+              </p>
+            )}
+            {data && data.length > 0 && (
+              <ul className="space-y-3">
+                {data.map((row) => {
+                  const cat = CATEGORY_LABEL[row.category] ?? CATEGORY_LABEL.other;
+                  const Icon = cat.icon;
+                  return (
+                    <li
+                      key={row.id}
+                      className="rounded-lg border p-4 transition-colors hover:bg-muted/30"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={cn(
+                              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
+                              cat.color,
+                            )}
+                          >
+                            <Icon className="size-3" />
+                            {cat.label}
+                          </span>
+                          {row.score != null && (
+                            <Badge variant="outline" className="font-mono">
+                              {row.score}
+                              {row.category === "nps" ? " / 10" : " / 5"}
+                            </Badge>
                           )}
-                        >
-                          <Icon className="size-3" />
-                          {cat.label}
-                        </span>
-                        {row.score != null && (
-                          <Badge variant="outline" className="font-mono">
-                            {row.score}
-                            {row.category === "nps" ? " / 10" : " / 5"}
-                          </Badge>
-                        )}
-                        {row.feature_used && (
-                          <Badge variant="secondary">{row.feature_used}</Badge>
-                        )}
+                          {row.feature_used && (
+                            <Badge variant="secondary">{row.feature_used}</Badge>
+                          )}
+                        </div>
+                        <time className="text-xs text-muted-foreground">
+                          {new Date(row.created_at).toLocaleString("zh-CN")}
+                        </time>
                       </div>
-                      <time className="text-xs text-muted-foreground">
-                        {new Date(row.created_at).toLocaleString("zh-CN")}
-                      </time>
-                    </div>
-                    {row.comment && (
-                      <p className="mt-2 text-sm text-foreground">{row.comment}</p>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                      {row.comment && (
+                        <p className="mt-2 text-sm text-foreground">{row.comment}</p>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>)</ErrorBoundary>
   );
 }
 

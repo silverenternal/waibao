@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * 求职者 — 我的记忆 (v9.1 Jobseeker 辅助模块)
@@ -344,223 +345,223 @@ export default function MemoryPage() {
   // ---- 渲染 ---------------------------------------------------------------
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50">
-      <main className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:py-8">
-        {/* Hero */}
-        <header className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-              <span
-                aria-hidden
-                className="inline-flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 text-white shadow-sm"
-              >
-                <Brain className="size-5" />
-              </span>
-              我的记忆
-            </h1>
-            <p className="mt-1 text-sm text-slate-500">
-              统一记忆库 (Mem0) · 跨 Agent 上下文共享 · 共 {memories.length} 条
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void fetchAll()}
-              disabled={pending}
-              aria-label="刷新"
-            >
-              <RefreshCcw className="size-4" />
-              <span className="ml-1.5 hidden sm:inline">刷新</span>
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleForgetAll}
-              disabled={pending || memories.length === 0}
-            >
-              <Trash2 className="size-4" />
-              <span className="ml-1.5">批量遗忘</span>
-            </Button>
-          </div>
-        </header>
-
-        {/* 分类计数 (快速切换) */}
-        <section aria-label="按类型浏览" className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-          <TypePill
-            label="全部"
-            active={typeFilter === "all"}
-            count={memories.length}
-            onClick={() => setTypeFilter("all")}
-          />
-          {(Object.keys(TYPE_META) as MemoryType[]).map((t) => (
-            <TypePill
-              key={t}
-              label={TYPE_META[t].label}
-              active={typeFilter === t}
-              count={typeCounts[t]}
-              onClick={() => setTypeFilter(t)}
-              dotClass={TYPE_META[t].color}
-            />
-          ))}
-        </section>
-
-        {/* 查询与过滤 */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">查找记忆</CardTitle>
-            <CardDescription>支持语义查询 — 输入关键词即可跨所有记忆搜索</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <div className="relative flex-1">
-                <Search
+    <ErrorBoundary>(<div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50">
+        <main className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:py-8">
+          {/* Hero */}
+          <header className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                <span
                   aria-hidden
-                  className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-slate-400"
-                />
-                <Input
-                  className="pl-8"
-                  value={queryText}
-                  onChange={(e) => setQueryText(e.target.value)}
-                  placeholder="例如:薪资期望 / 远程办公偏好 / 已面试公司"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") void handleQuery();
-                  }}
-                  aria-label="语义查询"
-                />
-              </div>
-              <Select
-                value={typeFilter}
-                onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}
+                  className="inline-flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 text-white shadow-sm"
+                >
+                  <Brain className="size-5" />
+                </span>
+                我的记忆
+              </h1>
+              <p className="mt-1 text-sm text-slate-500">
+                统一记忆库 (Mem0) · 跨 Agent 上下文共享 · 共 {memories.length} 条
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void fetchAll()}
+                disabled={pending}
+                aria-label="刷新"
               >
-                <SelectTrigger className="w-full sm:w-[180px]" aria-label="按类型过滤">
-                  <Filter className="mr-2 size-4 text-slate-500" />
-                  <SelectValue placeholder="全部类型" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">全部类型</SelectItem>
-                  {(Object.keys(TYPE_META) as MemoryType[]).map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {TYPE_META[t].label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button onClick={handleQuery} disabled={pending} className="shrink-0">
-                {pending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Search className="size-4" />
-                )}
-                <span className="ml-1.5">查询</span>
+                <RefreshCcw className="size-4" />
+                <span className="ml-1.5 hidden sm:inline">刷新</span>
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleForgetAll}
+                disabled={pending || memories.length === 0}
+              >
+                <Trash2 className="size-4" />
+                <span className="ml-1.5">批量遗忘</span>
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </header>
 
-        {/* 错误提示 */}
-        {error && (
-          <Card className="border-rose-200 bg-rose-50">
-            <CardContent className="flex items-center gap-2 p-3 text-sm text-rose-700">
-              <AlertTriangle className="size-4" />
-              {error}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* 加载骨架 */}
-        {loading ? (
-          <div className="space-y-3" role="status" aria-label="加载记忆中">
-            {Array.from({ length: 3 }, (_, i) => (
-              <Skeleton key={i} className="h-28 w-full rounded-xl" />
+          {/* 分类计数 (快速切换) */}
+          <section aria-label="按类型浏览" className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+            <TypePill
+              label="全部"
+              active={typeFilter === "all"}
+              count={memories.length}
+              onClick={() => setTypeFilter("all")}
+            />
+            {(Object.keys(TYPE_META) as MemoryType[]).map((t) => (
+              <TypePill
+                key={t}
+                label={TYPE_META[t].label}
+                active={typeFilter === t}
+                count={typeCounts[t]}
+                onClick={() => setTypeFilter(t)}
+                dotClass={TYPE_META[t].color}
+              />
             ))}
-            <span className="sr-only">正在加载记忆…</span>
-          </div>
-        ) : memories.length === 0 ? (
+          </section>
+
+          {/* 查询与过滤 */}
           <Card>
-            <CardContent className="flex flex-col items-center gap-2 py-12 text-center text-sm text-slate-500">
-              <Brain className="size-6 text-slate-300" />
-              <p>暂无记忆</p>
-              <p className="text-xs text-slate-400">
-                Agent 在对话中会自动写入你的偏好与事实。
-              </p>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">查找记忆</CardTitle>
+              <CardDescription>支持语义查询 — 输入关键词即可跨所有记忆搜索</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="relative flex-1">
+                  <Search
+                    aria-hidden
+                    className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-slate-400"
+                  />
+                  <Input
+                    className="pl-8"
+                    value={queryText}
+                    onChange={(e) => setQueryText(e.target.value)}
+                    placeholder="例如:薪资期望 / 远程办公偏好 / 已面试公司"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void handleQuery();
+                    }}
+                    aria-label="语义查询"
+                  />
+                </div>
+                <Select
+                  value={typeFilter}
+                  onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}
+                >
+                  <SelectTrigger className="w-full sm:w-[180px]" aria-label="按类型过滤">
+                    <Filter className="mr-2 size-4 text-slate-500" />
+                    <SelectValue placeholder="全部类型" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部类型</SelectItem>
+                    {(Object.keys(TYPE_META) as MemoryType[]).map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {TYPE_META[t].label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button onClick={handleQuery} disabled={pending} className="shrink-0">
+                  {pending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Search className="size-4" />
+                  )}
+                  <span className="ml-1.5">查询</span>
+                </Button>
+              </div>
             </CardContent>
           </Card>
-        ) : (
-          /* 按类型分组的时间线 */
-          <div className="space-y-8">
-            {filteredGroups.map(({ type, items }) => (
-              <section key={type} aria-labelledby={`group-${type}`}>
-                <div className="mb-3 flex items-center gap-2">
-                  <span
-                    aria-hidden
-                    className={cn("size-2 rounded-full", TYPE_META[type].color)}
-                  />
-                  <h2
-                    id={`group-${type}`}
-                    className="text-sm font-semibold text-slate-800"
-                  >
-                    {TYPE_META[type].label}
-                  </h2>
-                  <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
-                    {items.length}
-                  </Badge>
-                </div>
 
-                <ol className="relative ml-3 border-l-2 border-dashed border-slate-200 pl-6">
-                  {items.map((m) => (
-                    <li key={m.id} className="mb-4 last:mb-0">
-                      <span
-                        aria-hidden
-                        className={cn(
-                          "absolute -left-[9px] mt-3 size-4 rounded-full ring-4 ring-white",
-                          TYPE_META[type].color,
-                          TYPE_META[type].ring,
-                        )}
-                      />
-                      <MemoryCard
-                        memory={m}
-                        editing={editingId === m.id}
-                        editingContent={editingContent}
-                        pending={pending}
-                        onStartEdit={() => {
-                          setEditingId(m.id);
-                          setEditingContent(m.content);
-                        }}
-                        onCancelEdit={() => setEditingId(null)}
-                        onChangeContent={setEditingContent}
-                        onSave={() => void handleSaveEdit(m.id)}
-                        onDelete={() => void handleDelete(m.id)}
-                        onChangeType={(t) => void handleChangeType(m.id, t)}
-                      />
-                    </li>
-                  ))}
-                </ol>
-              </section>
-            ))}
-          </div>
-        )}
+          {/* 错误提示 */}
+          {error && (
+            <Card className="border-rose-200 bg-rose-50">
+              <CardContent className="flex items-center gap-2 p-3 text-sm text-rose-700">
+                <AlertTriangle className="size-4" />
+                {error}
+              </CardContent>
+            </Card>
+          )}
 
-        {/* 帮助说明 */}
-        <Card className="border-slate-200/70 bg-slate-50/60">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Sparkles className="size-4 text-amber-500" />
-              记忆如何工作
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1.5 text-xs text-slate-600 sm:text-sm">
-            <p>
-              · 每个 Agent 在每次对话时,会自动把与你相关的记忆注入到上下文,形成跨 Agent 共享。
-            </p>
-            <p>
-              · 记忆会随时间衰减 (decay_score),被反复访问的记忆会被拉回到 1.0。
-            </p>
-            <p>· 你可以随时编辑、删除或批量遗忘 (GDPR) — 一切都由你掌控。</p>
-          </CardContent>
-        </Card>
-      </main>
-    </div>
+          {/* 加载骨架 */}
+          {loading ? (
+            <div className="space-y-3" role="status" aria-label="加载记忆中">
+              {Array.from({ length: 3 }, (_, i) => (
+                <Skeleton key={i} className="h-28 w-full rounded-xl" />
+              ))}
+              <span className="sr-only">正在加载记忆…</span>
+            </div>
+          ) : memories.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center gap-2 py-12 text-center text-sm text-slate-500">
+                <Brain className="size-6 text-slate-300" />
+                <p>暂无记忆</p>
+                <p className="text-xs text-slate-400">
+                  Agent 在对话中会自动写入你的偏好与事实。
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            /* 按类型分组的时间线 */
+            (<div className="space-y-8">
+              {filteredGroups.map(({ type, items }) => (
+                <section key={type} aria-labelledby={`group-${type}`}>
+                  <div className="mb-3 flex items-center gap-2">
+                    <span
+                      aria-hidden
+                      className={cn("size-2 rounded-full", TYPE_META[type].color)}
+                    />
+                    <h2
+                      id={`group-${type}`}
+                      className="text-sm font-semibold text-slate-800"
+                    >
+                      {TYPE_META[type].label}
+                    </h2>
+                    <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+                      {items.length}
+                    </Badge>
+                  </div>
+
+                  <ol className="relative ml-3 border-l-2 border-dashed border-slate-200 pl-6">
+                    {items.map((m) => (
+                      <li key={m.id} className="mb-4 last:mb-0">
+                        <span
+                          aria-hidden
+                          className={cn(
+                            "absolute -left-[9px] mt-3 size-4 rounded-full ring-4 ring-white",
+                            TYPE_META[type].color,
+                            TYPE_META[type].ring,
+                          )}
+                        />
+                        <MemoryCard
+                          memory={m}
+                          editing={editingId === m.id}
+                          editingContent={editingContent}
+                          pending={pending}
+                          onStartEdit={() => {
+                            setEditingId(m.id);
+                            setEditingContent(m.content);
+                          }}
+                          onCancelEdit={() => setEditingId(null)}
+                          onChangeContent={setEditingContent}
+                          onSave={() => void handleSaveEdit(m.id)}
+                          onDelete={() => void handleDelete(m.id)}
+                          onChangeType={(t) => void handleChangeType(m.id, t)}
+                        />
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              ))}
+            </div>)
+          )}
+
+          {/* 帮助说明 */}
+          <Card className="border-slate-200/70 bg-slate-50/60">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Sparkles className="size-4 text-amber-500" />
+                记忆如何工作
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1.5 text-xs text-slate-600 sm:text-sm">
+              <p>
+                · 每个 Agent 在每次对话时,会自动把与你相关的记忆注入到上下文,形成跨 Agent 共享。
+              </p>
+              <p>
+                · 记忆会随时间衰减 (decay_score),被反复访问的记忆会被拉回到 1.0。
+              </p>
+              <p>· 你可以随时编辑、删除或批量遗忘 (GDPR) — 一切都由你掌控。</p>
+            </CardContent>
+          </Card>
+        </main>
+      </div>)</ErrorBoundary>
   );
 }
 

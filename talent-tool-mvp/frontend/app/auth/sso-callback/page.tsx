@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * T2901 — SSO callback page.
@@ -129,14 +130,14 @@ function SSOCallbackInner() {
 
 export default function SSOCallbackPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center">
-          <Loader2 className="h-8 w-8 text-primary animate-spin" />
-        </div>
-      }
-    >
-      <SSOCallbackInner />
-    </Suspense>
+    <ErrorBoundary>(<Suspense
+        fallback={
+          <div className="min-h-screen flex items-center justify-center">
+            <Loader2 className="h-8 w-8 text-primary animate-spin" />
+          </div>
+        }
+      >
+        <SSOCallbackInner />
+      </Suspense>)</ErrorBoundary>
   );
 }

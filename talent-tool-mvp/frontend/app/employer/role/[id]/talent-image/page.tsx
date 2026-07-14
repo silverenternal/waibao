@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * Employer-side Talent Image page (T602).
@@ -99,121 +100,120 @@ export default function RoleTalentImagePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
-      <header className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4">
-          <div className="flex items-center gap-3">
+    <ErrorBoundary>(<div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
+        <header className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur">
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => router.push("/employer")}
+                aria-label="返回"
+              >
+                <ArrowLeft className="size-4" />
+              </Button>
+              <div>
+                <h1 className="flex items-center gap-2 text-xl font-semibold text-foreground">
+                  <Users className="size-5 text-violet-500" />
+                  岗位人才画像
+                </h1>
+                <p className="text-xs text-muted-foreground">
+                  Role ID · <span className="font-mono">{roleId || "—"}</span>
+                </p>
+              </div>
+            </div>
             <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => router.push("/employer")}
-              aria-label="返回"
+              onClick={handleResynthesize}
+              disabled={resyncing || loading || !roleId}
+              className="gap-2"
             >
-              <ArrowLeft className="size-4" />
+              {resyncing ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <RefreshCcw className="size-4" />
+              )}
+              {resyncing ? "综合中..." : "重新综合"}
             </Button>
-            <div>
-              <h1 className="flex items-center gap-2 text-xl font-semibold text-foreground">
-                <Users className="size-5 text-violet-500" />
-                岗位人才画像
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                Role ID · <span className="font-mono">{roleId || "—"}</span>
-              </p>
-            </div>
           </div>
-          <Button
-            onClick={handleResynthesize}
-            disabled={resyncing || loading || !roleId}
-            className="gap-2"
-          >
-            {resyncing ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <RefreshCcw className="size-4" />
-            )}
-            {resyncing ? "综合中..." : "重新综合"}
-          </Button>
-        </div>
-      </header>
+        </header>
+        <main className="mx-auto max-w-6xl px-6 py-6">
+          {loading && <LoadingState />}
 
-      <main className="mx-auto max-w-6xl px-6 py-6">
-        {loading && <LoadingState />}
+          {error && !loading && (
+            <ErrorState message={error} onRetry={load} />
+          )}
 
-        {error && !loading && (
-          <ErrorState message={error} onRetry={load} />
-        )}
+          {!loading && !error && (
+            <div className="space-y-6">
+              {/* Top row: consensus + matrix */}
+              <div className="grid gap-6 lg:grid-cols-2">
+                <ConsensusScore
+                  score={row?.consensus_score ?? null}
+                  caption={
+                    row?.last_synthesized_at
+                      ? `综合 ${new Date(row.last_synthesized_at).toLocaleString(
+                          "en-GB",
+                          { dateStyle: "medium", timeStyle: "short" },
+                        )}`
+                      : "等待首次综合"
+                  }
+                />
+                <StakeholderMatrix
+                  stances={deriveStances(row)}
+                />
+              </div>
 
-        {!loading && !error && (
-          <div className="space-y-6">
-            {/* Top row: consensus + matrix */}
-            <div className="grid gap-6 lg:grid-cols-2">
-              <ConsensusScore
-                score={row?.consensus_score ?? null}
-                caption={
-                  row?.last_synthesized_at
-                    ? `综合 ${new Date(row.last_synthesized_at).toLocaleString(
-                        "en-GB",
-                        { dateStyle: "medium", timeStyle: "short" },
-                      )}`
-                    : "等待首次综合"
-                }
-              />
-              <StakeholderMatrix
-                stances={deriveStances(row)}
-              />
+              {/* Profile card */}
+              <TalentImageCard clarification={row} />
+
+              {/* Conflicts */}
+              <EmployerContradictionList conflicts={row?.conflicts} />
+
+              {/* Follow-ups + needs list */}
+              <div className="grid gap-6 lg:grid-cols-2">
+                <FollowUpQuestions
+                  questions={(row?.follow_up_questions ?? []) as FollowUpQuestion[]}
+                  onAnswer={(q, a) => {
+                    // Optimistic toggle.
+                    setRow((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            follow_up_questions: (prev.follow_up_questions ?? []).map(
+                              (qq, idx) =>
+                                qq.question === q.question
+                                  ? { ...qq, answered: true, answer: a }
+                                  : qq,
+                            ),
+                          }
+                        : prev,
+                    );
+                  }}
+                />
+                <NeedsCard row={row} />
+              </div>
+
+              {!row && (
+                <Card className="border-dashed">
+                  <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+                    <Sparkles className="size-8 text-violet-400" />
+                    <p className="text-sm text-slate-600">
+                      还没有该岗位的画像数据。
+                    </p>
+                    <p className="max-w-md text-xs text-slate-500">
+                      老板请先填写人才框架,部门负责人请提交 JD 细节,智能体会
+                      自动汇总三方意见。
+                    </p>
+                    <Button size="sm" onClick={handleResynthesize}>
+                      触发首次综合
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
             </div>
-
-            {/* Profile card */}
-            <TalentImageCard clarification={row} />
-
-            {/* Conflicts */}
-            <EmployerContradictionList conflicts={row?.conflicts} />
-
-            {/* Follow-ups + needs list */}
-            <div className="grid gap-6 lg:grid-cols-2">
-              <FollowUpQuestions
-                questions={(row?.follow_up_questions ?? []) as FollowUpQuestion[]}
-                onAnswer={(q, a) => {
-                  // Optimistic toggle.
-                  setRow((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          follow_up_questions: (prev.follow_up_questions ?? []).map(
-                            (qq, idx) =>
-                              qq.question === q.question
-                                ? { ...qq, answered: true, answer: a }
-                                : qq,
-                          ),
-                        }
-                      : prev,
-                  );
-                }}
-              />
-              <NeedsCard row={row} />
-            </div>
-
-            {!row && (
-              <Card className="border-dashed">
-                <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-                  <Sparkles className="size-8 text-violet-400" />
-                  <p className="text-sm text-slate-600">
-                    还没有该岗位的画像数据。
-                  </p>
-                  <p className="max-w-md text-xs text-slate-500">
-                    老板请先填写人才框架,部门负责人请提交 JD 细节,智能体会
-                    自动汇总三方意见。
-                  </p>
-                  <Button size="sm" onClick={handleResynthesize}>
-                    触发首次综合
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        )}
-      </main>
-    </div>
+          )}
+        </main>
+      </div>)</ErrorBoundary>
   );
 }
 

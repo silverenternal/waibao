@@ -36,6 +36,8 @@ export interface PageMetadataInput {
   jsonLd?: Record<string, unknown>[];
   /** Whether this is the canonical home route (true adds og:type=website). */
   isHome?: boolean;
+  /** SEO keywords (rendered as <meta name="keywords">). */
+  keywords?: string[];
 }
 
 export function buildCanonical(path: string): string {
@@ -58,6 +60,7 @@ export function generatePageMetadata(input: PageMetadataInput): Metadata {
     robots,
     locale = DEFAULT_LOCALE,
     isHome = false,
+    keywords,
   } = input;
 
   const fullTitle = `${title} | ${SITE_NAME}`;
@@ -84,6 +87,7 @@ export function generatePageMetadata(input: PageMetadataInput): Metadata {
   return {
     title: fullTitle,
     description,
+    keywords: keywords?.length ? keywords : undefined,
     alternates: {
       canonical,
       languages: Object.fromEntries(
@@ -95,6 +99,48 @@ export function generatePageMetadata(input: PageMetadataInput): Metadata {
     robots: robots ?? { index: true, follow: true },
     metadataBase: new URL(SITE_URL),
   };
+}
+
+/**
+ * Alias matching the task spec naming convention. Identical to
+ * {@link generatePageMetadata}. Prefer the explicit name in new code.
+ */
+export const generateMetadata = generatePageMetadata;
+
+/**
+ * i18n-aware variant. Accepts a translations map (the part of the messages
+ * bundle that contains title/description/keywords for the page) and the
+ * current locale, then forwards to {@link generatePageMetadata}.
+ *
+ * Example:
+ *   export async function generateMetadata() {
+ *     const locale = await getLocale();
+ *     const t = (await getMessages()).seo?.pricing ?? {};
+ *     return generateI18nMetadata({ path: "/pricing", namespace: "pricing", locale, t });
+ *   }
+ */
+export interface I18nMetadataInput extends Omit<PageMetadataInput, "title" | "description" | "keywords"> {
+  /** Page namespace key into the translations map. */
+  namespace: string;
+  /** Locale for OG locale tag. */
+  locale?: (typeof SUPPORTED_LOCALES)[number];
+  /** Translations for this page: { title, description, keywords? }. */
+  t: { title?: string; description?: string; keywords?: string[] | string };
+}
+
+export function generateI18nMetadata(input: I18nMetadataInput): Metadata {
+  const { namespace, t, ...rest } = input;
+  const keywords = Array.isArray(t.keywords)
+    ? t.keywords
+    : typeof t.keywords === "string"
+      ? t.keywords.split(",").map((k) => k.trim()).filter(Boolean)
+      : undefined;
+  return generatePageMetadata({
+    ...rest,
+    title: t.title ?? namespace,
+    description: t.description,
+    keywords,
+  });
 }
 
 /**

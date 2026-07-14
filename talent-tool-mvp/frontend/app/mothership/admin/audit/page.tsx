@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import { useEffect, useState } from "react";
 import { AuditFilterBar, AuditFilterValue } from "@/components/audit/AuditFilterBar";
@@ -57,30 +58,30 @@ export default function AuditAdminPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center gap-2">
-        <ShieldCheck className="h-6 w-6 text-primary" />
-        <h1 className="text-2xl font-semibold">Audit Log</h1>
-      </div>
-      <p className="text-sm text-muted-foreground">
-        Admin-only view of all PII access and GDPR operations. Entries are
-        append-only and cannot be modified.
-      </p>
-      <AuditFilterBar
-        value={filter}
-        onChange={setFilter}
-        onApply={() => load(filter)}
-        onExport={handleExport}
-      />
-      <Card>
-        <CardContent className="p-0">
-          {error ? (
-            <div className="p-8 text-sm text-destructive">{error}</div>
-          ) : (
-            <AuditLogTable entries={entries} loading={loading} />
-          )}
-        </CardContent>
-      </Card>
-    </div>
+    <ErrorBoundary>(<div className="space-y-6 p-6">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-semibold">Audit Log</h1>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Admin-only view of all PII access and GDPR operations. Entries are
+          append-only and cannot be modified.
+        </p>
+        <AuditFilterBar
+          value={filter}
+          onChange={setFilter}
+          onApply={() => load(filter)}
+          onExport={handleExport}
+        />
+        <Card>
+          <CardContent className="p-0">
+            {error ? (
+              <div className="p-8 text-sm text-destructive">{error}</div>
+            ) : (
+              <AuditLogTable entries={entries} loading={loading} />
+            )}
+          </CardContent>
+        </Card>
+      </div>)</ErrorBoundary>
   );
 }

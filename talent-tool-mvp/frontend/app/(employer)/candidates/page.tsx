@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * Candidates Manager — shadcn-admin DataTable pattern.
@@ -155,94 +156,91 @@ export default function CandidatesPage() {
   );
 
   return (
-    <div className="space-y-6 p-4 md:p-8">
-      <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">候选人 · Candidates</h1>
-          <p className="text-sm text-muted-foreground">
-            v8.1 + shadcn-admin DataTable · 排序/筛选/批量操作
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <ExportButton kind="candidate" />
-          <Button asChild>
-            <Link href="/mothership/candidates/new">
-              <PlusCircle className="mr-1 h-4 w-4" />
-              新增候选人
-            </Link>
-          </Button>
-        </div>
-      </header>
-
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Kpi label="总数" value={SAMPLE_CANDIDATES.length} icon={<Users2 className="h-4 w-4" />} />
-        <Kpi label="面试中" value={SAMPLE_CANDIDATES.filter((c) => c.stage === "面试").length} icon={<Users2 className="h-4 w-4" />} tone="blue" />
-        <Kpi label="Offer" value={SAMPLE_CANDIDATES.filter((c) => c.stage === "Offer").length} icon={<Users2 className="h-4 w-4" />} tone="emerald" />
-        <Kpi label="Starred" value={SAMPLE_CANDIDATES.filter((c) => c.starred).length} icon={<Star className="h-4 w-4" />} tone="amber" />
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">筛选</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-3">
-          <div className="w-full md:w-64">
-            <Input placeholder="搜索姓名 / 岗位..." />
+    <ErrorBoundary>(<div className="space-y-6 p-4 md:p-8">
+        <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">候选人 · Candidates</h1>
+            <p className="text-sm text-muted-foreground">
+              v8.1 + shadcn-admin DataTable · 排序/筛选/批量操作
+            </p>
           </div>
-          <Select
-            value={stage}
-            onValueChange={(v) => setStage(v as Candidate["stage"] | "all")}
-          >
-            <SelectTrigger className="w-36">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全部阶段</SelectItem>
-              <SelectItem value="推荐">推荐</SelectItem>
-              <SelectItem value="联系">联系</SelectItem>
-              <SelectItem value="面试">面试</SelectItem>
-              <SelectItem value="Offer">Offer</SelectItem>
-              <SelectItem value="已入职">已入职</SelectItem>
-              <SelectItem value="已归档">已归档</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button
-            variant={starredOnly ? "default" : "outline"}
-            size="sm"
-            onClick={() => setStarredOnly((v) => !v)}
-          >
-            <Star className="mr-1 h-3 w-3" />
-            只看 Star
-          </Button>
-          <span className="ml-auto text-sm text-muted-foreground">
-            {rows.length} / {SAMPLE_CANDIDATES.length}
-          </span>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="p-3">
-          <DataTable<Candidate>
-            data={rows}
-            columns={columns}
-            searchPlaceholder="搜索..."
-            pageSize={8}
-            bulkActions={(selected) => (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">{selected.length} 已选</span>
-                <Button variant="outline" size="sm">
-                  批量归档
-                </Button>
-                <Button variant="outline" size="sm">
-                  批量换岗
-                </Button>
-                <ExportButton kind="candidate" />
-              </div>
-            )}
-          />
-        </CardContent>
-      </Card>
-    </div>
+          <div className="flex flex-wrap gap-2">
+            <ExportButton kind="candidate" />
+            <Button asChild>
+              <Link href="/mothership/candidates/new">
+                <PlusCircle className="mr-1 h-4 w-4" />
+                新增候选人
+              </Link>
+            </Button>
+          </div>
+        </header>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <Kpi label="总数" value={SAMPLE_CANDIDATES.length} icon={<Users2 className="h-4 w-4" />} />
+          <Kpi label="面试中" value={SAMPLE_CANDIDATES.filter((c) => c.stage === "面试").length} icon={<Users2 className="h-4 w-4" />} tone="blue" />
+          <Kpi label="Offer" value={SAMPLE_CANDIDATES.filter((c) => c.stage === "Offer").length} icon={<Users2 className="h-4 w-4" />} tone="emerald" />
+          <Kpi label="Starred" value={SAMPLE_CANDIDATES.filter((c) => c.starred).length} icon={<Star className="h-4 w-4" />} tone="amber" />
+        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">筛选</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-center gap-3">
+            <div className="w-full md:w-64">
+              <Input placeholder="搜索姓名 / 岗位..." />
+            </div>
+            <Select
+              value={stage}
+              onValueChange={(v) => setStage(v as Candidate["stage"] | "all")}
+            >
+              <SelectTrigger className="w-36">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部阶段</SelectItem>
+                <SelectItem value="推荐">推荐</SelectItem>
+                <SelectItem value="联系">联系</SelectItem>
+                <SelectItem value="面试">面试</SelectItem>
+                <SelectItem value="Offer">Offer</SelectItem>
+                <SelectItem value="已入职">已入职</SelectItem>
+                <SelectItem value="已归档">已归档</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant={starredOnly ? "default" : "outline"}
+              size="sm"
+              onClick={() => setStarredOnly((v) => !v)}
+            >
+              <Star className="mr-1 h-3 w-3" />
+              只看 Star
+            </Button>
+            <span className="ml-auto text-sm text-muted-foreground">
+              {rows.length} / {SAMPLE_CANDIDATES.length}
+            </span>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3">
+            <DataTable<Candidate>
+              data={rows}
+              columns={columns}
+              searchPlaceholder="搜索..."
+              pageSize={8}
+              bulkActions={(selected) => (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">{selected.length} 已选</span>
+                  <Button variant="outline" size="sm">
+                    批量归档
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    批量换岗
+                  </Button>
+                  <ExportButton kind="candidate" />
+                </div>
+              )}
+            />
+          </CardContent>
+        </Card>
+      </div>)</ErrorBoundary>
   );
 }
 

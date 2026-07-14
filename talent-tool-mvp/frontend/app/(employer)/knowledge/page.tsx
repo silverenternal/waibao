@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import * as React from "react";
 import Link from "next/link";
@@ -149,179 +150,176 @@ export default function KnowledgePage() {
   const activeColl = collections.find((c) => c.id === activeCollection);
 
   return (
-    <div className="container mx-auto max-w-7xl space-y-6 p-6">
-      <header className="flex items-start justify-between">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold">
-            <Database className="h-6 w-6" />
-            知识库 (Knowledge Base)
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            上传公司文档,基于 LlamaIndex + Qdrant 检索,带源引用的对话式问答。
-          </p>
+    <ErrorBoundary>(<div className="container mx-auto max-w-7xl space-y-6 p-6">
+        <header className="flex items-start justify-between">
+          <div>
+            <h1 className="flex items-center gap-2 text-2xl font-bold">
+              <Database className="h-6 w-6" />
+              知识库 (Knowledge Base)
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              上传公司文档,基于 LlamaIndex + Qdrant 检索,带源引用的对话式问答。
+            </p>
+          </div>
+          <Button onClick={refresh} variant="outline" size="sm" disabled={loading}>
+            <RefreshCw className={"mr-1 h-4 w-4" + (loading ? " animate-spin" : "")} />
+            刷新
+          </Button>
+        </header>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">集合数</CardTitle>
+            </CardHeader>
+            <CardContent className="text-2xl font-bold">{collections.length}</CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">文档数</CardTitle>
+            </CardHeader>
+            <CardContent className="text-2xl font-bold">{documents.length}</CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">总 chunks</CardTitle>
+            </CardHeader>
+            <CardContent className="text-2xl font-bold">
+              {documents.reduce((a, d) => a + d.total_chunks, 0)}
+            </CardContent>
+          </Card>
         </div>
-        <Button onClick={refresh} variant="outline" size="sm" disabled={loading}>
-          <RefreshCw className={"mr-1 h-4 w-4" + (loading ? " animate-spin" : "")} />
-          刷新
-        </Button>
-      </header>
+        <Tabs defaultValue="manage" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="manage">
+              <FileText className="mr-1 h-4 w-4" /> 管理
+            </TabsTrigger>
+            <TabsTrigger value="chat">
+              <MessagesSquare className="mr-1 h-4 w-4" /> 对话
+            </TabsTrigger>
+          </TabsList>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">集合数</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-bold">{collections.length}</CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">文档数</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-bold">{documents.length}</CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">总 chunks</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-bold">
-            {documents.reduce((a, d) => a + d.total_chunks, 0)}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Tabs defaultValue="manage" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="manage">
-            <FileText className="mr-1 h-4 w-4" /> 管理
-          </TabsTrigger>
-          <TabsTrigger value="chat">
-            <MessagesSquare className="mr-1 h-4 w-4" /> 对话
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="manage" className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <Card className="md:col-span-1">
-              <CardHeader>
-                <CardTitle className="text-base">集合</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {collections.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => setActiveCollection(c.id)}
-                    className={
-                      "w-full rounded-md border p-3 text-left text-sm transition " +
-                      (c.id === activeCollection
-                        ? "border-primary bg-primary/5"
-                        : "hover:border-primary/40")
-                    }
-                  >
-                    <div className="font-medium">{c.name}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {c.embedding_model} · dim {c.embedding_dim} · chunk {c.chunk_size}/{c.chunk_overlap}
-                    </div>
-                  </button>
-                ))}
-                <div className="flex gap-1 pt-2">
-                  <input
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    placeholder="新集合名"
-                    className="flex-1 rounded-md border bg-background px-2 py-1 text-sm"
-                  />
-                  <Button size="sm" onClick={handleCreate}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                {error && <p className="text-xs text-destructive">{error}</p>}
-              </CardContent>
-            </Card>
-
-            <div className="space-y-4 md:col-span-2">
-              {activeCollection ? (
-                <>
-                  <DocumentUpload
-                    collectionId={activeCollection}
-                    onUploaded={handleUploaded}
-                  />
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">
-                        文档 ({documents.filter((d) => d.collection_id === activeCollection).length})
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {documents
-                          .filter((d) => d.collection_id === activeCollection)
-                          .map((d) => (
-                            <div
-                              key={d.id}
-                              className="flex items-center gap-3 rounded-md border p-3 text-sm"
-                            >
-                              <FileText className="h-4 w-4 text-muted-foreground" />
-                              <div className="flex-1">
-                                <div className="font-medium">{d.display_name}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  {d.total_chunks} chunks · {d.total_tokens} tokens · {(d.size_bytes / 1024).toFixed(1)} KB
-                                </div>
-                              </div>
-                              <Badge
-                                variant={d.status === "indexed" ? "secondary" : "outline"}
-                              >
-                                {d.status}
-                              </Badge>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() =>
-                                  setDocuments((prev) => prev.filter((x) => x.id !== d.id))
-                                }
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
+          <TabsContent value="manage" className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <Card className="md:col-span-1">
+                <CardHeader>
+                  <CardTitle className="text-base">集合</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {collections.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => setActiveCollection(c.id)}
+                      className={
+                        "w-full rounded-md border p-3 text-left text-sm transition " +
+                        (c.id === activeCollection
+                          ? "border-primary bg-primary/5"
+                          : "hover:border-primary/40")
+                      }
+                    >
+                      <div className="font-medium">{c.name}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {c.embedding_model} · dim {c.embedding_dim} · chunk {c.chunk_size}/{c.chunk_overlap}
                       </div>
+                    </button>
+                  ))}
+                  <div className="flex gap-1 pt-2">
+                    <input
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      placeholder="新集合名"
+                      className="flex-1 rounded-md border bg-background px-2 py-1 text-sm"
+                    />
+                    <Button size="sm" onClick={handleCreate}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {error && <p className="text-xs text-destructive">{error}</p>}
+                </CardContent>
+              </Card>
+
+              <div className="space-y-4 md:col-span-2">
+                {activeCollection ? (
+                  <>
+                    <DocumentUpload
+                      collectionId={activeCollection}
+                      onUploaded={handleUploaded}
+                    />
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">
+                          文档 ({documents.filter((d) => d.collection_id === activeCollection).length})
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          {documents
+                            .filter((d) => d.collection_id === activeCollection)
+                            .map((d) => (
+                              <div
+                                key={d.id}
+                                className="flex items-center gap-3 rounded-md border p-3 text-sm"
+                              >
+                                <FileText className="h-4 w-4 text-muted-foreground" />
+                                <div className="flex-1">
+                                  <div className="font-medium">{d.display_name}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {d.total_chunks} chunks · {d.total_tokens} tokens · {(d.size_bytes / 1024).toFixed(1)} KB
+                                  </div>
+                                </div>
+                                <Badge
+                                  variant={d.status === "indexed" ? "secondary" : "outline"}
+                                >
+                                  {d.status}
+                                </Badge>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={() =>
+                                    setDocuments((prev) => prev.filter((x) => x.id !== d.id))
+                                  }
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </>
+                ) : (
+                  <Card>
+                    <CardContent className="p-8 text-center text-muted-foreground">
+                      请先创建或选择一个集合。
                     </CardContent>
                   </Card>
-                </>
-              ) : (
-                <Card>
-                  <CardContent className="p-8 text-center text-muted-foreground">
-                    请先创建或选择一个集合。
-                  </CardContent>
-                </Card>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="chat">
-          {activeCollection ? (
-            <ChatWithCitations
-              collectionId={activeCollection}
-              onCitationClick={handleCitation}
-            />
-          ) : (
-            <Card>
-              <CardContent className="p-8 text-center text-muted-foreground">
-                请先选择集合再开始对话。
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
-
-      <footer className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
-        <Sparkles className="mr-1 inline h-3 w-3" />
-        由 LlamaIndex (40k+ ⭐) + Qdrant (25k+ ⭐) 驱动 · BGE-reranker · 1024-dim BGE-large embeddings
-        {activeColl && <> · 集合：{activeColl.name}</>}
-        <Link href="/admin/rag" className="ml-3 underline">
-          管理后台
-        </Link>
-      </footer>
-    </div>
+          <TabsContent value="chat">
+            {activeCollection ? (
+              <ChatWithCitations
+                collectionId={activeCollection}
+                onCitationClick={handleCitation}
+              />
+            ) : (
+              <Card>
+                <CardContent className="p-8 text-center text-muted-foreground">
+                  请先选择集合再开始对话。
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
+        <footer className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
+          <Sparkles className="mr-1 inline h-3 w-3" />
+          由 LlamaIndex (40k+ ⭐) + Qdrant (25k+ ⭐) 驱动 · BGE-reranker · 1024-dim BGE-large embeddings
+          {activeColl && <> · 集合：{activeColl.name}</>}
+          <Link href="/admin/rag" className="ml-3 underline">
+            管理后台
+          </Link>
+        </footer>
+      </div>)</ErrorBoundary>
   );
 }

@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v9.1 — 计划进度页 (T3606)
@@ -135,167 +136,164 @@ export default function ProgressPage() {
   );
 
   return (
-    <TremorShell
-      title="执行进度"
-      subtitle="追踪你的职业规划执行情况 · 支持打卡和动态调整"
-      badge={data ? `${stats.overall}% 完成` : "加载中"}
-      toolbar={toolbar}
-    >
-      {/* KPI band */}
-      <TremorKpiGrid>
-        <TremorKpiCard
-          title="总体完成度"
-          value={`${stats.overall}%`}
-          helper={data ? `${data.items.length} 个任务` : "—"}
-        />
-        <TremorKpiCard
-          title="已完成"
-          value={stats.done}
-          unit="项"
-          helper="累计已勾选"
-        />
-        <TremorKpiCard
-          title="进行中"
-          value={stats.active}
-          unit="项"
-          helper="已开始但未完成"
-        />
-        <TremorKpiCard
-          title="长期未推进"
-          value={stats.stale}
-          unit="项"
-          helper={stats.stale > 0 ? "建议尽快打卡或调整" : "状态良好"}
-        />
-      </TremorKpiGrid>
-
-      {error && (
-        <Card className="border-rose-200 bg-rose-50/60">
-          <CardContent className="flex items-center gap-3 p-3 text-sm text-rose-700">
-            <AlertTriangle className="size-4" />
-            <span>{error}</span>
-            <Button
-              size="sm"
-              variant="outline"
-              className="ml-auto"
-              onClick={() => userId && load(userId)}
-            >
-              重试
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        {/* gauge */}
-        <TremorPanel
-          title="总体进度仪表"
-          description="按比例绘制的同心环"
-        >
-          <ProgressGauge
-            value={stats.overall}
-            short={stats.byBucket.short}
-            mid={stats.byBucket.mid}
-            long={stats.byBucket.long}
+    <ErrorBoundary>(<TremorShell
+        title="执行进度"
+        subtitle="追踪你的职业规划执行情况 · 支持打卡和动态调整"
+        badge={data ? `${stats.overall}% 完成` : "加载中"}
+        toolbar={toolbar}
+      >
+        {/* KPI band */}
+        <TremorKpiGrid>
+          <TremorKpiCard
+            title="总体完成度"
+            value={`${stats.overall}%`}
+            helper={data ? `${data.items.length} 个任务` : "—"}
           />
-        </TremorPanel>
-
-        {/* bucket distribution */}
-        <TremorPanel
-          title="桶分布"
-          description="按短 / 中 / 长期拆分"
-          className="lg:col-span-2"
-        >
-          <div className="grid grid-cols-3 gap-3">
-            {(
-              [
-                {
-                  key: "short",
-                  label: "短期",
-                  tone: "from-emerald-50 to-emerald-100 border-emerald-200",
-                  text: "text-emerald-700",
-                },
-                {
-                  key: "mid",
-                  label: "中期",
-                  tone: "from-sky-50 to-sky-100 border-sky-200",
-                  text: "text-sky-700",
-                },
-                {
-                  key: "long",
-                  label: "长期",
-                  tone: "from-violet-50 to-violet-100 border-violet-200",
-                  text: "text-violet-700",
-                },
-              ] as const
-            ).map((b) => {
-              const count = stats.byBucket[b.key];
-              return (
-                <div
-                  key={b.key}
-                  className={cn(
-                    "rounded-xl border bg-gradient-to-br p-4",
-                    b.tone,
-                  )}
-                >
-                  <p className="text-xs text-muted-foreground">{b.label}任务</p>
-                  <p className={cn("mt-1 text-2xl font-semibold", b.text)}>
-                    {count}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-          <div className="mt-4 flex flex-wrap gap-3 text-xs">
-            <Badge variant="outline" className="gap-1">
-              <Target className="size-3" /> {stats.byBucket.short} 短期
-            </Badge>
-            <Badge variant="outline" className="gap-1">
-              <Clock className="size-3" /> {stats.byBucket.mid} 中期
-            </Badge>
-            <Badge variant="outline" className="gap-1">
-              <Sparkles className="size-3" /> {stats.byBucket.long} 长期
-            </Badge>
-            {data?.updated_at && (
-              <span className="ml-auto text-muted-foreground">
-                最近更新 · {new Date(data.updated_at).toLocaleString()}
-              </span>
-            )}
-          </div>
-        </TremorPanel>
-      </div>
-
-      {/* tracker */}
-      {data && userId ? (
-        <PlanProgressTracker
-          userId={userId}
-          data={data}
-          onChanged={() => void load(userId)}
-        />
-      ) : loading ? (
-        <Card>
-          <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            加载中…
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-            <History className="size-6 text-slate-400" />
-            <p className="text-sm text-slate-500">
-              尚未生成职业规划,先去
+          <TremorKpiCard
+            title="已完成"
+            value={stats.done}
+            unit="项"
+            helper="累计已勾选"
+          />
+          <TremorKpiCard
+            title="进行中"
+            value={stats.active}
+            unit="项"
+            helper="已开始但未完成"
+          />
+          <TremorKpiCard
+            title="长期未推进"
+            value={stats.stale}
+            unit="项"
+            helper={stats.stale > 0 ? "建议尽快打卡或调整" : "状态良好"}
+          />
+        </TremorKpiGrid>
+        {error && (
+          <Card className="border-rose-200 bg-rose-50/60">
+            <CardContent className="flex items-center gap-3 p-3 text-sm text-rose-700">
+              <AlertTriangle className="size-4" />
+              <span>{error}</span>
               <Button
-                variant="link"
-                className="px-1"
-                onClick={() => router.push("/jobseeker/plan")}
+                size="sm"
+                variant="outline"
+                className="ml-auto"
+                onClick={() => userId && load(userId)}
               >
-                生成规划
+                重试
               </Button>
-              再来打卡吧。
-            </p>
-          </CardContent>
-        </Card>
-      )}
-    </TremorShell>
+            </CardContent>
+          </Card>
+        )}
+        <div className="grid gap-4 lg:grid-cols-3">
+          {/* gauge */}
+          <TremorPanel
+            title="总体进度仪表"
+            description="按比例绘制的同心环"
+          >
+            <ProgressGauge
+              value={stats.overall}
+              short={stats.byBucket.short}
+              mid={stats.byBucket.mid}
+              long={stats.byBucket.long}
+            />
+          </TremorPanel>
+
+          {/* bucket distribution */}
+          <TremorPanel
+            title="桶分布"
+            description="按短 / 中 / 长期拆分"
+            className="lg:col-span-2"
+          >
+            <div className="grid grid-cols-3 gap-3">
+              {(
+                [
+                  {
+                    key: "short",
+                    label: "短期",
+                    tone: "from-emerald-50 to-emerald-100 border-emerald-200",
+                    text: "text-emerald-700",
+                  },
+                  {
+                    key: "mid",
+                    label: "中期",
+                    tone: "from-sky-50 to-sky-100 border-sky-200",
+                    text: "text-sky-700",
+                  },
+                  {
+                    key: "long",
+                    label: "长期",
+                    tone: "from-violet-50 to-violet-100 border-violet-200",
+                    text: "text-violet-700",
+                  },
+                ] as const
+              ).map((b) => {
+                const count = stats.byBucket[b.key];
+                return (
+                  <div
+                    key={b.key}
+                    className={cn(
+                      "rounded-xl border bg-gradient-to-br p-4",
+                      b.tone,
+                    )}
+                  >
+                    <p className="text-xs text-muted-foreground">{b.label}任务</p>
+                    <p className={cn("mt-1 text-2xl font-semibold", b.text)}>
+                      {count}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-3 text-xs">
+              <Badge variant="outline" className="gap-1">
+                <Target className="size-3" /> {stats.byBucket.short} 短期
+              </Badge>
+              <Badge variant="outline" className="gap-1">
+                <Clock className="size-3" /> {stats.byBucket.mid} 中期
+              </Badge>
+              <Badge variant="outline" className="gap-1">
+                <Sparkles className="size-3" /> {stats.byBucket.long} 长期
+              </Badge>
+              {data?.updated_at && (
+                <span className="ml-auto text-muted-foreground">
+                  最近更新 · {new Date(data.updated_at).toLocaleString()}
+                </span>
+              )}
+            </div>
+          </TremorPanel>
+        </div>
+        {/* tracker */}
+        {data && userId ? (
+          <PlanProgressTracker
+            userId={userId}
+            data={data}
+            onChanged={() => void load(userId)}
+          />
+        ) : loading ? (
+          <Card>
+            <CardContent className="py-10 text-center text-sm text-muted-foreground">
+              加载中…
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+              <History className="size-6 text-slate-400" />
+              <p className="text-sm text-slate-500">
+                尚未生成职业规划,先去
+                <Button
+                  variant="link"
+                  className="px-1"
+                  onClick={() => router.push("/jobseeker/plan")}
+                >
+                  生成规划
+                </Button>
+                再来打卡吧。
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </TremorShell>)</ErrorBoundary>
   );
 }
 

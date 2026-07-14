@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * T1702 — /admin/pilot/[id] 项目详情.
@@ -191,110 +192,107 @@ export default function AdminPilotDetailPage() {
   if (!program) return null;
 
   return (
-    <main className="mx-auto max-w-5xl space-y-6 px-4 py-8">
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={() => router.push("/admin/pilot")}>
-          <ArrowLeft className="mr-2 size-4" />
-          返回
-        </Button>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={fetchProgram}
-            aria-label="刷新"
-          >
-            <RefreshCw className="size-4" />
+    <ErrorBoundary>(<main className="mx-auto max-w-5xl space-y-6 px-4 py-8">
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" onClick={() => router.push("/admin/pilot")}>
+            <ArrowLeft className="mr-2 size-4" />
+            返回
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={downloadReport}
-            disabled={actionLoading}
-          >
-            <Download className="mr-2 size-4" />
-            下载报告
-          </Button>
-          {program.status === "recruiting" && (
-            <Button size="sm" onClick={start} disabled={actionLoading}>
-              <Play className="mr-2 size-4" />
-              启动试用
-            </Button>
-          )}
-          {program.status === "active" && (
+          <div className="flex items-center gap-2">
             <Button
+              variant="ghost"
               size="sm"
-              variant="destructive"
-              onClick={end}
+              onClick={fetchProgram}
+              aria-label="刷新"
+            >
+              <RefreshCw className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={downloadReport}
               disabled={actionLoading}
             >
-              <Square className="mr-2 size-4" />
-              结束试用
+              <Download className="mr-2 size-4" />
+              下载报告
             </Button>
-          )}
-        </div>
-      </div>
-
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">{program.name}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {orgName(program)} · 状态 {program.status} · 目标 NPS ≥ {program.target_nps} · 上限 {program.max_users} 用户
-        </p>
-      </header>
-
-      {/* KPI / Stats */}
-      <UsageStats programId={programId as string} refreshMs={0} />
-
-      {/* 邀请 */}
-      <Card className="p-5">
-        <h2 className="text-sm font-semibold">邀请新用户</h2>
-        <p className="mt-1 text-xs text-muted-foreground">
-          邀请后会发送邮件链接,14 天内有效.
-        </p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_140px_auto]">
-          <div>
-            <Label htmlFor="email" className="sr-only">
-              邮箱
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="alice@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
+            {program.status === "recruiting" && (
+              <Button size="sm" onClick={start} disabled={actionLoading}>
+                <Play className="mr-2 size-4" />
+                启动试用
+              </Button>
+            )}
+            {program.status === "active" && (
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={end}
+                disabled={actionLoading}
+              >
+                <Square className="mr-2 size-4" />
+                结束试用
+              </Button>
+            )}
           </div>
-          <div>
-            <Label htmlFor="role" className="sr-only">
-              角色
-            </Label>
-            <select
-              id="role"
-              className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-            >
-              <option value="jobseeker">求职者</option>
-              <option value="employer">雇主</option>
-              <option value="observer">观察者</option>
-            </select>
-          </div>
-          <Button onClick={invite} disabled={actionLoading || !email.trim()}>
-            <Mail className="mr-2 size-4" />
-            发送邀请
-          </Button>
         </div>
-        {inviteMsg && (
-          <p
-            className={`mt-2 text-xs ${
-              inviteMsg.startsWith("失败") ? "text-rose-600" : "text-emerald-700"
-            }`}
-            role="status"
-          >
-            {inviteMsg}
+        <header>
+          <h1 className="text-2xl font-semibold tracking-tight">{program.name}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {orgName(program)} · 状态 {program.status} · 目标 NPS ≥ {program.target_nps} · 上限 {program.max_users} 用户
           </p>
-        )}
-      </Card>
-    </main>
+        </header>
+        {/* KPI / Stats */}
+        <UsageStats programId={programId as string} refreshMs={0} />
+        {/* 邀请 */}
+        <Card className="p-5">
+          <h2 className="text-sm font-semibold">邀请新用户</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            邀请后会发送邮件链接,14 天内有效.
+          </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_140px_auto]">
+            <div>
+              <Label htmlFor="email" className="sr-only">
+                邮箱
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="alice@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="role" className="sr-only">
+                角色
+              </Label>
+              <select
+                id="role"
+                className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+              >
+                <option value="jobseeker">求职者</option>
+                <option value="employer">雇主</option>
+                <option value="observer">观察者</option>
+              </select>
+            </div>
+            <Button onClick={invite} disabled={actionLoading || !email.trim()}>
+              <Mail className="mr-2 size-4" />
+              发送邀请
+            </Button>
+          </div>
+          {inviteMsg && (
+            <p
+              className={`mt-2 text-xs ${
+                inviteMsg.startsWith("失败") ? "text-rose-600" : "text-emerald-700"
+              }`}
+              role="status"
+            >
+              {inviteMsg}
+            </p>
+          )}
+        </Card>
+      </main>)</ErrorBoundary>
   );
 }

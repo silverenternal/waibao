@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,71 +54,69 @@ export default function SalaryInsightsPage() {
   }, [role, city, seniority]);
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <h1 className="text-2xl font-bold">薪资洞察</h1>
-
-      {/* 选择器 */}
-      <Card>
-        <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="text-xs text-slate-500">岗位</label>
-            <select
-              className="w-full border rounded p-2 mt-1"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-            >
-              {ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
+    <ErrorBoundary>(<div className="container mx-auto p-6 space-y-6">
+        <h1 className="text-2xl font-bold">薪资洞察</h1>
+        {/* 选择器 */}
+        <Card>
+          <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-xs text-slate-500">岗位</label>
+              <select
+                className="w-full border rounded p-2 mt-1"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+              >
+                {ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-slate-500">城市</label>
+              <select
+                className="w-full border rounded p-2 mt-1"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+              >
+                {CITIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-slate-500">职级</label>
+              <select
+                className="w-full border rounded p-2 mt-1"
+                value={seniority}
+                onChange={(e) => setSeniority(e.target.value)}
+              >
+                {SENIORITIES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </CardContent>
+        </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 space-y-4">
+            <SalaryDistributionChart distribution={dist} loading={loading} />
+            <SalaryTrendChart trend={trend} loading={loading} />
           </div>
           <div>
-            <label className="text-xs text-slate-500">城市</label>
-            <select
-              className="w-full border rounded p-2 mt-1"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-            >
-              {CITIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+            <MyOfferPosition
+              role={role}
+              city={city}
+              seniority={seniority}
+              defaultOfferK={dist?.p50_k ?? 25}
+            />
           </div>
-          <div>
-            <label className="text-xs text-slate-500">职级</label>
-            <select
-              className="w-full border rounded p-2 mt-1"
-              value={seniority}
-              onChange={(e) => setSeniority(e.target.value)}
-            >
-              {SENIORITIES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 space-y-4">
-          <SalaryDistributionChart distribution={dist} loading={loading} />
-          <SalaryTrendChart trend={trend} loading={loading} />
         </div>
-        <div>
-          <MyOfferPosition
-            role={role}
-            city={city}
-            seniority={seniority}
-            defaultOfferK={dist?.p50_k ?? 25}
-          />
-        </div>
-      </div>
-    </div>
+      </div>)</ErrorBoundary>
   );
 }

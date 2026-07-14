@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * T3801 — Pilot 合作方实时 Dashboard.
@@ -111,105 +112,101 @@ export default function PilotDashboardPage() {
   }, [fetchOnce]);
 
   return (
-    <main className="mx-auto max-w-7xl space-y-6 px-4 py-8">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Pilot 实时 Dashboard</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            监控 5+ 中型企业 30 天试用情况, 自动刷新 (SSE, 60s)。
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant={sseConnected ? "default" : "outline"} className="gap-1">
-            <span
-              className={cn(
-                "inline-block h-2 w-2 rounded-full",
-                sseConnected ? "bg-emerald-500" : "bg-slate-400",
-              )}
-            />
-            {sseConnected ? "实时" : "离线"}
-          </Badge>
-          <Button variant="outline" size="sm" onClick={fetchOnce}>
-            <RefreshCw className="mr-1 h-4 w-4" />
-            刷新
-          </Button>
-        </div>
-      </header>
-
-      {loading && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> 加载中…
-        </div>
-      )}
-
-      {error && (
-        <Card className="border-rose-300 bg-rose-50 p-4 text-sm text-rose-800">
-          数据获取失败: {error}
-        </Card>
-      )}
-
-      {summary && (
-        <section className="grid grid-cols-2 gap-4 md:grid-cols-5">
-          <KpiCard
-            icon={<Users className="h-5 w-5" />}
-            label="合作方"
-            value={String(summary.programs)}
-            sub={`${summary.by_status?.active ?? 0} active · ${summary.by_status?.completed ?? 0} completed`}
-          />
-          <KpiCard
-            icon={<TrendingUp className="h-5 w-5" />}
-            label="平均 NPS"
-            value={summary.avg_nps?.toString() ?? "—"}
-            sub={summary.avg_nps !== null ? (summary.avg_nps >= 40 ? "达标" : "偏低") : "无数据"}
-            tone={summary.avg_nps !== null && summary.avg_nps >= 40 ? "ok" : "warn"}
-          />
-          <KpiCard
-            icon={<Activity className="h-5 w-5" />}
-            label="平均续约概率"
-            value={
-              summary.avg_renewal_probability !== null
-                ? `${Math.round(summary.avg_renewal_probability * 100)}%`
-                : "—"
-            }
-            sub={
-              summary.avg_renewal_probability !== null && summary.avg_renewal_probability >= 0.6
-                ? "健康"
-                : "关注"
-            }
-            tone={
-              summary.avg_renewal_probability !== null && summary.avg_renewal_probability >= 0.6
-                ? "ok"
-                : "warn"
-            }
-          />
-          <KpiCard
-            icon={<AlertTriangle className="h-5 w-5" />}
-            label="活跃告警"
-            value={String(summary.active_alerts)}
-            sub={summary.active_alerts > 0 ? "需处理" : "无"}
-            tone={summary.active_alerts > 0 ? "bad" : "ok"}
-          />
-          <KpiCard
-            icon={<CheckCircle2 className="h-5 w-5" />}
-            label="目标"
-            value="5+ / 30d"
-            sub="≥ 5 家中型企业"
-          />
-        </section>
-      )}
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {partners.map((p) => (
-          <PartnerCard key={p.program_id} partner={p} />
-        ))}
-        {partners.length === 0 && !loading && (
-          <Card className="col-span-full p-8 text-center text-sm text-muted-foreground">
-            暂无活跃 Pilot。运行{" "}
-            <code className="rounded bg-slate-100 px-1">scripts/seed_pilot_partners.py</code> 创建。
+    <ErrorBoundary>(<main className="mx-auto max-w-7xl space-y-6 px-4 py-8">
+        <header className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Pilot 实时 Dashboard</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              监控 5+ 中型企业 30 天试用情况, 自动刷新 (SSE, 60s)。
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant={sseConnected ? "default" : "outline"} className="gap-1">
+              <span
+                className={cn(
+                  "inline-block h-2 w-2 rounded-full",
+                  sseConnected ? "bg-emerald-500" : "bg-slate-400",
+                )}
+              />
+              {sseConnected ? "实时" : "离线"}
+            </Badge>
+            <Button variant="outline" size="sm" onClick={fetchOnce}>
+              <RefreshCw className="mr-1 h-4 w-4" />
+              刷新
+            </Button>
+          </div>
+        </header>
+        {loading && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> 加载中…
+          </div>
+        )}
+        {error && (
+          <Card className="border-rose-300 bg-rose-50 p-4 text-sm text-rose-800">
+            数据获取失败: {error}
           </Card>
         )}
-      </section>
-    </main>
+        {summary && (
+          <section className="grid grid-cols-2 gap-4 md:grid-cols-5">
+            <KpiCard
+              icon={<Users className="h-5 w-5" />}
+              label="合作方"
+              value={String(summary.programs)}
+              sub={`${summary.by_status?.active ?? 0} active · ${summary.by_status?.completed ?? 0} completed`}
+            />
+            <KpiCard
+              icon={<TrendingUp className="h-5 w-5" />}
+              label="平均 NPS"
+              value={summary.avg_nps?.toString() ?? "—"}
+              sub={summary.avg_nps !== null ? (summary.avg_nps >= 40 ? "达标" : "偏低") : "无数据"}
+              tone={summary.avg_nps !== null && summary.avg_nps >= 40 ? "ok" : "warn"}
+            />
+            <KpiCard
+              icon={<Activity className="h-5 w-5" />}
+              label="平均续约概率"
+              value={
+                summary.avg_renewal_probability !== null
+                  ? `${Math.round(summary.avg_renewal_probability * 100)}%`
+                  : "—"
+              }
+              sub={
+                summary.avg_renewal_probability !== null && summary.avg_renewal_probability >= 0.6
+                  ? "健康"
+                  : "关注"
+              }
+              tone={
+                summary.avg_renewal_probability !== null && summary.avg_renewal_probability >= 0.6
+                  ? "ok"
+                  : "warn"
+              }
+            />
+            <KpiCard
+              icon={<AlertTriangle className="h-5 w-5" />}
+              label="活跃告警"
+              value={String(summary.active_alerts)}
+              sub={summary.active_alerts > 0 ? "需处理" : "无"}
+              tone={summary.active_alerts > 0 ? "bad" : "ok"}
+            />
+            <KpiCard
+              icon={<CheckCircle2 className="h-5 w-5" />}
+              label="目标"
+              value="5+ / 30d"
+              sub="≥ 5 家中型企业"
+            />
+          </section>
+        )}
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {partners.map((p) => (
+            <PartnerCard key={p.program_id} partner={p} />
+          ))}
+          {partners.length === 0 && !loading && (
+            <Card className="col-span-full p-8 text-center text-sm text-muted-foreground">
+              暂无活跃 Pilot。运行{" "}
+              <code className="rounded bg-slate-100 px-1">scripts/seed_pilot_partners.py</code> 创建。
+            </Card>
+          )}
+        </section>
+      </main>)</ErrorBoundary>
   );
 }
 

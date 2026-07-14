@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v8.0 T3902 — Admin Feedback Dashboard.
@@ -148,126 +149,122 @@ export default function FeedbackAdminPage() {
   });
 
   return (
-    <div className="space-y-6 p-6">
-      <header className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
-            <Inbox className="h-5 w-5 text-indigo-500" /> 用户反馈
-          </h1>
-          <p className="text-sm text-slate-600">统一入口收集, 自动归类, 趋势可视化</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-            <Input
-              placeholder="搜索评论 / 功能 / 用户"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 w-56 pl-7 text-sm"
-            />
+    <ErrorBoundary>(<div className="space-y-6 p-6">
+        <header className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
+              <Inbox className="h-5 w-5 text-indigo-500" /> 用户反馈
+            </h1>
+            <p className="text-sm text-slate-600">统一入口收集, 自动归类, 趋势可视化</p>
           </div>
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-            className="h-8 rounded-md border border-slate-200 bg-white px-2 text-sm"
-          >
-            <option value="">全部类型</option>
-            <option value="rating">评分</option>
-            <option value="bug">Bug</option>
-            <option value="feature">建议</option>
-            <option value="experience">体验</option>
-            <option value="performance">性能</option>
-          </select>
-          <select
-            value={filterPriority}
-            onChange={(e) => setFilterPriority(e.target.value)}
-            className="h-8 rounded-md border border-slate-200 bg-white px-2 text-sm"
-          >
-            <option value="">全部优先级</option>
-            <option value="critical">Critical</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
-          </select>
-          <Button size="sm" variant="outline" onClick={fetchAll} disabled={loading}>
-            {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Filter className="h-3.5 w-3.5" />}
-            刷新
-          </Button>
-        </div>
-      </header>
-
-      {error && (
-        <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
-          <XCircle className="mr-1 inline h-3.5 w-3.5" /> {error}
-        </div>
-      )}
-
-      {/* Summary cards */}
-      {list && (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-          <Stat label="总数" value={list.total} />
-          <Stat label="Bug" value={list.by_type.bug ?? 0} />
-          <Stat label="建议" value={list.by_type.feature ?? 0} />
-          <Stat label="Critical" value={list.by_priority.critical ?? 0} />
-          <Stat label="High" value={list.by_priority.high ?? 0} />
-        </div>
-      )}
-
-      {/* Trend */}
-      {trend && trend.buckets.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+              <Input
+                placeholder="搜索评论 / 功能 / 用户"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-8 w-56 pl-7 text-sm"
+              />
+            </div>
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="h-8 rounded-md border border-slate-200 bg-white px-2 text-sm"
+            >
+              <option value="">全部类型</option>
+              <option value="rating">评分</option>
+              <option value="bug">Bug</option>
+              <option value="feature">建议</option>
+              <option value="experience">体验</option>
+              <option value="performance">性能</option>
+            </select>
+            <select
+              value={filterPriority}
+              onChange={(e) => setFilterPriority(e.target.value)}
+              className="h-8 rounded-md border border-slate-200 bg-white px-2 text-sm"
+            >
+              <option value="">全部优先级</option>
+              <option value="critical">Critical</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+            <Button size="sm" variant="outline" onClick={fetchAll} disabled={loading}>
+              {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Filter className="h-3.5 w-3.5" />}
+              刷新
+            </Button>
+          </div>
+        </header>
+        {error && (
+          <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+            <XCircle className="mr-1 inline h-3.5 w-3.5" /> {error}
+          </div>
+        )}
+        {/* Summary cards */}
+        {list && (
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+            <Stat label="总数" value={list.total} />
+            <Stat label="Bug" value={list.by_type.bug ?? 0} />
+            <Stat label="建议" value={list.by_type.feature ?? 0} />
+            <Stat label="Critical" value={list.by_priority.critical ?? 0} />
+            <Stat label="High" value={list.by_priority.high ?? 0} />
+          </div>
+        )}
+        {/* Trend */}
+        {trend && trend.buckets.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">14 天趋势</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex h-24 items-end gap-1">
+                {trend.buckets.map((b) => {
+                  const max = Math.max(...trend.buckets.map((x) => x.total), 1);
+                  const h = (b.total / max) * 100;
+                  return (
+                    <div key={b.date} className="flex flex-1 flex-col items-center gap-1">
+                      <div
+                        className="w-full rounded-t bg-sky-400"
+                        style={{ height: `${h}%`, minHeight: "2px" }}
+                        title={`${b.date}: ${b.total}`}
+                      />
+                      <span className="text-[10px] text-slate-500">
+                        {b.date.slice(5)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              {trend.top_categories.length > 0 && (
+                <div className="mt-3 text-xs text-slate-500">
+                  TOP 类别:{" "}
+                  {trend.top_categories
+                    .map((c) => `${c.category} (${c.count})`)
+                    .join(" · ")}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+        {/* List */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">14 天趋势</CardTitle>
+            <CardTitle className="text-base">反馈列表 ({filteredData.length})</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex h-24 items-end gap-1">
-              {trend.buckets.map((b) => {
-                const max = Math.max(...trend.buckets.map((x) => x.total), 1);
-                const h = (b.total / max) * 100;
-                return (
-                  <div key={b.date} className="flex flex-1 flex-col items-center gap-1">
-                    <div
-                      className="w-full rounded-t bg-sky-400"
-                      style={{ height: `${h}%`, minHeight: "2px" }}
-                      title={`${b.date}: ${b.total}`}
-                    />
-                    <span className="text-[10px] text-slate-500">
-                      {b.date.slice(5)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-            {trend.top_categories.length > 0 && (
-              <div className="mt-3 text-xs text-slate-500">
-                TOP 类别:{" "}
-                {trend.top_categories
-                  .map((c) => `${c.category} (${c.count})`)
-                  .join(" · ")}
-              </div>
+          <CardContent className="space-y-2">
+            {loading ? (
+              <p className="text-sm text-slate-500">加载中...</p>
+            ) : filteredData.length === 0 ? (
+              <p className="text-sm text-slate-500">无反馈</p>
+            ) : (
+              filteredData.map((f) => (
+                <FeedbackRow key={f.id} item={f} onUpdate={updateStatus} />
+              ))
             )}
           </CardContent>
         </Card>
-      )}
-
-      {/* List */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">反馈列表 ({filteredData.length})</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {loading ? (
-            <p className="text-sm text-slate-500">加载中...</p>
-          ) : filteredData.length === 0 ? (
-            <p className="text-sm text-slate-500">无反馈</p>
-          ) : (
-            filteredData.map((f) => (
-              <FeedbackRow key={f.id} item={f} onUpdate={updateStatus} />
-            ))
-          )}
-        </CardContent>
-      </Card>
-    </div>
+      </div>)</ErrorBoundary>
   );
 }
 

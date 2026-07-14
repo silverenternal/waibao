@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v9.1 · 求职者 Profile (OpenResume 风格)
@@ -201,274 +202,273 @@ export default function JobseekerProfilePage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-6 p-4 lg:p-8">
-      {/* 操作条 */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">我的简历</h1>
-          <p className="text-sm text-muted-foreground">
-            AI 已根据你的档案和最近 90 天的工作自动整理。可以一键导出或分享。
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" variant="outline" onClick={handleCopy}>
-            <Share2 className="size-4" />
-            复制为文本
-          </Button>
-          <Button size="sm" variant="outline" onClick={handlePrint}>
-            <Download className="size-4" />
-            下载 PDF
-          </Button>
-          <Button size="sm" onClick={() => setEditing((v) => !v)}>
-            <Pencil className="size-4" />
-            {editing ? "完成" : "编辑"}
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        {/* 左:简历纸张 */}
-        <ResumePaper>
-          {/* Header */}
-          <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
-            <Avatar className="size-20 ring-2 ring-slate-200">
-              <AvatarFallback className="text-2xl font-semibold text-slate-700">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 space-y-1">
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-                {PROFILE.name}
-              </h1>
-              <p className="text-sm font-medium text-slate-700">
-                {PROFILE.title}
-              </p>
-              <p className="text-sm text-slate-500">{PROFILE.location}</p>
-              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
-                <span className="inline-flex items-center gap-1">
-                  <Mail className="size-3" />
-                  {PROFILE.email}
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <Phone className="size-3" />
-                  {PROFILE.phone}
-                </span>
-                {PROFILE.links.map((l) => (
-                  <a
-                    key={l.label}
-                    href={l.href}
-                    className="text-indigo-600 hover:underline"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {l.label}
-                  </a>
-                ))}
-              </div>
-            </div>
-          </header>
-
-          <Separator className="my-5" />
-
-          {/* Summary */}
-          <SectionTitle>个人简介</SectionTitle>
-          <p className="text-sm leading-relaxed text-slate-700">
-            {PROFILE.headline}
-          </p>
-
-          {/* Skills */}
-          <SectionTitle icon={<Wrench className="size-3.5" />}>技能</SectionTitle>
-          <div className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
-            {PROFILE.skills.map((s) => (
-              <SkillBar key={s.name} name={s.name} level={s.level} />
-            ))}
+    <ErrorBoundary>(<div className="mx-auto flex max-w-6xl flex-col gap-6 p-4 lg:p-8">
+        {/* 操作条 */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">我的简历</h1>
+            <p className="text-sm text-muted-foreground">
+              AI 已根据你的档案和最近 90 天的工作自动整理。可以一键导出或分享。
+            </p>
           </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" variant="outline" onClick={handleCopy}>
+              <Share2 className="size-4" />
+              复制为文本
+            </Button>
+            <Button size="sm" variant="outline" onClick={handlePrint}>
+              <Download className="size-4" />
+              下载 PDF
+            </Button>
+            <Button size="sm" onClick={() => setEditing((v) => !v)}>
+              <Pencil className="size-4" />
+              {editing ? "完成" : "编辑"}
+            </Button>
+          </div>
+        </div>
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+          {/* 左:简历纸张 */}
+          <ResumePaper>
+            {/* Header */}
+            <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+              <Avatar className="size-20 ring-2 ring-slate-200">
+                <AvatarFallback className="text-2xl font-semibold text-slate-700">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 space-y-1">
+                <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+                  {PROFILE.name}
+                </h1>
+                <p className="text-sm font-medium text-slate-700">
+                  {PROFILE.title}
+                </p>
+                <p className="text-sm text-slate-500">{PROFILE.location}</p>
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                  <span className="inline-flex items-center gap-1">
+                    <Mail className="size-3" />
+                    {PROFILE.email}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Phone className="size-3" />
+                    {PROFILE.phone}
+                  </span>
+                  {PROFILE.links.map((l) => (
+                    <a
+                      key={l.label}
+                      href={l.href}
+                      className="text-indigo-600 hover:underline"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {l.label}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </header>
 
-          {/* Experience */}
-          <SectionTitle icon={<Briefcase className="size-3.5" />}>
-            工作经验
-          </SectionTitle>
-          <div className="space-y-5">
-            {PROFILE.experiences.map((e) => (
-              <article key={e.company}>
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <h3 className="text-sm font-semibold text-slate-900">
-                    {e.title} · {e.company}
-                  </h3>
+            <Separator className="my-5" />
+
+            {/* Summary */}
+            <SectionTitle>个人简介</SectionTitle>
+            <p className="text-sm leading-relaxed text-slate-700">
+              {PROFILE.headline}
+            </p>
+
+            {/* Skills */}
+            <SectionTitle icon={<Wrench className="size-3.5" />}>技能</SectionTitle>
+            <div className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
+              {PROFILE.skills.map((s) => (
+                <SkillBar key={s.name} name={s.name} level={s.level} />
+              ))}
+            </div>
+
+            {/* Experience */}
+            <SectionTitle icon={<Briefcase className="size-3.5" />}>
+              工作经验
+            </SectionTitle>
+            <div className="space-y-5">
+              {PROFILE.experiences.map((e) => (
+                <article key={e.company}>
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <h3 className="text-sm font-semibold text-slate-900">
+                      {e.title} · {e.company}
+                    </h3>
+                    <span className="text-xs text-slate-500">{e.period}</span>
+                  </div>
+                  <p className="text-xs text-slate-500">{e.location}</p>
+                  <ul className="mt-2 space-y-1.5 text-sm leading-relaxed text-slate-700">
+                    {e.bullets.map((b, i) => (
+                      <li key={i} className="relative pl-4">
+                        <span className="absolute left-1 top-2 size-1 rounded-full bg-slate-400" />
+                        {b}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {e.tags.map((t) => (
+                      <Badge
+                        key={t}
+                        variant="secondary"
+                        className="bg-slate-100 text-[10px] text-slate-600"
+                      >
+                        {t}
+                      </Badge>
+                    ))}
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            {/* Projects */}
+            <SectionTitle>项目亮点</SectionTitle>
+            <div className="space-y-3">
+              {PROFILE.projects.map((p) => (
+                <div key={p.name}>
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <h3 className="text-sm font-semibold text-slate-900">
+                      {p.name}
+                      {p.link ? (
+                        <a
+                          href={p.link}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="ml-1.5 text-xs font-normal text-indigo-600 hover:underline"
+                        >
+                          ↗
+                        </a>
+                      ) : null}
+                    </h3>
+                    <span className="text-xs text-slate-500">{p.period}</span>
+                  </div>
+                  <p className="text-sm text-slate-700">{p.summary}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Education */}
+            <SectionTitle icon={<GraduationCap className="size-3.5" />}>
+              教育
+            </SectionTitle>
+            <div className="space-y-2">
+              {PROFILE.education.map((e) => (
+                <div
+                  key={e.school}
+                  className="flex flex-wrap items-baseline justify-between gap-2"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {e.school} · {e.degree}
+                    </p>
+                    <p className="text-xs text-slate-500">{e.note}</p>
+                  </div>
                   <span className="text-xs text-slate-500">{e.period}</span>
                 </div>
-                <p className="text-xs text-slate-500">{e.location}</p>
-                <ul className="mt-2 space-y-1.5 text-sm leading-relaxed text-slate-700">
-                  {e.bullets.map((b, i) => (
-                    <li key={i} className="relative pl-4">
-                      <span className="absolute left-1 top-2 size-1 rounded-full bg-slate-400" />
-                      {b}
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {e.tags.map((t) => (
-                    <Badge
-                      key={t}
-                      variant="secondary"
-                      className="bg-slate-100 text-[10px] text-slate-600"
-                    >
-                      {t}
-                    </Badge>
-                  ))}
-                </div>
-              </article>
-            ))}
-          </div>
+              ))}
+            </div>
 
-          {/* Projects */}
-          <SectionTitle>项目亮点</SectionTitle>
-          <div className="space-y-3">
-            {PROFILE.projects.map((p) => (
-              <div key={p.name}>
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <h3 className="text-sm font-semibold text-slate-900">
-                    {p.name}
-                    {p.link ? (
-                      <a
-                        href={p.link}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="ml-1.5 text-xs font-normal text-indigo-600 hover:underline"
-                      >
-                        ↗
-                      </a>
-                    ) : null}
-                  </h3>
-                  <span className="text-xs text-slate-500">{p.period}</span>
-                </div>
-                <p className="text-sm text-slate-700">{p.summary}</p>
-              </div>
-            ))}
-          </div>
+            {/* Languages */}
+            <SectionTitle>语言</SectionTitle>
+            <ul className="grid grid-cols-1 gap-1.5 text-sm text-slate-700 sm:grid-cols-2">
+              {PROFILE.languages.map((l) => (
+                <li key={l.name} className="flex items-center justify-between">
+                  <span className="font-medium">{l.name}</span>
+                  <span className="text-xs text-slate-500">{l.level}</span>
+                </li>
+              ))}
+            </ul>
+          </ResumePaper>
 
-          {/* Education */}
-          <SectionTitle icon={<GraduationCap className="size-3.5" />}>
-            教育
-          </SectionTitle>
-          <div className="space-y-2">
-            {PROFILE.education.map((e) => (
-              <div
-                key={e.school}
-                className="flex flex-wrap items-baseline justify-between gap-2"
-              >
+          {/* 右:操作 + 提示 */}
+          <aside className="space-y-4">
+            <Card>
+              <CardHeader className="space-y-1">
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Sparkles className="size-4 text-indigo-500" />
+                  档案完整度
+                </CardTitle>
+                <CardDescription>
+                  完整度越高,推荐越精准。
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {e.school} · {e.degree}
-                  </p>
-                  <p className="text-xs text-slate-500">{e.note}</p>
+                  <div className="flex items-baseline justify-between text-xs">
+                    <span className="text-muted-foreground">当前</span>
+                    <span className="text-2xl font-semibold tracking-tight">
+                      {COMPLETENESS}%
+                    </span>
+                  </div>
+                  <Progress value={COMPLETENESS} className="mt-1 h-2" />
                 </div>
-                <span className="text-xs text-slate-500">{e.period}</span>
-              </div>
-            ))}
-          </div>
+                <ul className="space-y-1.5 text-xs">
+                  <Hint done label="基础信息 / 联系方式" />
+                  <Hint done label="工作经历 3 段" />
+                  <Hint done label="技能 8 项,带熟练度" />
+                  <Hint done label="2 个项目亮点" />
+                  <Hint done label="教育背景" />
+                  <Hint
+                    label="上传作品集 / 视频简历(可解锁金牌)"
+                  />
+                </ul>
+              </CardContent>
+            </Card>
 
-          {/* Languages */}
-          <SectionTitle>语言</SectionTitle>
-          <ul className="grid grid-cols-1 gap-1.5 text-sm text-slate-700 sm:grid-cols-2">
-            {PROFILE.languages.map((l) => (
-              <li key={l.name} className="flex items-center justify-between">
-                <span className="font-medium">{l.name}</span>
-                <span className="text-xs text-slate-500">{l.level}</span>
-              </li>
-            ))}
-          </ul>
-        </ResumePaper>
+            <Card>
+              <CardHeader className="space-y-1">
+                <CardTitle className="text-sm">分享给顾问</CardTitle>
+                <CardDescription>
+                  顾问 Lily 已经看过这份简历的最新版本。
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button size="sm" className="w-full">
+                  分享给 Lily
+                </Button>
+                <Button size="sm" variant="outline" className="w-full">
+                  生成匿名版
+                </Button>
+              </CardContent>
+            </Card>
 
-        {/* 右:操作 + 提示 */}
-        <aside className="space-y-4">
-          <Card>
-            <CardHeader className="space-y-1">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Sparkles className="size-4 text-indigo-500" />
-                档案完整度
-              </CardTitle>
-              <CardDescription>
-                完整度越高,推荐越精准。
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div>
-                <div className="flex items-baseline justify-between text-xs">
-                  <span className="text-muted-foreground">当前</span>
-                  <span className="text-2xl font-semibold tracking-tight">
-                    {COMPLETENESS}%
-                  </span>
-                </div>
-                <Progress value={COMPLETENESS} className="mt-1 h-2" />
-              </div>
-              <ul className="space-y-1.5 text-xs">
-                <Hint done label="基础信息 / 联系方式" />
-                <Hint done label="工作经历 3 段" />
-                <Hint done label="技能 8 项,带熟练度" />
-                <Hint done label="2 个项目亮点" />
-                <Hint done label="教育背景" />
-                <Hint
-                  label="上传作品集 / 视频简历(可解锁金牌)"
-                />
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-sm">分享给顾问</CardTitle>
-              <CardDescription>
-                顾问 Lily 已经看过这份简历的最新版本。
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button size="sm" className="w-full">
-                分享给 Lily
-              </Button>
-              <Button size="sm" variant="outline" className="w-full">
-                生成匿名版
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-sm">下一步</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-xs text-muted-foreground">
-              <p>
-                · 让 Copilot{" "}
-                <span className="text-foreground">润色工作经历</span>
-                ,把数字结果前置。
-              </p>
-              <p>
-                · 看看{" "}
-                <span className="text-foreground">Tidewave</span>{" "}
-                给你的 88% 匹配度如何拆解。
-              </p>
-              <p>
-                · 打开{" "}
-                <span className="text-foreground">议价模拟</span>
-                ,为 92k 目标做准备。
-              </p>
-            </CardContent>
-          </Card>
-
-          {editing && (
-            <Card className="border-dashed bg-muted/40">
-              <CardContent className="space-y-1 py-3 text-xs text-muted-foreground">
-                <p className="font-medium text-foreground">编辑模式已开启</p>
+            <Card>
+              <CardHeader className="space-y-1">
+                <CardTitle className="text-sm">下一步</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-xs text-muted-foreground">
                 <p>
-                  真实的内联编辑组件会在 <code>components/jobseeker/</code>{" "}
-                  出现后接入。当前页面以只读预览形式展示。
+                  · 让 Copilot{" "}
+                  <span className="text-foreground">润色工作经历</span>
+                  ,把数字结果前置。
+                </p>
+                <p>
+                  · 看看{" "}
+                  <span className="text-foreground">Tidewave</span>{" "}
+                  给你的 88% 匹配度如何拆解。
+                </p>
+                <p>
+                  · 打开{" "}
+                  <span className="text-foreground">议价模拟</span>
+                  ,为 92k 目标做准备。
                 </p>
               </CardContent>
             </Card>
-          )}
-        </aside>
-      </div>
-    </div>
+
+            {editing && (
+              <Card className="border-dashed bg-muted/40">
+                <CardContent className="space-y-1 py-3 text-xs text-muted-foreground">
+                  <p className="font-medium text-foreground">编辑模式已开启</p>
+                  <p>
+                    真实的内联编辑组件会在 <code>components/jobseeker/</code>{" "}
+                    出现后接入。当前页面以只读预览形式展示。
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </aside>
+        </div>
+      </div>)</ErrorBoundary>
   );
 }
 

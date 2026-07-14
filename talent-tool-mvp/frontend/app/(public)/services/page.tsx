@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v8.0 T3502 — Public Services catalog.
@@ -165,167 +166,164 @@ export default function ServicesPage(): React.ReactElement {
   };
 
   return (
-    <main className="container mx-auto max-w-6xl px-4 py-12">
-      <header className="mb-8 space-y-2">
-        <p className="text-xs uppercase tracking-widest text-blue-600">
-          Service Catalog · v8.0
-        </p>
-        <h1 className="text-3xl font-bold text-slate-900 sm:text-4xl">
-          waibao 服务目录
-        </h1>
-        <p className="max-w-3xl text-base text-slate-600">
-          实时查看 waibao 平台全部对外服务。按 Plan 要求、状态、分类筛选。订阅后我们会在服务状态变更时通过邮箱或 Webhook 通知你。
-        </p>
-        <div className="mt-3 flex gap-4 text-sm text-slate-600">
-          <span className="inline-flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-green-500" /> Active{" "}
-            <strong>{totals.enabled}</strong>
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-blue-500" /> Beta <strong>{totals.beta}</strong>
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-yellow-500" /> Maintenance{" "}
-            <strong>{totals.maintenance}</strong>
-          </span>
-        </div>
-      </header>
-
-      <section className="mb-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-          <input
-            aria-label="Search services"
-            placeholder="搜索服务名 / 描述"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-          />
-          <Select label="分类" value={category} onChange={setCategory} options={CATEGORY_OPTIONS} />
-          <Select label="Plan" value={plan} onChange={setPlan} options={PLAN_OPTIONS} />
-          <Select label="状态" value={status} onChange={setStatus} options={STATUS_OPTIONS} />
-        </div>
-      </section>
-
-      {loading ? (
-        <SkeletonGrid />
-      ) : error ? (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      ) : services.length === 0 ? (
-        <div className="rounded-md border border-slate-200 bg-white px-4 py-12 text-center text-slate-500">
-          没有匹配的服务。试试调整筛选条件。
-        </div>
-      ) : (
-        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-          <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
-                  名称
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
-                  状态
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
-                  Plan 要求
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
-                  依赖
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">
-                  详情
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {services.map((s) => (
-                <tr key={s.name} className="hover:bg-slate-50">
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium text-slate-900">{s.display_name}</span>
-                      <span className="text-xs text-slate-500">{s.name}</span>
-                      {s.description ? (
-                        <span className="mt-1 text-xs text-slate-500">{s.description}</span>
-                      ) : null}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={cn(
-                        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1",
-                        STATUS_CLASSES[s.status] ?? STATUS_CLASSES.enabled,
-                      )}
-                    >
-                      {STATUS_LABELS[s.status] ?? s.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={cn(
-                        "inline-block rounded px-2 py-0.5 text-xs font-semibold",
-                        PLAN_CLASSES[s.plan_required] ?? PLAN_CLASSES.free,
-                      )}
-                    >
-                      {PLAN_LABELS[s.plan_required] ?? s.plan_required}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-xs text-slate-600">
-                    {(s.dependencies ?? []).length} dep
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/services/${encodeURIComponent(s.name)}`}
-                      className="text-sm font-medium text-blue-600 hover:text-blue-700"
-                    >
-                      查看
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <section className="mt-12 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-slate-900">订阅服务变更通知</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          服务上下线 / 进入维护模式时通过邮箱或 Webhook 第一时间通知。
-        </p>
-        <form onSubmit={onSubmitSubscribe} className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-          <input
-            type="email"
-            placeholder="email@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-          />
-          <input
-            type="url"
-            placeholder="https://hooks.example.com/notify"
-            value={webhook}
-            onChange={(e) => setWebhook(e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-          />
-          <button
-            type="submit"
-            disabled={subscribeState.kind === "submitting"}
-            className="md:col-span-2 inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
-          >
-            {subscribeState.kind === "submitting" ? "订阅中..." : "订阅"}
-          </button>
-        </form>
-        {subscribeState.kind === "ok" ? (
-          <p className="mt-3 text-sm text-green-700">
-            订阅成功。订阅 ID: <code>{subscribeState.id}</code>
+    <ErrorBoundary>(<main className="container mx-auto max-w-6xl px-4 py-12">
+        <header className="mb-8 space-y-2">
+          <p className="text-xs uppercase tracking-widest text-blue-600">
+            Service Catalog · v8.0
           </p>
-        ) : null}
-        {subscribeState.kind === "error" ? (
-          <p className="mt-3 text-sm text-red-700">{subscribeState.message}</p>
-        ) : null}
-      </section>
-    </main>
+          <h1 className="text-3xl font-bold text-slate-900 sm:text-4xl">
+            waibao 服务目录
+          </h1>
+          <p className="max-w-3xl text-base text-slate-600">
+            实时查看 waibao 平台全部对外服务。按 Plan 要求、状态、分类筛选。订阅后我们会在服务状态变更时通过邮箱或 Webhook 通知你。
+          </p>
+          <div className="mt-3 flex gap-4 text-sm text-slate-600">
+            <span className="inline-flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-green-500" /> Active{" "}
+              <strong>{totals.enabled}</strong>
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-blue-500" /> Beta <strong>{totals.beta}</strong>
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-yellow-500" /> Maintenance{" "}
+              <strong>{totals.maintenance}</strong>
+            </span>
+          </div>
+        </header>
+        <section className="mb-6 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+            <input
+              aria-label="Search services"
+              placeholder="搜索服务名 / 描述"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            />
+            <Select label="分类" value={category} onChange={setCategory} options={CATEGORY_OPTIONS} />
+            <Select label="Plan" value={plan} onChange={setPlan} options={PLAN_OPTIONS} />
+            <Select label="状态" value={status} onChange={setStatus} options={STATUS_OPTIONS} />
+          </div>
+        </section>
+        {loading ? (
+          <SkeletonGrid />
+        ) : error ? (
+          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        ) : services.length === 0 ? (
+          <div className="rounded-md border border-slate-200 bg-white px-4 py-12 text-center text-slate-500">
+            没有匹配的服务。试试调整筛选条件。
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
+                    名称
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
+                    状态
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
+                    Plan 要求
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600">
+                    依赖
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-600">
+                    详情
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {services.map((s) => (
+                  <tr key={s.name} className="hover:bg-slate-50">
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-slate-900">{s.display_name}</span>
+                        <span className="text-xs text-slate-500">{s.name}</span>
+                        {s.description ? (
+                          <span className="mt-1 text-xs text-slate-500">{s.description}</span>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={cn(
+                          "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ring-1",
+                          STATUS_CLASSES[s.status] ?? STATUS_CLASSES.enabled,
+                        )}
+                      >
+                        {STATUS_LABELS[s.status] ?? s.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={cn(
+                          "inline-block rounded px-2 py-0.5 text-xs font-semibold",
+                          PLAN_CLASSES[s.plan_required] ?? PLAN_CLASSES.free,
+                        )}
+                      >
+                        {PLAN_LABELS[s.plan_required] ?? s.plan_required}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-slate-600">
+                      {(s.dependencies ?? []).length} dep
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Link
+                        href={`/services/${encodeURIComponent(s.name)}`}
+                        className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                      >
+                        查看
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <section className="mt-12 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-slate-900">订阅服务变更通知</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            服务上下线 / 进入维护模式时通过邮箱或 Webhook 第一时间通知。
+          </p>
+          <form onSubmit={onSubmitSubscribe} className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+            <input
+              type="email"
+              placeholder="email@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            />
+            <input
+              type="url"
+              placeholder="https://hooks.example.com/notify"
+              value={webhook}
+              onChange={(e) => setWebhook(e.target.value)}
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            />
+            <button
+              type="submit"
+              disabled={subscribeState.kind === "submitting"}
+              className="md:col-span-2 inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
+            >
+              {subscribeState.kind === "submitting" ? "订阅中..." : "订阅"}
+            </button>
+          </form>
+          {subscribeState.kind === "ok" ? (
+            <p className="mt-3 text-sm text-green-700">
+              订阅成功。订阅 ID: <code>{subscribeState.id}</code>
+            </p>
+          ) : null}
+          {subscribeState.kind === "error" ? (
+            <p className="mt-3 text-sm text-red-700">{subscribeState.message}</p>
+          ) : null}
+        </section>
+      </main>)</ErrorBoundary>
   );
 }
 

@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * /jobseeker/interview/ai/[id] — v9.1 AI 模拟面试官会话页
@@ -581,311 +582,308 @@ export default function AIInterviewSessionPage(props: { params: Promise<{ id: st
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-sky-50">
-      <a
-        href="#question-panel"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:bg-white focus:px-3 focus:py-2 focus:rounded"
-      >
-        跳到题目
-      </a>
-
-      <header className="bg-white border-b px-6 py-4 flex items-center justify-between sticky top-0 z-20">
-        <div>
-          <h1 className="text-xl font-semibold flex items-center gap-2">
-            <span aria-hidden>{personaIcon}</span> AI 模拟面试
-          </h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            {interview.role_label} · 难度 {plan[0] ? "—" : "—"} · 已答 {answeredCount} / {totalQuestions}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {!personaLocked && (
-            <button
-              onClick={() => setShowPersonaPicker((v) => !v)}
-              className="px-3 py-1.5 text-xs rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200"
-              data-testid="open-persona"
-            >
-              切换人格
-            </button>
-          )}
-          {!realtimeEnabled ? (
-            <button
-              onClick={startRealtime}
-              className="px-3 py-1.5 text-xs rounded-full bg-sky-100 text-sky-700 hover:bg-sky-200"
-              data-testid="start-realtime"
-            >
-              🎙 启用语音
-            </button>
-          ) : (
-            <button
-              onClick={stopRealtime}
-              className="px-3 py-1.5 text-xs rounded-full bg-rose-100 text-rose-700 hover:bg-rose-200"
-              data-testid="stop-realtime"
-            >
-              关闭语音
-            </button>
-          )}
-          <button
-            onClick={() => router.push("/jobseeker/interview")}
-            className="text-xs text-slate-500 hover:text-slate-700"
-          >
-            ← 退出
-          </button>
-        </div>
-      </header>
-
-      {showPersonaPicker && (
-        <section
-          className="bg-white border-b px-6 py-5"
-          aria-label="切换面试官人格"
+    <ErrorBoundary>(<div className="min-h-screen bg-gradient-to-b from-slate-50 to-sky-50">
+        <a
+          href="#question-panel"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:bg-white focus:px-3 focus:py-2 focus:rounded"
         >
-          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
-            ⚠ 切换人格仅在第一次提交回答前有效,提交后将锁定以保持会话一致性。
-          </p>
-          <InterviewPersonaPicker
-            selected={interview.persona?.id || "friendly_warm"}
-            onSelect={(id) => {
-              // 仅本地缓存;后端切换需重新 /start(简化处理:仅显示)
-              setInterview((prev) =>
-                prev
-                  ? { ...prev, persona: { ...prev.persona, id, label: id } }
-                  : prev,
-              );
-              setShowPersonaPicker(false);
-            }}
-          />
-        </section>
-      )}
-
-      <div className="max-w-6xl mx-auto p-6 space-y-4">
-        {/* 阶段进度 */}
-        <div className="bg-white rounded-2xl shadow-sm p-4">
-          <div className="flex items-center gap-1 text-xs" role="list" aria-label="阶段进度">
-            {stageProgress.map((sp, idx) => (
-              <div
-                key={sp.key}
-                role="listitem"
-                className={`flex-1 rounded-md p-1.5 text-center transition ${
-                  sp.active
-                    ? "bg-sky-100 text-sky-700"
-                    : sp.done === sp.total && sp.total > 0
-                    ? "bg-emerald-50 text-emerald-700"
-                    : "bg-slate-50 text-slate-500"
-                }`}
-                data-testid={`stage-progress-${sp.key}`}
-              >
-                <div className="font-medium truncate">{sp.label}</div>
-                <div className="opacity-70">
-                  {sp.done}/{sp.total || "—"}
-                </div>
-                {idx < stageProgress.length - 1 && (
-                  <span className="sr-only">下一阶段 {stageProgress[idx + 1].label}</span>
-                )}
-              </div>
-            ))}
+          跳到题目
+        </a>
+        <header className="bg-white border-b px-6 py-4 flex items-center justify-between sticky top-0 z-20">
+          <div>
+            <h1 className="text-xl font-semibold flex items-center gap-2">
+              <span aria-hidden>{personaIcon}</span> AI 模拟面试
+            </h1>
+            <p className="text-sm text-slate-500 mt-0.5">
+              {interview.role_label} · 难度 {plan[0] ? "—" : "—"} · 已答 {answeredCount} / {totalQuestions}
+            </p>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-          {/* 左侧 · 视频区 */}
-          <div className="lg:col-span-2 space-y-4">
-            {livekitCard}
-            {cameraCard}
-            {realtimeActive && (
-              <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-700 space-y-1">
-                <p>
-                  🎙 语音已启用 · 状态: <span className="font-medium">{rt.state}</span>
-                </p>
-                {rt.emotion && <p>情绪: {rt.emotion}</p>}
-                <p className="text-slate-500">语音流将自动填入下方输入框。</p>
-              </div>
-            )}
-            {lastEval && (
-              <div
-                className="bg-white rounded-2xl shadow-sm p-4 space-y-2"
-                data-testid="last-eval"
+          <div className="flex items-center gap-2">
+            {!personaLocked && (
+              <button
+                onClick={() => setShowPersonaPicker((v) => !v)}
+                className="px-3 py-1.5 text-xs rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200"
+                data-testid="open-persona"
               >
-                <h3 className="text-sm font-semibold text-slate-800">上一次评分</h3>
-                <div className="flex items-center gap-2 text-sm">
-                  <span
-                    className={`px-2 py-0.5 rounded text-xs font-medium ${
-                      lastEval.evaluation.band === "excellent"
-                        ? "bg-emerald-100 text-emerald-700"
-                        : lastEval.evaluation.band === "good"
-                        ? "bg-sky-100 text-sky-700"
-                        : lastEval.evaluation.band === "fair"
-                        ? "bg-amber-100 text-amber-700"
-                        : "bg-rose-100 text-rose-700"
-                    }`}
-                  >
-                    {lastEval.evaluation.band} · {lastEval.evaluation.overall.toFixed(1)} 分
-                  </span>
+                切换人格
+              </button>
+            )}
+            {!realtimeEnabled ? (
+              <button
+                onClick={startRealtime}
+                className="px-3 py-1.5 text-xs rounded-full bg-sky-100 text-sky-700 hover:bg-sky-200"
+                data-testid="start-realtime"
+              >
+                🎙 启用语音
+              </button>
+            ) : (
+              <button
+                onClick={stopRealtime}
+                className="px-3 py-1.5 text-xs rounded-full bg-rose-100 text-rose-700 hover:bg-rose-200"
+                data-testid="stop-realtime"
+              >
+                关闭语音
+              </button>
+            )}
+            <button
+              onClick={() => router.push("/jobseeker/interview")}
+              className="text-xs text-slate-500 hover:text-slate-700"
+            >
+              ← 退出
+            </button>
+          </div>
+        </header>
+        {showPersonaPicker && (
+          <section
+            className="bg-white border-b px-6 py-5"
+            aria-label="切换面试官人格"
+          >
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+              ⚠ 切换人格仅在第一次提交回答前有效,提交后将锁定以保持会话一致性。
+            </p>
+            <InterviewPersonaPicker
+              selected={interview.persona?.id || "friendly_warm"}
+              onSelect={(id) => {
+                // 仅本地缓存;后端切换需重新 /start(简化处理:仅显示)
+                setInterview((prev) =>
+                  prev
+                    ? { ...prev, persona: { ...prev.persona, id, label: id } }
+                    : prev,
+                );
+                setShowPersonaPicker(false);
+              }}
+            />
+          </section>
+        )}
+        <div className="max-w-6xl mx-auto p-6 space-y-4">
+          {/* 阶段进度 */}
+          <div className="bg-white rounded-2xl shadow-sm p-4">
+            <div className="flex items-center gap-1 text-xs" role="list" aria-label="阶段进度">
+              {stageProgress.map((sp, idx) => (
+                <div
+                  key={sp.key}
+                  role="listitem"
+                  className={`flex-1 rounded-md p-1.5 text-center transition ${
+                    sp.active
+                      ? "bg-sky-100 text-sky-700"
+                      : sp.done === sp.total && sp.total > 0
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-slate-50 text-slate-500"
+                  }`}
+                  data-testid={`stage-progress-${sp.key}`}
+                >
+                  <div className="font-medium truncate">{sp.label}</div>
+                  <div className="opacity-70">
+                    {sp.done}/{sp.total || "—"}
+                  </div>
+                  {idx < stageProgress.length - 1 && (
+                    <span className="sr-only">下一阶段 {stageProgress[idx + 1].label}</span>
+                  )}
                 </div>
-                <p className="text-xs text-slate-600 italic">
-                  「{lastEval.evaluation.feedback}」
-                </p>
-                <div className="grid grid-cols-5 gap-1 text-[10px] text-slate-500">
-                  {Object.entries(lastEval.evaluation.dimensions || {}).map(([k, v]) => (
-                    <div key={k} className="text-center bg-slate-50 rounded py-1">
-                      <div className="font-medium text-slate-700">{Math.round(v)}</div>
-                      <div>
-                        {k === "technical"
-                          ? "技"
-                          : k === "communication"
-                          ? "沟"
-                          : k === "thinking"
-                          ? "思"
-                          : k === "potential"
-                          ? "潜"
-                          : "文"}
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+            {/* 左侧 · 视频区 */}
+            <div className="lg:col-span-2 space-y-4">
+              {livekitCard}
+              {cameraCard}
+              {realtimeActive && (
+                <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-700 space-y-1">
+                  <p>
+                    🎙 语音已启用 · 状态: <span className="font-medium">{rt.state}</span>
+                  </p>
+                  {rt.emotion && <p>情绪: {rt.emotion}</p>}
+                  <p className="text-slate-500">语音流将自动填入下方输入框。</p>
+                </div>
+              )}
+              {lastEval && (
+                <div
+                  className="bg-white rounded-2xl shadow-sm p-4 space-y-2"
+                  data-testid="last-eval"
+                >
+                  <h3 className="text-sm font-semibold text-slate-800">上一次评分</h3>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span
+                      className={`px-2 py-0.5 rounded text-xs font-medium ${
+                        lastEval.evaluation.band === "excellent"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : lastEval.evaluation.band === "good"
+                          ? "bg-sky-100 text-sky-700"
+                          : lastEval.evaluation.band === "fair"
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-rose-100 text-rose-700"
+                      }`}
+                    >
+                      {lastEval.evaluation.band} · {lastEval.evaluation.overall.toFixed(1)} 分
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 italic">
+                    「{lastEval.evaluation.feedback}」
+                  </p>
+                  <div className="grid grid-cols-5 gap-1 text-[10px] text-slate-500">
+                    {Object.entries(lastEval.evaluation.dimensions || {}).map(([k, v]) => (
+                      <div key={k} className="text-center bg-slate-50 rounded py-1">
+                        <div className="font-medium text-slate-700">{Math.round(v)}</div>
+                        <div>
+                          {k === "technical"
+                            ? "技"
+                            : k === "communication"
+                            ? "沟"
+                            : k === "thinking"
+                            ? "思"
+                            : k === "potential"
+                            ? "潜"
+                            : "文"}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 右侧 · 题目 + 实时对话 + 转写 */}
+            <div className="lg:col-span-3 space-y-4" ref={transcriptRef}>
+              <section
+                id="question-panel"
+                className="bg-white rounded-2xl shadow-sm p-5 space-y-3"
+                data-testid="current-question"
+                aria-label="当前面试题"
+              >
+                {current ? (
+                  <>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">
+                        {current.stage_label}
+                      </span>
+                      {current.is_follow_up && (
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">
+                          追问
+                        </span>
+                      )}
+                      <span className="text-xs text-slate-400">
+                        第 {current.stage_seq} 题
+                      </span>
+                    </div>
+                    <h2 className="text-lg font-semibold text-slate-800">{current.title}</h2>
+                    <p className="text-slate-600 leading-relaxed">{current.prompt}</p>
+                    {current.expected_points && current.expected_points.length > 0 && (
+                      <details className="text-xs text-slate-500">
+                        <summary className="cursor-pointer">参考要点</summary>
+                        <ul className="mt-1 list-disc pl-4 space-y-0.5">
+                          {current.expected_points.map((p, i) => (
+                            <li key={i}>{p}</li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
+                    <textarea
+                      value={answer}
+                      onChange={(e) => setAnswer(e.target.value)}
+                      rows={6}
+                      placeholder="在此输入你的回答(支持 STAR 结构, 越具体越好)…"
+                      className="w-full rounded-xl border border-slate-300 p-3 text-sm focus:border-sky-500 focus:ring-1 focus:ring-sky-200 outline-none"
+                      data-testid="answer-textarea"
+                      aria-label="回答输入框"
+                    />
+                    {error && (
+                      <div className="bg-rose-50 text-rose-700 text-sm rounded p-2" role="alert">
+                        {error}
+                      </div>
+                    )}
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-xs text-slate-500">
+                        剩余 {remaining} 题 · 提交后人格将锁定
+                      </span>
+                      <div className="flex gap-2">
+                        {canFinish ? (
+                          <button
+                            onClick={finish}
+                            disabled={submitting}
+                            className="px-4 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-medium disabled:opacity-50"
+                            data-testid="finish-interview"
+                          >
+                            {submitting ? "生成报告中…" : "完成并生成报告"}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={submitAnswer}
+                            disabled={submitting}
+                            className="px-4 py-2 rounded-xl bg-sky-500 text-white font-medium disabled:opacity-50"
+                            data-testid="submit-answer"
+                          >
+                            {submitting ? "提交中…" : "提交并下一题"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center text-slate-500">
+                    所有题目已答完。点击下方按钮生成报告。
+                    <div className="mt-3">
+                      <button
+                        onClick={finish}
+                        className="px-5 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-medium"
+                        data-testid="finish-interview"
+                      >
+                        生成报告
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </section>
+
+              <section
+                className="bg-white rounded-2xl shadow-sm p-5"
+                aria-label="实时对话"
+                data-testid="realtime-stream"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-slate-800">实时对话</h3>
+                  <span className="text-[10px] text-slate-400">滚动到底部查看最新</span>
+                </div>
+                <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
+                  {chatStream.length === 0 && (
+                    <div className="text-xs text-slate-400 text-center py-8">
+                      还没有对话内容,题目加载后会自动出现。
+                    </div>
+                  )}
+                  {chatStream.map((m, i) => (
+                    <div
+                      key={i}
+                      className={`flex gap-2 ${m.from === "user" ? "flex-row-reverse" : ""}`}
+                    >
+                      <div
+                        className={`size-7 rounded-full flex items-center justify-center text-sm shrink-0 ${
+                          m.from === "ai" ? "bg-sky-100" : "bg-slate-200"
+                        }`}
+                        aria-hidden
+                      >
+                        {m.from === "ai" ? personaIcon : "🧑"}
+                      </div>
+                      <div
+                        className={`rounded-2xl px-3 py-2 text-sm max-w-[80%] whitespace-pre-wrap ${
+                          m.from === "ai"
+                            ? "bg-sky-50 text-slate-800 border border-sky-100"
+                            : "bg-slate-900 text-white"
+                        }`}
+                      >
+                        {m.text}
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-          </div>
+              </section>
 
-          {/* 右侧 · 题目 + 实时对话 + 转写 */}
-          <div className="lg:col-span-3 space-y-4" ref={transcriptRef}>
-            <section
-              id="question-panel"
-              className="bg-white rounded-2xl shadow-sm p-5 space-y-3"
-              data-testid="current-question"
-              aria-label="当前面试题"
-            >
-              {current ? (
-                <>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">
-                      {current.stage_label}
-                    </span>
-                    {current.is_follow_up && (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">
-                        追问
-                      </span>
-                    )}
-                    <span className="text-xs text-slate-400">
-                      第 {current.stage_seq} 题
-                    </span>
-                  </div>
-                  <h2 className="text-lg font-semibold text-slate-800">{current.title}</h2>
-                  <p className="text-slate-600 leading-relaxed">{current.prompt}</p>
-                  {current.expected_points && current.expected_points.length > 0 && (
-                    <details className="text-xs text-slate-500">
-                      <summary className="cursor-pointer">参考要点</summary>
-                      <ul className="mt-1 list-disc pl-4 space-y-0.5">
-                        {current.expected_points.map((p, i) => (
-                          <li key={i}>{p}</li>
-                        ))}
-                      </ul>
-                    </details>
-                  )}
-                  <textarea
-                    value={answer}
-                    onChange={(e) => setAnswer(e.target.value)}
-                    rows={6}
-                    placeholder="在此输入你的回答(支持 STAR 结构, 越具体越好)…"
-                    className="w-full rounded-xl border border-slate-300 p-3 text-sm focus:border-sky-500 focus:ring-1 focus:ring-sky-200 outline-none"
-                    data-testid="answer-textarea"
-                    aria-label="回答输入框"
-                  />
-                  {error && (
-                    <div className="bg-rose-50 text-rose-700 text-sm rounded p-2" role="alert">
-                      {error}
-                    </div>
-                  )}
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-xs text-slate-500">
-                      剩余 {remaining} 题 · 提交后人格将锁定
-                    </span>
-                    <div className="flex gap-2">
-                      {canFinish ? (
-                        <button
-                          onClick={finish}
-                          disabled={submitting}
-                          className="px-4 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-medium disabled:opacity-50"
-                          data-testid="finish-interview"
-                        >
-                          {submitting ? "生成报告中…" : "完成并生成报告"}
-                        </button>
-                      ) : (
-                        <button
-                          onClick={submitAnswer}
-                          disabled={submitting}
-                          className="px-4 py-2 rounded-xl bg-sky-500 text-white font-medium disabled:opacity-50"
-                          data-testid="submit-answer"
-                        >
-                          {submitting ? "提交中…" : "提交并下一题"}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="text-center text-slate-500">
-                  所有题目已答完。点击下方按钮生成报告。
-                  <div className="mt-3">
-                    <button
-                      onClick={finish}
-                      className="px-5 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-medium"
-                      data-testid="finish-interview"
-                    >
-                      生成报告
-                    </button>
-                  </div>
-                </div>
-              )}
-            </section>
-
-            <section
-              className="bg-white rounded-2xl shadow-sm p-5"
-              aria-label="实时对话"
-              data-testid="realtime-stream"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-slate-800">实时对话</h3>
-                <span className="text-[10px] text-slate-400">滚动到底部查看最新</span>
-              </div>
-              <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
-                {chatStream.length === 0 && (
-                  <div className="text-xs text-slate-400 text-center py-8">
-                    还没有对话内容,题目加载后会自动出现。
-                  </div>
-                )}
-                {chatStream.map((m, i) => (
-                  <div
-                    key={i}
-                    className={`flex gap-2 ${m.from === "user" ? "flex-row-reverse" : ""}`}
-                  >
-                    <div
-                      className={`size-7 rounded-full flex items-center justify-center text-sm shrink-0 ${
-                        m.from === "ai" ? "bg-sky-100" : "bg-slate-200"
-                      }`}
-                      aria-hidden
-                    >
-                      {m.from === "ai" ? personaIcon : "🧑"}
-                    </div>
-                    <div
-                      className={`rounded-2xl px-3 py-2 text-sm max-w-[80%] whitespace-pre-wrap ${
-                        m.from === "ai"
-                          ? "bg-sky-50 text-slate-800 border border-sky-100"
-                          : "bg-slate-900 text-white"
-                      }`}
-                    >
-                      {m.text}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section aria-label="完整转写">
-              <LiveTranscript items={transcript} currentQuestionId={current?.id} />
-            </section>
+              <section aria-label="完整转写">
+                <LiveTranscript items={transcript} currentQuestionId={current?.id} />
+              </section>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      </div>)</ErrorBoundary>
   );
 }

@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * /interviews (T1305) — Video interview list.
@@ -48,55 +49,53 @@ export default function InterviewsPage({ searchParams }: Props) {
   }, [load]);
 
   return (
-    <div className="mx-auto max-w-4xl p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Link href="/tickets" className="text-sm text-gray-500">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <h1 className="text-2xl font-semibold">Video interviews</h1>
-        </div>
-        <Button onClick={load} variant="outline" size="sm">
-          {loading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            "Refresh"
-          )}
-        </Button>
-      </div>
-
-      {error && (
-        <Card className="mb-4 border-red-200 bg-red-50">
-          <CardContent className="p-3 text-red-700">
-            <AlertCircle className="mr-1 inline h-4 w-4" /> {error}
-          </CardContent>
-        </Card>
-      )}
-
-      {loading && interviews.length === 0 ? (
-        <div className="flex justify-center p-6 text-gray-500">
-          <Loader2 className="h-5 w-5 animate-spin" />
-        </div>
-      ) : interviews.length === 0 ? (
-        <Card>
-          <CardContent className="p-6 text-center text-gray-500">
-            <VideoIcon className="mx-auto mb-2 h-8 w-8 text-gray-400" />
-            <p>No video interviews scheduled.</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {interviews.map((iv) => (
-            <Link
-              key={iv.id}
-              href={`/interviews/${iv.id}`}
-              className="block hover:shadow"
-            >
-              <VideoMeetingCard interview={iv} />
+    <ErrorBoundary>(<div className="mx-auto max-w-4xl p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Link href="/tickets" className="text-sm text-gray-500">
+              <ArrowLeft className="h-4 w-4" />
             </Link>
-          ))}
+            <h1 className="text-2xl font-semibold">Video interviews</h1>
+          </div>
+          <Button onClick={load} variant="outline" size="sm">
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              "Refresh"
+            )}
+          </Button>
         </div>
-      )}
-    </div>
+        {error && (
+          <Card className="mb-4 border-red-200 bg-red-50">
+            <CardContent className="p-3 text-red-700">
+              <AlertCircle className="mr-1 inline h-4 w-4" /> {error}
+            </CardContent>
+          </Card>
+        )}
+        {loading && interviews.length === 0 ? (
+          <div className="flex justify-center p-6 text-gray-500">
+            <Loader2 className="h-5 w-5 animate-spin" />
+          </div>
+        ) : interviews.length === 0 ? (
+          <Card>
+            <CardContent className="p-6 text-center text-gray-500">
+              <VideoIcon className="mx-auto mb-2 h-8 w-8 text-gray-400" />
+              <p>No video interviews scheduled.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {interviews.map((iv) => (
+              <Link
+                key={iv.id}
+                href={`/interviews/${iv.id}`}
+                className="block hover:shadow"
+              >
+                <VideoMeetingCard interview={iv} />
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>)</ErrorBoundary>
   );
 }

@@ -1,3 +1,4 @@
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import type { Metadata } from "next";
 import { generatePageMetadata, faqJsonLd } from "@/lib/metadata";
 import { JsonLd } from "@/components/JsonLd";
@@ -128,233 +129,232 @@ const PLANS: Plan[] = [
 
 export default function PricingPage() {
   return (
-    <>
-      <JsonLd
-        data={{
-          "@context": "https://schema.org",
-          "@type": "Product",
-          name: "RecruitTech",
-          description:
-            "AI-powered talent platform with candidate matching, RAG, multi-agent workflows, multi-tenant isolation, audit trail, GDPR/PIPL/CCPA tools, and 99.9% SLA.",
-          brand: { "@type": "Brand", name: "RecruitTech" },
-          offers: PLANS.map((p) =>
-            p.monthly === null
-              ? {
-                  "@type": "Offer",
-                  name: p.name,
-                  priceSpecification: {
-                    "@type": "PriceSpecification",
+    <ErrorBoundary>(<>
+        <JsonLd
+          data={{
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: "RecruitTech",
+            description:
+              "AI-powered talent platform with candidate matching, RAG, multi-agent workflows, multi-tenant isolation, audit trail, GDPR/PIPL/CCPA tools, and 99.9% SLA.",
+            brand: { "@type": "Brand", name: "RecruitTech" },
+            offers: PLANS.map((p) =>
+              p.monthly === null
+                ? {
+                    "@type": "Offer",
+                    name: p.name,
+                    priceSpecification: {
+                      "@type": "PriceSpecification",
+                      priceCurrency: "USD",
+                      description: "Contact sales",
+                    },
+                  }
+                : {
+                    "@type": "Offer",
+                    name: p.name,
+                    price: String(p.monthly),
                     priceCurrency: "USD",
-                    description: "Contact sales",
-                  },
-                }
-              : {
-                  "@type": "Offer",
-                  name: p.name,
-                  price: String(p.monthly),
-                  priceCurrency: "USD",
-                  category: "subscription",
-                }
-          ),
-        }}
-        id="jsonld-pricing-product"
-      />
+                    category: "subscription",
+                  }
+            ),
+          }}
+          id="jsonld-pricing-product"
+        />
+        <main className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-20">
+          {/* Header */}
+          <header className="mb-12 text-center">
+            <span className="inline-block rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+              v7.0 · SaaS + Multi-tenant + SLA
+            </span>
+            <h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
+              Pricing that scales with your team
+            </h1>
+            <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg">
+              Three tiers, transparent pricing, billed per seat. Every plan
+              includes multi-tenant RLS isolation, the audit trail, GDPR/PIPL/CCPA
+              APIs, and the open REST API.
+            </p>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Already on v6?{" "}
+              <a href="/login" className="text-primary hover:underline">
+                Sign in
+              </a>{" "}
+              — your data and integrations are preserved.
+            </p>
+          </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-20">
-        {/* Header */}
-        <header className="mb-12 text-center">
-          <span className="inline-block rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-            v7.0 · SaaS + Multi-tenant + SLA
-          </span>
-          <h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
-            Pricing that scales with your team
-          </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg">
-            Three tiers, transparent pricing, billed per seat. Every plan
-            includes multi-tenant RLS isolation, the audit trail, GDPR/PIPL/CCPA
-            APIs, and the open REST API.
-          </p>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Already on v6?{" "}
-            <a href="/login" className="text-primary hover:underline">
-              Sign in
-            </a>{" "}
-            — your data and integrations are preserved.
-          </p>
-        </header>
-
-        {/* Plan grid */}
-        <section
-          aria-labelledby="plans-heading"
-          className="grid gap-6 md:grid-cols-3"
-        >
-          <h2 id="plans-heading" className="sr-only">
-            Subscription plans
-          </h2>
-          {PLANS.map((plan) => (
-            <article
-              key={plan.id}
-              aria-labelledby={`plan-${plan.id}`}
-              className={[
-                "relative flex flex-col rounded-2xl border p-6 shadow-sm transition",
-                plan.highlight
-                  ? "border-primary ring-2 ring-primary/50 shadow-primary/10"
-                  : "border-border hover:border-primary/30",
-              ].join(" ")}
-              data-testid={`plan-card-${plan.id}`}
-            >
-              {plan.badge ? (
-                <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-primary-foreground">
-                  {plan.badge}
-                </span>
-              ) : null}
-              <div className="mb-4">
-                <h3
-                  id={`plan-${plan.id}`}
-                  className="text-lg font-semibold tracking-tight"
-                >
-                  {plan.name}
-                </h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {plan.tagline}
-                </p>
-              </div>
-              <div className="mb-4">
-                {plan.monthly === null ? (
-                  <p className="text-3xl font-bold">Custom</p>
-                ) : (
-                  <>
-                    <p className="text-3xl font-bold">
-                      ${plan.monthly}
-                      <span className="text-sm font-medium text-muted-foreground">
-                        {" "}
-                        / seat / mo
-                      </span>
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Annual billing saves 20% · USD · taxes excluded
-                    </p>
-                  </>
-                )}
-              </div>
-              <ul className="mb-4 space-y-1 text-sm" aria-label="Plan limits">
-                {plan.limits.map((l) => (
-                  <li
-                    key={l.label}
-                    className="flex justify-between border-b border-border/50 py-1"
-                  >
-                    <span className="text-muted-foreground">{l.label}</span>
-                    <span className="font-medium">{l.value}</span>
-                  </li>
-                ))}
-              </ul>
-              <ul
-                className="mb-6 space-y-2 text-sm"
-                aria-label={`${plan.name} features`}
-              >
-                {plan.features.map((f) => (
-                  <li key={f} className="flex gap-2">
-                    <CheckIcon />
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <div className="mb-4 rounded-md bg-muted/50 p-3 text-xs">
-                <span className="font-semibold">SLA:</span> {plan.sla}
-              </div>
-              <a
-                href={plan.cta.href}
-                className={[
-                  "mt-auto inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition",
-                  plan.cta.variant === "primary"
-                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                    : "border border-primary text-primary hover:bg-primary/10",
-                ].join(" ")}
-              >
-                {plan.cta.label}
-              </a>
-            </article>
-          ))}
-        </section>
-
-        {/* Trust strip */}
-        <section
-          aria-labelledby="trust-heading"
-          className="mt-14 flex flex-wrap items-center justify-center gap-3 text-xs text-muted-foreground"
-        >
-          <h2 id="trust-heading" className="sr-only">
-            Trust and compliance
-          </h2>
-          <TrustBadge>Multi-tenant RLS</TrustBadge>
-          <TrustBadge>SOC 2 Type II</TrustBadge>
-          <TrustBadge>ISO 27001</TrustBadge>
-          <TrustBadge>GDPR / PIPL / CCPA</TrustBadge>
-          <TrustBadge>99.9% SLA</TrustBadge>
-          <TrustBadge>SAML / SCIM</TrustBadge>
-        </section>
-
-        {/* FAQ */}
-        <section
-          aria-labelledby="faq-heading"
-          className="mt-16 rounded-2xl border border-border bg-card p-6 sm:p-8"
-        >
-          <h2
-            id="faq-heading"
-            className="text-2xl font-semibold tracking-tight"
+          {/* Plan grid */}
+          <section
+            aria-labelledby="plans-heading"
+            className="grid gap-6 md:grid-cols-3"
           >
-            Frequently asked questions
-          </h2>
-          <dl className="mt-6 space-y-6 text-sm">
-            <Faq
-              q="Can I switch plans?"
-              a="Yes — upgrade any time and we'll pro-rate the difference. Downgrade takes effect at the end of your current cycle and never deletes your data."
-            />
-            <Faq
-              q="What payment methods are supported?"
-              a="Credit card (Visa, Mastercard, Amex) for self-serve, wire transfer for Enterprise contracts. Invoices in CNY, USD, EUR, SGD, HKD."
-            />
-            <Faq
-              q="Is there a refund policy?"
-              a="Self-serve plans have a 7-day no-questions-asked refund on first order. Enterprise refunds follow your master service agreement."
-            />
-            <Faq
-              q="Where is data stored?"
-              a="Choose from CN (Beijing), HK (Hong Kong), SG (Singapore), or EU (Frankfurt) for SaaS plans. Self-hosted deployments are fully under your control."
-            />
-            <Faq
-              q="Do you offer a non-profit / startup discount?"
-              a="Yes — qualified non-profits and early-stage startups (< 2 years, < $2M ARR) receive 30% off Starter or Growth for 12 months."
-            />
-          </dl>
-        </section>
+            <h2 id="plans-heading" className="sr-only">
+              Subscription plans
+            </h2>
+            {PLANS.map((plan) => (
+              <article
+                key={plan.id}
+                aria-labelledby={`plan-${plan.id}`}
+                className={[
+                  "relative flex flex-col rounded-2xl border p-6 shadow-sm transition",
+                  plan.highlight
+                    ? "border-primary ring-2 ring-primary/50 shadow-primary/10"
+                    : "border-border hover:border-primary/30",
+                ].join(" ")}
+                data-testid={`plan-card-${plan.id}`}
+              >
+                {plan.badge ? (
+                  <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-primary-foreground">
+                    {plan.badge}
+                  </span>
+                ) : null}
+                <div className="mb-4">
+                  <h3
+                    id={`plan-${plan.id}`}
+                    className="text-lg font-semibold tracking-tight"
+                  >
+                    {plan.name}
+                  </h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {plan.tagline}
+                  </p>
+                </div>
+                <div className="mb-4">
+                  {plan.monthly === null ? (
+                    <p className="text-3xl font-bold">Custom</p>
+                  ) : (
+                    <>
+                      <p className="text-3xl font-bold">
+                        ${plan.monthly}
+                        <span className="text-sm font-medium text-muted-foreground">
+                          {" "}
+                          / seat / mo
+                        </span>
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Annual billing saves 20% · USD · taxes excluded
+                      </p>
+                    </>
+                  )}
+                </div>
+                <ul className="mb-4 space-y-1 text-sm" aria-label="Plan limits">
+                  {plan.limits.map((l) => (
+                    <li
+                      key={l.label}
+                      className="flex justify-between border-b border-border/50 py-1"
+                    >
+                      <span className="text-muted-foreground">{l.label}</span>
+                      <span className="font-medium">{l.value}</span>
+                    </li>
+                  ))}
+                </ul>
+                <ul
+                  className="mb-6 space-y-2 text-sm"
+                  aria-label={`${plan.name} features`}
+                >
+                  {plan.features.map((f) => (
+                    <li key={f} className="flex gap-2">
+                      <CheckIcon />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mb-4 rounded-md bg-muted/50 p-3 text-xs">
+                  <span className="font-semibold">SLA:</span> {plan.sla}
+                </div>
+                <a
+                  href={plan.cta.href}
+                  className={[
+                    "mt-auto inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition",
+                    plan.cta.variant === "primary"
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                      : "border border-primary text-primary hover:bg-primary/10",
+                  ].join(" ")}
+                >
+                  {plan.cta.label}
+                </a>
+              </article>
+            ))}
+          </section>
 
-        {/* CTA strip */}
-        <section className="mt-16 rounded-2xl bg-gradient-to-br from-primary/20 via-primary/5 to-transparent p-8 text-center sm:p-12">
-          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Not sure which plan fits?
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
-            Book a 30-minute call with a solutions engineer. We&apos;ll
-            recommend the right tier, walk through the API, and run a custom
-            cost model.
-          </p>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <a
-              href="/login?plan=enterprise"
-              className="inline-flex items-center justify-center rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          {/* Trust strip */}
+          <section
+            aria-labelledby="trust-heading"
+            className="mt-14 flex flex-wrap items-center justify-center gap-3 text-xs text-muted-foreground"
+          >
+            <h2 id="trust-heading" className="sr-only">
+              Trust and compliance
+            </h2>
+            <TrustBadge>Multi-tenant RLS</TrustBadge>
+            <TrustBadge>SOC 2 Type II</TrustBadge>
+            <TrustBadge>ISO 27001</TrustBadge>
+            <TrustBadge>GDPR / PIPL / CCPA</TrustBadge>
+            <TrustBadge>99.9% SLA</TrustBadge>
+            <TrustBadge>SAML / SCIM</TrustBadge>
+          </section>
+
+          {/* FAQ */}
+          <section
+            aria-labelledby="faq-heading"
+            className="mt-16 rounded-2xl border border-border bg-card p-6 sm:p-8"
+          >
+            <h2
+              id="faq-heading"
+              className="text-2xl font-semibold tracking-tight"
             >
-              Book a 30-min call
-            </a>
-            <a
-              href="/status"
-              className="inline-flex items-center justify-center rounded-md border border-border bg-background px-5 py-2.5 text-sm font-medium hover:bg-muted"
-            >
-              View live status
-            </a>
-          </div>
-        </section>
-      </main>
-    </>
+              Frequently asked questions
+            </h2>
+            <dl className="mt-6 space-y-6 text-sm">
+              <Faq
+                q="Can I switch plans?"
+                a="Yes — upgrade any time and we'll pro-rate the difference. Downgrade takes effect at the end of your current cycle and never deletes your data."
+              />
+              <Faq
+                q="What payment methods are supported?"
+                a="Credit card (Visa, Mastercard, Amex) for self-serve, wire transfer for Enterprise contracts. Invoices in CNY, USD, EUR, SGD, HKD."
+              />
+              <Faq
+                q="Is there a refund policy?"
+                a="Self-serve plans have a 7-day no-questions-asked refund on first order. Enterprise refunds follow your master service agreement."
+              />
+              <Faq
+                q="Where is data stored?"
+                a="Choose from CN (Beijing), HK (Hong Kong), SG (Singapore), or EU (Frankfurt) for SaaS plans. Self-hosted deployments are fully under your control."
+              />
+              <Faq
+                q="Do you offer a non-profit / startup discount?"
+                a="Yes — qualified non-profits and early-stage startups (< 2 years, < $2M ARR) receive 30% off Starter or Growth for 12 months."
+              />
+            </dl>
+          </section>
+
+          {/* CTA strip */}
+          <section className="mt-16 rounded-2xl bg-gradient-to-br from-primary/20 via-primary/5 to-transparent p-8 text-center sm:p-12">
+            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              Not sure which plan fits?
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
+              Book a 30-minute call with a solutions engineer. We&apos;ll
+              recommend the right tier, walk through the API, and run a custom
+              cost model.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <a
+                href="/login?plan=enterprise"
+                className="inline-flex items-center justify-center rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                Book a 30-min call
+              </a>
+              <a
+                href="/status"
+                className="inline-flex items-center justify-center rounded-md border border-border bg-background px-5 py-2.5 text-sm font-medium hover:bg-muted"
+              >
+                View live status
+              </a>
+            </div>
+          </section>
+        </main>
+      </>)</ErrorBoundary>
   );
 }
 

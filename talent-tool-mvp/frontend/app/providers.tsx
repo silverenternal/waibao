@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase";
 import type { User } from "@/contracts/canonical";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { RefineProvider } from "@/lib/refine";
+import { QueryProvider } from "@/components/providers/QueryProvider";
+import { MswProvider } from "@/components/providers/MswProvider";
 
 interface AuthContextValue {
   supabase: SupabaseClient;
@@ -102,7 +104,11 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{ supabase, user, loading, setDemoUser, signOut }}>
-      <RefineProvider>{children}</RefineProvider>
+      <MswProvider>
+        <QueryProvider>
+          <RefineProvider>{children}</RefineProvider>
+        </QueryProvider>
+      </MswProvider>
     </AuthContext.Provider>
   );
 }

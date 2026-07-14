@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v8.1 T3604 — 情绪关怀页面 (求职者侧)
@@ -71,36 +72,36 @@ export default function EmotionCarePage() {
   }, []);
 
   return (
-    <div className="container mx-auto p-6 space-y-4">
-      <h1 className="text-2xl font-bold">情绪关怀</h1>
-      <p className="text-sm text-slate-600">
-        当系统检测到你情绪有波动,会自动启动关怀 workflow. 你也可以在这里查看历史记录.
-      </p>
-      {tickets.length === 0 ? (
-        <Card className="p-6 text-center text-sm text-slate-500">
-          暂无关怀记录
-        </Card>
-      ) : (
-        tickets.map((t) => (
-          <EmotionCareCard
-            key={t.id}
-            ticket={t as any}
-            actions={(actions[t.id] ?? []) as any}
-            onClose={async () => {
-              await fetch(`/api/v8_1/emotion/care/tickets/${t.id}/close`, {
-                method: "POST",
-              });
-              setTickets((prev) =>
-                prev.map((p) =>
-                  p.id === t.id
-                    ? { ...p, closed_at: new Date().toISOString() }
-                    : p,
-                ),
-              );
-            }}
-          />
-        ))
-      )}
-    </div>
+    <ErrorBoundary>(<div className="container mx-auto p-6 space-y-4">
+        <h1 className="text-2xl font-bold">情绪关怀</h1>
+        <p className="text-sm text-slate-600">
+          当系统检测到你情绪有波动,会自动启动关怀 workflow. 你也可以在这里查看历史记录.
+        </p>
+        {tickets.length === 0 ? (
+          <Card className="p-6 text-center text-sm text-slate-500">
+            暂无关怀记录
+          </Card>
+        ) : (
+          tickets.map((t) => (
+            <EmotionCareCard
+              key={t.id}
+              ticket={t as any}
+              actions={(actions[t.id] ?? []) as any}
+              onClose={async () => {
+                await fetch(`/api/v8_1/emotion/care/tickets/${t.id}/close`, {
+                  method: "POST",
+                });
+                setTickets((prev) =>
+                  prev.map((p) =>
+                    p.id === t.id
+                      ? { ...p, closed_at: new Date().toISOString() }
+                      : p,
+                  ),
+                );
+              }}
+            />
+          ))
+        )}
+      </div>)</ErrorBoundary>
   );
 }

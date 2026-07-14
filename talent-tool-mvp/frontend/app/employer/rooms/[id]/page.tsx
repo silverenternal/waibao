@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * Room conversation page — /rooms/{id} (T608).
@@ -296,104 +297,102 @@ export default function RoomDetailPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] w-full">
-      <div className="hidden md:block">
-        <RoomSidebar rooms={rooms} activeRoomId={roomId} />
-      </div>
-
-      <div className="flex flex-1 min-w-0 flex-col">
-        <RoomHeader
-          name={room.name}
-          type={room.type}
-          members={room.members}
-          onlineUserIds={new Set()} // 实时由 useRoom 内部统计, 这里先空
-          pinnedCount={pinnedIds.size}
-          wsStatus={wsStatus}
-          onToggleSearch={() => setSearchOpen((o) => !o)}
-          onShowPins={() => router.push(`/rooms/${roomId}#pins`)}
-          onLeave={() => {
-            if (!confirm("离开这个房间?")) return;
-            roomsApi.removeMember(roomId, currentUserId).then(() => {
-              toast.success("已离开");
-              router.push("/rooms");
-            });
-          }}
-        />
-
-        {searchOpen && (
-          <div className="border-b bg-muted/30 px-4 py-2 flex items-center gap-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <Input
-              autoFocus
-              placeholder="在房间内搜索消息..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                void performSearch(e.target.value);
-              }}
-              className="h-8"
-            />
-            {searchResults.length > 0 && (
-              <span className="text-xs text-muted-foreground">{searchResults.length} 条</span>
-            )}
-          </div>
-        )}
-
-        <MessageList
-          messages={messages}
-          threadCounts={threadCounts}
-          reactions={reactions}
-          pendingMessages={Array.from(pending.values())}
-          mentionsMe={new Set(messages.filter((m) => m.mentions.includes(currentUserId)).map((m) => m.id))}
-          pinnedIds={pinnedIds}
-          currentUserId={currentUserId}
-          loadingMore={loadingMore}
-          hasMore={!!nextCursor}
-          onLoadMore={() => fetchMessages(nextCursor)}
-          onDelete={handleDelete}
-          onEdit={(m) => {
-            const txt = window.prompt("编辑消息:", m.content);
-            if (txt != null) void handleEdit(m, txt);
-          }}
-          onReply={(m) => setOpenThread(m)}
-          onOpenThread={(m) => setOpenThread(m)}
-          onPin={handlePin}
-          onReact={handleReact}
-          className="flex-1"
-        />
-
-        <MessageComposer
-          members={room.members}
-          onSend={handleSend}
-          onAttach={handleAttach}
-          onTyping={sendTyping}
-        />
-
-        {openThread && (
-          <ThreadPanel
-            roomId={roomId}
-            parentMessage={openThread}
+    <ErrorBoundary>(<div className="flex h-[calc(100vh-3.5rem)] w-full">
+        <div className="hidden md:block">
+          <RoomSidebar rooms={rooms} activeRoomId={roomId} />
+        </div>
+        <div className="flex flex-1 min-w-0 flex-col">
+          <RoomHeader
+            name={room.name}
+            type={room.type}
             members={room.members}
-            currentUserId={currentUserId}
-            reactions={reactions[openThread.id] || []}
-            onClose={() => setOpenThread(null)}
-            onReplied={() => {
-              setThreadCounts((c) => ({ ...c, [openThread.id]: (c[openThread.id] ?? 0) + 1 }));
+            onlineUserIds={new Set()} // 实时由 useRoom 内部统计, 这里先空
+            pinnedCount={pinnedIds.size}
+            wsStatus={wsStatus}
+            onToggleSearch={() => setSearchOpen((o) => !o)}
+            onShowPins={() => router.push(`/rooms/${roomId}#pins`)}
+            onLeave={() => {
+              if (!confirm("离开这个房间?")) return;
+              roomsApi.removeMember(roomId, currentUserId).then(() => {
+                toast.success("已离开");
+                router.push("/rooms");
+              });
             }}
           />
-        )}
-      </div>
 
-      <div className="md:hidden">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => router.push("/rooms")}
-          className="fixed bottom-20 left-3 z-30"
-        >
-          ← 房间列表
-        </Button>
-      </div>
-    </div>
+          {searchOpen && (
+            <div className="border-b bg-muted/30 px-4 py-2 flex items-center gap-2">
+              <Search className="h-4 w-4 text-muted-foreground" />
+              <Input
+                autoFocus
+                placeholder="在房间内搜索消息..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  void performSearch(e.target.value);
+                }}
+                className="h-8"
+              />
+              {searchResults.length > 0 && (
+                <span className="text-xs text-muted-foreground">{searchResults.length} 条</span>
+              )}
+            </div>
+          )}
+
+          <MessageList
+            messages={messages}
+            threadCounts={threadCounts}
+            reactions={reactions}
+            pendingMessages={Array.from(pending.values())}
+            mentionsMe={new Set(messages.filter((m) => m.mentions.includes(currentUserId)).map((m) => m.id))}
+            pinnedIds={pinnedIds}
+            currentUserId={currentUserId}
+            loadingMore={loadingMore}
+            hasMore={!!nextCursor}
+            onLoadMore={() => fetchMessages(nextCursor)}
+            onDelete={handleDelete}
+            onEdit={(m) => {
+              const txt = window.prompt("编辑消息:", m.content);
+              if (txt != null) void handleEdit(m, txt);
+            }}
+            onReply={(m) => setOpenThread(m)}
+            onOpenThread={(m) => setOpenThread(m)}
+            onPin={handlePin}
+            onReact={handleReact}
+            className="flex-1"
+          />
+
+          <MessageComposer
+            members={room.members}
+            onSend={handleSend}
+            onAttach={handleAttach}
+            onTyping={sendTyping}
+          />
+
+          {openThread && (
+            <ThreadPanel
+              roomId={roomId}
+              parentMessage={openThread}
+              members={room.members}
+              currentUserId={currentUserId}
+              reactions={reactions[openThread.id] || []}
+              onClose={() => setOpenThread(null)}
+              onReplied={() => {
+                setThreadCounts((c) => ({ ...c, [openThread.id]: (c[openThread.id] ?? 0) + 1 }));
+              }}
+            />
+          )}
+        </div>
+        <div className="md:hidden">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/rooms")}
+            className="fixed bottom-20 left-3 z-30"
+          >
+            ← 房间列表
+          </Button>
+        </div>
+      </div>)</ErrorBoundary>
   );
 }

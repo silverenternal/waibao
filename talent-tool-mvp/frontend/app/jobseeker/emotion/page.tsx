@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v9.1 — Emotion timeline page (T605).
@@ -270,185 +271,184 @@ export default function EmotionTimelinePage() {
   }, [points, journalPoints]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100">
-      <header className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => router.push("/jobseeker")}
-              aria-label="返回"
-            >
-              <ArrowLeft className="size-4" />
-            </Button>
-            <div>
-              <h1 className="flex items-center gap-2 text-xl font-semibold text-foreground">
-                <Heart className="size-5 text-pink-500" />
-                情绪时间线
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                折线 · 触发事件 · 关联日记 · 周报 · 关怀,数据每 {Math.round(POLL_MS / 1000)} 秒刷新
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="hidden gap-1 sm:flex">
-              {[14, 30, 60, 90].map((d) => (
-                <Button
-                  key={d}
-                  size="sm"
-                  variant={d === days ? "default" : "outline"}
-                  onClick={() => setDays(d)}
-                >
-                  {d} 天
-                </Button>
-              ))}
-            </div>
-            <Button
-              variant="outline"
-              size="icon-sm"
-              onClick={() => load(true)}
-              disabled={refreshing}
-              aria-label="刷新"
-            >
-              <RefreshCcw className={cn("size-4", refreshing && "animate-spin")} />
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-6xl space-y-6 px-6 py-6">
-        {/* KPI band — Tremor style */}
-        <TremorKpiGrid>
-          <TremorKpiCard
-            title="记录数"
-            value={count}
-            unit="条"
-            helper={`最近 ${days} 天`}
-            spark={spark.length > 1 ? spark : undefined}
-          />
-          <TremorKpiCard
-            title="关注告警"
-            value={alerts}
-            unit="次"
-            delta={alerts > 0 ? alerts * 8 : 0}
-            helper={alerts > 0 ? "建议联系 HR" : "状态稳定"}
-          />
-          <TremorKpiCard
-            title="情绪均值"
-            value={avg.toFixed(2)}
-            helper={`${days} 天滑动平均`}
-            delta={deltaPct ?? undefined}
-          />
-          <TremorKpiCard
-            title="状态带"
-            value={moodBand.label}
-            helper={
-              lastEventAt ? `最近记录 · ${lastEventAt}` : "尚无记录"
-            }
-          />
-        </TremorKpiGrid>
-
-        {care?.ticket && (
-          <section className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-              <HeartHandshake className="size-4 text-rose-500" />
-              关怀与建议
-              <Badge variant="destructive" className="ml-auto text-[10px]">
-                待处理
-              </Badge>
-            </div>
-            <EmotionCareCard
-              ticket={care.ticket}
-              actions={care.actions ?? []}
-            />
-          </section>
-        )}
-
-        {loading ? (
-          <Card>
-            <CardContent className="flex items-center justify-center gap-2 py-16 text-sm text-slate-500">
-              <Loader2 className="size-4 animate-spin text-blue-500" />
-              加载情绪数据…
-            </CardContent>
-          </Card>
-        ) : error ? (
-          <Card className="border-rose-200 bg-rose-50/60">
-            <CardContent className="flex flex-col items-center gap-3 py-10 text-sm text-rose-700">
-              <AlertTriangle className="size-5" />
-              <span>{error}</span>
-              <Button variant="outline" size="sm" onClick={() => load(true)}>
-                重试
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <Tabs defaultValue="timeline" className="space-y-4">
-            <TabsList className="w-full sm:w-fit">
-              <TabsTrigger value="timeline">
-                <Activity className="mr-1.5 size-3.5" /> 折线图
-              </TabsTrigger>
-              <TabsTrigger value="distribution">
-                <PieChartIcon className="mr-1.5 size-3.5" /> 情绪分布
-              </TabsTrigger>
-              <TabsTrigger value="weekly">
-                <CalendarRange className="mr-1.5 size-3.5" /> 周报
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="timeline">
-              <div className="grid gap-4 lg:grid-cols-3">
-                <TremorPanel
-                  title="情绪倾向 · 强度 · 触发事件"
-                  description="点击任意点查看当日详情"
-                  className="lg:col-span-2"
-                >
-                  <EmotionTimelineChart
-                    data={points}
-                    height={340}
-                    onPointClick={(p) => setSelected(toDetail(p))}
-                  />
-                </TremorPanel>
-                <EmotionEventDetail
-                  event={selected}
-                  onClose={() => setSelected(null)}
-                  onOpenJournal={(id) => router.push(`/jobseeker/journal/${id}`)}
-                />
-              </div>
-
-              <div className="mt-4">
-                <EmotionTriggerCorrelation joined={correlation} />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="distribution">
-              <TremorPanel
-                title="情绪分布"
-                description="按主情绪频次 + 强度直方图"
+    <ErrorBoundary>(<div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100">
+        <header className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur">
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => router.push("/jobseeker")}
+                aria-label="返回"
               >
-                <EmotionDistribution points={points} />
-              </TremorPanel>
-            </TabsContent>
+                <ArrowLeft className="size-4" />
+              </Button>
+              <div>
+                <h1 className="flex items-center gap-2 text-xl font-semibold text-foreground">
+                  <Heart className="size-5 text-pink-500" />
+                  情绪时间线
+                </h1>
+                <p className="text-xs text-muted-foreground">
+                  折线 · 触发事件 · 关联日记 · 周报 · 关怀,数据每 {Math.round(POLL_MS / 1000)} 秒刷新
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="hidden gap-1 sm:flex">
+                {[14, 30, 60, 90].map((d) => (
+                  <Button
+                    key={d}
+                    size="sm"
+                    variant={d === days ? "default" : "outline"}
+                    onClick={() => setDays(d)}
+                  >
+                    {d} 天
+                  </Button>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="icon-sm"
+                onClick={() => load(true)}
+                disabled={refreshing}
+                aria-label="刷新"
+              >
+                <RefreshCcw className={cn("size-4", refreshing && "animate-spin")} />
+              </Button>
+            </div>
+          </div>
+        </header>
+        <main className="mx-auto max-w-6xl space-y-6 px-6 py-6">
+          {/* KPI band — Tremor style */}
+          <TremorKpiGrid>
+            <TremorKpiCard
+              title="记录数"
+              value={count}
+              unit="条"
+              helper={`最近 ${days} 天`}
+              spark={spark.length > 1 ? spark : undefined}
+            />
+            <TremorKpiCard
+              title="关注告警"
+              value={alerts}
+              unit="次"
+              delta={alerts > 0 ? alerts * 8 : 0}
+              helper={alerts > 0 ? "建议联系 HR" : "状态稳定"}
+            />
+            <TremorKpiCard
+              title="情绪均值"
+              value={avg.toFixed(2)}
+              helper={`${days} 天滑动平均`}
+              delta={deltaPct ?? undefined}
+            />
+            <TremorKpiCard
+              title="状态带"
+              value={moodBand.label}
+              helper={
+                lastEventAt ? `最近记录 · ${lastEventAt}` : "尚无记录"
+              }
+            />
+          </TremorKpiGrid>
 
-            <TabsContent value="weekly">
-              <section className="space-y-3">
-                <header className="flex items-center gap-2">
-                  <Notebook className="size-4 text-violet-500" />
-                  <h2 className="text-sm font-semibold text-slate-800">
-                    按周汇总
-                  </h2>
-                  <Badge variant="outline" className="ml-auto text-[10px]">
-                    最近 {weeklyRows.length} 周
-                  </Badge>
-                </header>
-                <EmotionWeekSummary rows={weeklyRows} />
-              </section>
-            </TabsContent>
-          </Tabs>
-        )}
-      </main>
-    </div>
+          {care?.ticket && (
+            <section className="space-y-2">
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                <HeartHandshake className="size-4 text-rose-500" />
+                关怀与建议
+                <Badge variant="destructive" className="ml-auto text-[10px]">
+                  待处理
+                </Badge>
+              </div>
+              <EmotionCareCard
+                ticket={care.ticket}
+                actions={care.actions ?? []}
+              />
+            </section>
+          )}
+
+          {loading ? (
+            <Card>
+              <CardContent className="flex items-center justify-center gap-2 py-16 text-sm text-slate-500">
+                <Loader2 className="size-4 animate-spin text-blue-500" />
+                加载情绪数据…
+              </CardContent>
+            </Card>
+          ) : error ? (
+            <Card className="border-rose-200 bg-rose-50/60">
+              <CardContent className="flex flex-col items-center gap-3 py-10 text-sm text-rose-700">
+                <AlertTriangle className="size-5" />
+                <span>{error}</span>
+                <Button variant="outline" size="sm" onClick={() => load(true)}>
+                  重试
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <Tabs defaultValue="timeline" className="space-y-4">
+              <TabsList className="w-full sm:w-fit">
+                <TabsTrigger value="timeline">
+                  <Activity className="mr-1.5 size-3.5" /> 折线图
+                </TabsTrigger>
+                <TabsTrigger value="distribution">
+                  <PieChartIcon className="mr-1.5 size-3.5" /> 情绪分布
+                </TabsTrigger>
+                <TabsTrigger value="weekly">
+                  <CalendarRange className="mr-1.5 size-3.5" /> 周报
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="timeline">
+                <div className="grid gap-4 lg:grid-cols-3">
+                  <TremorPanel
+                    title="情绪倾向 · 强度 · 触发事件"
+                    description="点击任意点查看当日详情"
+                    className="lg:col-span-2"
+                  >
+                    <EmotionTimelineChart
+                      data={points}
+                      height={340}
+                      onPointClick={(p) => setSelected(toDetail(p))}
+                    />
+                  </TremorPanel>
+                  <EmotionEventDetail
+                    event={selected}
+                    onClose={() => setSelected(null)}
+                    onOpenJournal={(id) => router.push(`/jobseeker/journal/${id}`)}
+                  />
+                </div>
+
+                <div className="mt-4">
+                  <EmotionTriggerCorrelation joined={correlation} />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="distribution">
+                <TremorPanel
+                  title="情绪分布"
+                  description="按主情绪频次 + 强度直方图"
+                >
+                  <EmotionDistribution points={points} />
+                </TremorPanel>
+              </TabsContent>
+
+              <TabsContent value="weekly">
+                <section className="space-y-3">
+                  <header className="flex items-center gap-2">
+                    <Notebook className="size-4 text-violet-500" />
+                    <h2 className="text-sm font-semibold text-slate-800">
+                      按周汇总
+                    </h2>
+                    <Badge variant="outline" className="ml-auto text-[10px]">
+                      最近 {weeklyRows.length} 周
+                    </Badge>
+                  </header>
+                  <EmotionWeekSummary rows={weeklyRows} />
+                </section>
+              </TabsContent>
+            </Tabs>
+          )}
+        </main>
+      </div>)</ErrorBoundary>
   );
 }
 

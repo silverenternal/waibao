@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api-client";
@@ -54,114 +55,110 @@ export default function RecommendationsPage() {
   const strong = candidates.filter((c) => c.confidence === "strong").length;
 
   return (
-    <div className="space-y-6 p-6">
-      <header className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-amber-500" />
-            Candidate recommendations
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Active candidates ranked against an open role using matching v2.
-          </p>
-        </div>
-      </header>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Select a role</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="space-y-1 flex-1 min-w-[260px]">
-              <Label htmlFor="role-input">Role ID</Label>
-              <Input
-                id="role-input"
-                placeholder="paste role id or pick from list below"
-                value={roleId}
-                onChange={(e) => setRoleId(e.target.value)}
-              />
-            </div>
-            <Button onClick={loadCandidates} disabled={!roleId || loading}>
-              <Search className="h-4 w-4 mr-1" />
-              {loading ? "Loading…" : "Recommend"}
-            </Button>
+    <ErrorBoundary>(<div className="space-y-6 p-6">
+        <header className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-amber-500" />
+              Candidate recommendations
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Active candidates ranked against an open role using matching v2.
+            </p>
           </div>
-
-          {roles.length > 0 && (
-            <div className="mt-4">
-              <p className="text-xs text-muted-foreground mb-2">
-                Active roles ({roles.length})
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {roles.slice(0, 20).map((r) => (
-                  <button
-                    key={r.id}
-                    type="button"
-                    onClick={() => setRoleId(r.id)}
-                    className={`text-xs px-2 py-1 rounded-full border ${
-                      r.id === roleId
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "bg-white text-slate-700 hover:bg-muted"
-                    }`}
-                  >
-                    {r.title}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {roleId && (
-        <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <MetricTile
-            label="Candidates"
-            value={candidates.length}
-            icon={<Briefcase className="h-4 w-4" />}
-            loading={loading}
-          />
-          <MetricTile
-            label="Avg score"
-            value={`${(avgScore * 100).toFixed(0)}`}
-            icon={<Sparkles className="h-4 w-4" />}
-            loading={loading}
-          />
-          <MetricTile
-            label="Strong matches"
-            value={strong}
-            icon={<Sparkles className="h-4 w-4" />}
-            loading={loading}
-          />
-          <MetricTile
-            label="Role"
-            value={selected?.title ?? "—"}
-            icon={<Briefcase className="h-4 w-4" />}
-          />
-        </section>
-      )}
-
-      {pageError && (
-        <p className="text-sm text-red-600">{pageError}</p>
-      )}
-
-      {roleId ? (
-        loading ? (
-          <Skeleton className="h-[400px] w-full" />
-        ) : (
-          <RecommendedCandidateList
-            candidates={candidates}
-            roleTitle={selected?.title}
-          />
-        )
-      ) : (
+        </header>
         <Card>
-          <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Pick a role above to see ranked candidates.
+          <CardHeader>
+            <CardTitle className="text-base">Select a role</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-1 flex-1 min-w-[260px]">
+                <Label htmlFor="role-input">Role ID</Label>
+                <Input
+                  id="role-input"
+                  placeholder="paste role id or pick from list below"
+                  value={roleId}
+                  onChange={(e) => setRoleId(e.target.value)}
+                />
+              </div>
+              <Button onClick={loadCandidates} disabled={!roleId || loading}>
+                <Search className="h-4 w-4 mr-1" />
+                {loading ? "Loading…" : "Recommend"}
+              </Button>
+            </div>
+
+            {roles.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs text-muted-foreground mb-2">
+                  Active roles ({roles.length})
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {roles.slice(0, 20).map((r) => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => setRoleId(r.id)}
+                      className={`text-xs px-2 py-1 rounded-full border ${
+                        r.id === roleId
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-white text-slate-700 hover:bg-muted"
+                      }`}
+                    >
+                      {r.title}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
-      )}
-    </div>
+        {roleId && (
+          <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <MetricTile
+              label="Candidates"
+              value={candidates.length}
+              icon={<Briefcase className="h-4 w-4" />}
+              loading={loading}
+            />
+            <MetricTile
+              label="Avg score"
+              value={`${(avgScore * 100).toFixed(0)}`}
+              icon={<Sparkles className="h-4 w-4" />}
+              loading={loading}
+            />
+            <MetricTile
+              label="Strong matches"
+              value={strong}
+              icon={<Sparkles className="h-4 w-4" />}
+              loading={loading}
+            />
+            <MetricTile
+              label="Role"
+              value={selected?.title ?? "—"}
+              icon={<Briefcase className="h-4 w-4" />}
+            />
+          </section>
+        )}
+        {pageError && (
+          <p className="text-sm text-red-600">{pageError}</p>
+        )}
+        {roleId ? (
+          loading ? (
+            <Skeleton className="h-[400px] w-full" />
+          ) : (
+            <RecommendedCandidateList
+              candidates={candidates}
+              roleTitle={selected?.title}
+            />
+          )
+        ) : (
+          <Card>
+            <CardContent className="py-10 text-center text-sm text-muted-foreground">
+              Pick a role above to see ranked candidates.
+            </CardContent>
+          </Card>
+        )}
+      </div>)</ErrorBoundary>
   );
 }

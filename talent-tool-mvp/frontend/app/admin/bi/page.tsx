@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -95,59 +96,55 @@ export default function BiPage() {
   );
 
   return (
-    <div className="flex flex-col gap-6 p-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">商业智能 (BI)</h1>
-          <p className="text-sm text-muted-foreground">
-            Cube.js 驱动的拖拽式报表 + 5 个内置 dashboard
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <ShareButton
-            onSave={(name) =>
-              dashboard && saveAsDashboard(name, dashboard.widgets)
-            }
+    <ErrorBoundary>(<div className="flex flex-col gap-6 p-6">
+        <header className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">商业智能 (BI)</h1>
+            <p className="text-sm text-muted-foreground">
+              Cube.js 驱动的拖拽式报表 + 5 个内置 dashboard
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <ShareButton
+              onSave={(name) =>
+                dashboard && saveAsDashboard(name, dashboard.widgets)
+              }
+            />
+            <button
+              className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground"
+              onClick={() => openBuilder()}
+            >
+              + 新建组件
+            </button>
+          </div>
+        </header>
+        <DashboardTabs
+          active={active}
+          onChange={setActive}
+          saved={saved}
+        />
+        {error ? (
+          <div className="rounded border border-destructive/40 bg-destructive/10 p-3 text-sm">
+            {error}
+          </div>
+        ) : null}
+        {loading ? (
+          <SkeletonGrid />
+        ) : (
+          <WidgetGrid
+            widgets={dashboard?.widgets ?? []}
+            onEdit={openBuilder}
           />
-          <button
-            className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground"
-            onClick={() => openBuilder()}
-          >
-            + 新建组件
-          </button>
-        </div>
-      </header>
-
-      <DashboardTabs
-        active={active}
-        onChange={setActive}
-        saved={saved}
-      />
-
-      {error ? (
-        <div className="rounded border border-destructive/40 bg-destructive/10 p-3 text-sm">
-          {error}
-        </div>
-      ) : null}
-
-      {loading ? (
-        <SkeletonGrid />
-      ) : (
-        <WidgetGrid
-          widgets={dashboard?.widgets ?? []}
-          onEdit={openBuilder}
-        />
-      )}
-
-      {builder.open && builder.widget && meta ? (
-        <BuilderDialog
-          meta={meta}
-          widget={builder.widget}
-          onClose={() => setBuilder({ open: false, widget: null })}
-          onRun={runBuilderQuery}
-        />
-      ) : null}
-    </div>
+        )}
+        {builder.open && builder.widget && meta ? (
+          <BuilderDialog
+            meta={meta}
+            widget={builder.widget}
+            onClose={() => setBuilder({ open: false, widget: null })}
+            onRun={runBuilderQuery}
+          />
+        ) : null}
+      </div>)</ErrorBoundary>
   );
 }
 

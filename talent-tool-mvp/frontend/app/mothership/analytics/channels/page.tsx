@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import { useEffect, useState } from "react";
 import { apiClient } from "@/lib/api-client";
@@ -84,130 +85,127 @@ export default function ChannelsPage() {
     channels?.channels.reduce((s, c) => s + c.hires, 0) ?? 0;
 
   return (
-    <div className="space-y-6 p-6">
-      <header className="flex items-end justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Channel ROI
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            First-touch / last-touch / multi-touch attribution.
-          </p>
-        </div>
-        <div className="flex gap-3 items-end">
-          <div className="space-y-1">
-            <Label className="text-xs">Period</Label>
-            <Select
-              value={String(days)}
-              onValueChange={(v) => setDays(Number(v))}
-            >
-              <SelectTrigger className="w-[150px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7">7 days</SelectItem>
-                <SelectItem value="30">30 days</SelectItem>
-                <SelectItem value="90">90 days</SelectItem>
-                <SelectItem value="180">6 months</SelectItem>
-                <SelectItem value="365">12 months</SelectItem>
-              </SelectContent>
-            </Select>
+    <ErrorBoundary>(<div className="space-y-6 p-6">
+        <header className="flex items-end justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              Channel ROI
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              First-touch / last-touch / multi-touch attribution.
+            </p>
           </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Model</Label>
-            <Select
-              value={model}
-              onValueChange={(v) =>
-                setModel(v as (typeof MODELS)[number]["value"])
-              }
-            >
-              <SelectTrigger className="w-[200px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {MODELS.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>
-                    {m.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="flex gap-3 items-end">
+            <div className="space-y-1">
+              <Label className="text-xs">Period</Label>
+              <Select
+                value={String(days)}
+                onValueChange={(v) => setDays(Number(v))}
+              >
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7">7 days</SelectItem>
+                  <SelectItem value="30">30 days</SelectItem>
+                  <SelectItem value="90">90 days</SelectItem>
+                  <SelectItem value="180">6 months</SelectItem>
+                  <SelectItem value="365">12 months</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Model</Label>
+              <Select
+                value={model}
+                onValueChange={(v) =>
+                  setModel(v as (typeof MODELS)[number]["value"])
+                }
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MODELS.map((m) => (
+                    <SelectItem key={m.value} value={m.value}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-        </div>
-      </header>
-
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <MetricTile
-          label="Total cost"
-          value={`¥${(totalCost / 100).toFixed(0)}`}
-          icon={<DollarSign className="h-4 w-4" />}
-          loading={loading}
-        />
-        <MetricTile
-          label="Total revenue"
-          value={`¥${(totalRevenue / 100).toFixed(0)}`}
-          icon={<TrendingUp className="h-4 w-4" />}
-          loading={loading}
-        />
-        <MetricTile
-          label="Total hires"
-          value={totalHires}
-          icon={<Trophy className="h-4 w-4" />}
-          loading={loading}
-        />
-        <MetricTile
-          label="Best channel"
-          value={channels?.best_channel ?? "—"}
-          icon={<BarChart3 className="h-4 w-4" />}
-          loading={loading}
-        />
-      </section>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>ROI by channel</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading || !channels ? (
-            <Skeleton className="h-[260px] w-full" />
-          ) : (
-            <ChannelRoiChart channels={channels.channels} />
-          )}
-        </CardContent>
-      </Card>
-
-      <Tabs defaultValue="channels">
-        <TabsList>
-          <TabsTrigger value="channels">Channel table</TabsTrigger>
-          <TabsTrigger value="models">All models</TabsTrigger>
-        </TabsList>
-        <TabsContent value="channels">
-          <Card>
-            <CardContent className="pt-6">
-              {loading || !channels ? (
-                <Skeleton className="h-[200px] w-full" />
-              ) : (
-                <ChannelTable channels={channels.channels} />
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="models">
-          <Card>
-            <CardContent className="pt-6">
-              {!roiReport ? (
-                <p className="text-sm text-muted-foreground py-4 text-center">
-                  ROI comparison is admin-only; sign in as admin to view all
-                  models.
-                </p>
-              ) : (
-                <AllModelsView report={roiReport} />
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+        </header>
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <MetricTile
+            label="Total cost"
+            value={`¥${(totalCost / 100).toFixed(0)}`}
+            icon={<DollarSign className="h-4 w-4" />}
+            loading={loading}
+          />
+          <MetricTile
+            label="Total revenue"
+            value={`¥${(totalRevenue / 100).toFixed(0)}`}
+            icon={<TrendingUp className="h-4 w-4" />}
+            loading={loading}
+          />
+          <MetricTile
+            label="Total hires"
+            value={totalHires}
+            icon={<Trophy className="h-4 w-4" />}
+            loading={loading}
+          />
+          <MetricTile
+            label="Best channel"
+            value={channels?.best_channel ?? "—"}
+            icon={<BarChart3 className="h-4 w-4" />}
+            loading={loading}
+          />
+        </section>
+        <Card>
+          <CardHeader>
+            <CardTitle>ROI by channel</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading || !channels ? (
+              <Skeleton className="h-[260px] w-full" />
+            ) : (
+              <ChannelRoiChart channels={channels.channels} />
+            )}
+          </CardContent>
+        </Card>
+        <Tabs defaultValue="channels">
+          <TabsList>
+            <TabsTrigger value="channels">Channel table</TabsTrigger>
+            <TabsTrigger value="models">All models</TabsTrigger>
+          </TabsList>
+          <TabsContent value="channels">
+            <Card>
+              <CardContent className="pt-6">
+                {loading || !channels ? (
+                  <Skeleton className="h-[200px] w-full" />
+                ) : (
+                  <ChannelTable channels={channels.channels} />
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="models">
+            <Card>
+              <CardContent className="pt-6">
+                {!roiReport ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">
+                    ROI comparison is admin-only; sign in as admin to view all
+                    models.
+                  </p>
+                ) : (
+                  <AllModelsView report={roiReport} />
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>)</ErrorBoundary>
   );
 }
 

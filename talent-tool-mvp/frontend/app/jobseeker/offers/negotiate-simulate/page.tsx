@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v9.1 — /jobseeker/offers/negotiate-simulate — Open WebUI 风谈判模拟
@@ -890,8 +891,8 @@ function Dot({ delay }: { delay: string }) {
 // ---------- Suspense 包裹 ----------
 export default function NegotiateSimulatePage() {
   return (
-    <Suspense fallback={<div className="p-8 text-slate-400">加载中…</div>}>
-      <SimulatePageInner />
-    </Suspense>
+    <ErrorBoundary>(<Suspense fallback={<div className="p-8 text-slate-400">加载中…</div>}>
+        <SimulatePageInner />
+      </Suspense>)</ErrorBoundary>
   );
 }

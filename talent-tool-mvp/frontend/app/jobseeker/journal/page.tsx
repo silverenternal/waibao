@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v9.1 Journal 主页面 (T3601 / T3605).
@@ -652,264 +653,262 @@ export default function JournalPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100/40">
-      <div className="border-b bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 px-6 py-4">
-          <div className="flex items-center gap-2">
-            <span className="grid size-9 place-items-center rounded-lg bg-gradient-to-br from-indigo-500 to-blue-500 text-white shadow-sm">
-              <BookOpen className="size-4" />
-            </span>
-            <div>
-              <h1 className="text-lg font-semibold text-slate-900">
-                工作日记
-              </h1>
-              <p className="text-xs text-slate-500">
-                写下来,智能体会给你更具体的建议
-              </p>
+    <ErrorBoundary>(<div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100/40">
+        <div className="border-b bg-white/80 backdrop-blur">
+          <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 px-6 py-4">
+            <div className="flex items-center gap-2">
+              <span className="grid size-9 place-items-center rounded-lg bg-gradient-to-br from-indigo-500 to-blue-500 text-white shadow-sm">
+                <BookOpen className="size-4" />
+              </span>
+              <div>
+                <h1 className="text-lg font-semibold text-slate-900">
+                  工作日记
+                </h1>
+                <p className="text-xs text-slate-500">
+                  写下来,智能体会给你更具体的建议
+                </p>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                (window.location.href = "/jobseeker/journal/voice")
-              }
-              className="gap-1"
-            >
-              <Mic className="size-3.5" /> 语音
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                (window.location.href = "/jobseeker/journal/analytics")
-              }
-              className="gap-1"
-            >
-              <Sparkles className="size-3.5" /> 分析
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  (window.location.href = "/jobseeker/journal/voice")
+                }
+                className="gap-1"
+              >
+                <Mic className="size-3.5" /> 语音
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  (window.location.href = "/jobseeker/journal/analytics")
+                }
+                className="gap-1"
+              >
+                <Sparkles className="size-3.5" /> 分析
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
-
-      <main className="mx-auto max-w-3xl space-y-5 px-6 py-6">
-        {/* 撰写区 */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <PenLine className="size-4 text-indigo-500" />
-              今日记录
-              <Badge variant="outline" className="ml-auto text-[10px]">
-                {new Date().toLocaleDateString("zh-CN", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                  weekday: "short",
-                })}
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <NotebookEditor
-              value={blocks}
-              onChange={setBlocks}
-              disabled={submitting}
-            />
-
-            {/* 标签评分 */}
-            <div className="space-y-2 rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-3">
-              <p className="text-xs font-medium text-slate-600">
-                给今天的状态打个标签(选 1-3 个,可选)
-              </p>
-              <TagChips<MoodTag>
-                icon={Zap}
-                ariaLabel="心情"
-                options={MOOD_TAGS}
-                value={mood}
-                onChange={setMood}
-              />
-              <TagChips<EnergyTag>
-                icon={CircleDashed}
-                ariaLabel="能量"
-                options={ENERGY_TAGS}
-                value={energy}
-                onChange={setEnergy}
-              />
-              <TagChips<StressTag>
-                icon={AlertTriangle}
-                ariaLabel="压力"
-                options={STRESS_TAGS}
-                value={stress}
-                onChange={setStress}
-              />
-            </div>
-
-            {/* 三态行动项 */}
-            <div className="rounded-xl border border-slate-200 bg-white p-3">
-              <div className="mb-2 flex items-center gap-2">
-                <Target className="size-4 text-blue-500" />
-                <p className="text-sm font-medium text-slate-700">
-                  本次行动项
-                </p>
-                <Badge variant="secondary" className="ml-auto text-[10px]">
-                  {actions.length} 项 · 三态循环
+        <main className="mx-auto max-w-3xl space-y-5 px-6 py-6">
+          {/* 撰写区 */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <PenLine className="size-4 text-indigo-500" />
+                今日记录
+                <Badge variant="outline" className="ml-auto text-[10px]">
+                  {new Date().toLocaleDateString("zh-CN", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    weekday: "short",
+                  })}
                 </Badge>
-              </div>
-              <ul className="mb-2 space-y-1.5" aria-label="行动项列表">
-                {actions.map((a) => (
-                  <ActionItemRow
-                    key={a.id}
-                    item={a}
-                    onCycle={() => cycleAction(a.id)}
-                    onRemove={() => removeAction(a.id)}
-                  />
-                ))}
-                {actions.length === 0 && (
-                  <li className="rounded-lg border border-dashed border-slate-200 px-2.5 py-2 text-center text-xs text-slate-400">
-                    先在脑子里列出今天要推进的事,点击行可循环切换 待办 → 进行中 → 已完成
-                  </li>
-                )}
-              </ul>
-              <div className="flex gap-1.5">
-                <input
-                  value={newAction}
-                  onChange={(e) => setNewAction(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      addAction();
-                    }
-                  }}
-                  placeholder="例如:明早 10 点前完成匹配实验回看"
-                  aria-label="新增行动项"
-                  className="flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <NotebookEditor
+                value={blocks}
+                onChange={setBlocks}
+                disabled={submitting}
+              />
+
+              {/* 标签评分 */}
+              <div className="space-y-2 rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-3">
+                <p className="text-xs font-medium text-slate-600">
+                  给今天的状态打个标签(选 1-3 个,可选)
+                </p>
+                <TagChips<MoodTag>
+                  icon={Zap}
+                  ariaLabel="心情"
+                  options={MOOD_TAGS}
+                  value={mood}
+                  onChange={setMood}
                 />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={addAction}
-                  disabled={!newAction.trim()}
-                  className="gap-1"
-                >
-                  <Plus className="size-3.5" /> 添加
-                </Button>
+                <TagChips<EnergyTag>
+                  icon={CircleDashed}
+                  ariaLabel="能量"
+                  options={ENERGY_TAGS}
+                  value={energy}
+                  onChange={setEnergy}
+                />
+                <TagChips<StressTag>
+                  icon={AlertTriangle}
+                  ariaLabel="压力"
+                  options={STRESS_TAGS}
+                  value={stress}
+                  onChange={setStress}
+                />
               </div>
-            </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-              <p className="text-xs text-slate-500">
-                {content.length} 字 · 至少 1 个标签 + 正文即可提交
-              </p>
-              <div className="flex gap-2">
-                <Button variant="ghost" size="sm" onClick={reset}>
-                  <RotateCcw className="size-3.5" /> 清空
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={submit}
-                  disabled={!canSubmit}
-                  className="gap-1"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="size-3.5 animate-spin" /> AI 思考中…
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="size-3.5" /> 提交并获取建议
-                    </>
+              {/* 三态行动项 */}
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <div className="mb-2 flex items-center gap-2">
+                  <Target className="size-4 text-blue-500" />
+                  <p className="text-sm font-medium text-slate-700">
+                    本次行动项
+                  </p>
+                  <Badge variant="secondary" className="ml-auto text-[10px]">
+                    {actions.length} 项 · 三态循环
+                  </Badge>
+                </div>
+                <ul className="mb-2 space-y-1.5" aria-label="行动项列表">
+                  {actions.map((a) => (
+                    <ActionItemRow
+                      key={a.id}
+                      item={a}
+                      onCycle={() => cycleAction(a.id)}
+                      onRemove={() => removeAction(a.id)}
+                    />
+                  ))}
+                  {actions.length === 0 && (
+                    <li className="rounded-lg border border-dashed border-slate-200 px-2.5 py-2 text-center text-xs text-slate-400">
+                      先在脑子里列出今天要推进的事,点击行可循环切换 待办 → 进行中 → 已完成
+                    </li>
                   )}
-                </Button>
+                </ul>
+                <div className="flex gap-1.5">
+                  <input
+                    value={newAction}
+                    onChange={(e) => setNewAction(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addAction();
+                      }
+                    }}
+                    placeholder="例如:明早 10 点前完成匹配实验回看"
+                    aria-label="新增行动项"
+                    className="flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={addAction}
+                    disabled={!newAction.trim()}
+                    className="gap-1"
+                  >
+                    <Plus className="size-3.5" /> 添加
+                  </Button>
+                </div>
               </div>
-            </div>
 
-            {error && (
-              <div
-                role="alert"
-                className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700"
-              >
-                <AlertTriangle className="size-3.5" /> {error}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                <p className="text-xs text-slate-500">
+                  {content.length} 字 · 至少 1 个标签 + 正文即可提交
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" onClick={reset}>
+                    <RotateCcw className="size-3.5" /> 清空
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={submit}
+                    disabled={!canSubmit}
+                    className="gap-1"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 className="size-3.5 animate-spin" /> AI 思考中…
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="size-3.5" /> 提交并获取建议
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
 
-        {/* AI 评价 */}
-        {latestAI && (
-          <AIArtifactCard
-            rating={latestAI.rating ?? null}
-            advice={latestAI.advice ?? null}
-            warnings={latestAI.warnings ?? []}
-            actionItems={latestAI.action_items ?? []}
-          />
-        )}
+              {error && (
+                <div
+                  role="alert"
+                  className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700"
+                >
+                  <AlertTriangle className="size-3.5" /> {error}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-        {/* 时间线 */}
-        <section aria-label="历史日记时间线">
-          <header className="mb-3 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-base font-semibold text-slate-800">
-              <BookOpen className="size-4 text-indigo-500" /> 最近 30 天
-              <Badge variant="outline" className="text-[10px]">
-                {timeline.length} 篇
-              </Badge>
-            </h2>
-          </header>
-
-          {loadingTimeline ? (
-            <Card>
-              <CardContent className="flex items-center gap-2 py-8 text-sm text-slate-500">
-                <Loader2 className="size-4 animate-spin" /> 加载中…
-              </CardContent>
-            </Card>
-          ) : timeline.length === 0 ? (
-            <EmptyTimeline />
-          ) : (
-            <ol className="space-y-3">
-              {timeline.map((j) => (
-                <TimelineRow key={j.id} entry={j} />
-              ))}
-            </ol>
+          {/* AI 评价 */}
+          {latestAI && (
+            <AIArtifactCard
+              rating={latestAI.rating ?? null}
+              advice={latestAI.advice ?? null}
+              warnings={latestAI.warnings ?? []}
+              actionItems={latestAI.action_items ?? []}
+            />
           )}
-        </section>
-      </main>
 
-      {/* Notion-like 块编辑器样式 */}
-      <style jsx global>{`
-        .nb-editor h1.nb-h1 {
-          font-size: 1.5rem;
-          font-weight: 600;
-          color: #0f172a;
-          margin: 4px 0 8px;
-          line-height: 1.3;
-          outline: none;
-        }
-        .nb-editor h2.nb-h2 {
-          font-size: 1.125rem;
-          font-weight: 600;
-          color: #1e293b;
-          margin: 4px 0 6px;
-          line-height: 1.3;
-          outline: none;
-        }
-        .nb-editor p.nb-p {
-          margin: 4px 0;
-          outline: none;
-        }
-        .nb-editor p.nb-li {
-          display: flex;
-          align-items: baseline;
-          gap: 6px;
-          margin: 2px 0;
-        }
-        .nb-editor p.nb-li .nb-bullet {
-          color: #94a3b8;
-        }
-        .nb-editor [data-block-id]:empty::before {
-          content: "";
-        }
-      `}</style>
-    </div>
+          {/* 时间线 */}
+          <section aria-label="历史日记时间线">
+            <header className="mb-3 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-base font-semibold text-slate-800">
+                <BookOpen className="size-4 text-indigo-500" /> 最近 30 天
+                <Badge variant="outline" className="text-[10px]">
+                  {timeline.length} 篇
+                </Badge>
+              </h2>
+            </header>
+
+            {loadingTimeline ? (
+              <Card>
+                <CardContent className="flex items-center gap-2 py-8 text-sm text-slate-500">
+                  <Loader2 className="size-4 animate-spin" /> 加载中…
+                </CardContent>
+              </Card>
+            ) : timeline.length === 0 ? (
+              <EmptyTimeline />
+            ) : (
+              <ol className="space-y-3">
+                {timeline.map((j) => (
+                  <TimelineRow key={j.id} entry={j} />
+                ))}
+              </ol>
+            )}
+          </section>
+        </main>
+        {/* Notion-like 块编辑器样式 */}
+        <style jsx global>{`
+          .nb-editor h1.nb-h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #0f172a;
+            margin: 4px 0 8px;
+            line-height: 1.3;
+            outline: none;
+          }
+          .nb-editor h2.nb-h2 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin: 4px 0 6px;
+            line-height: 1.3;
+            outline: none;
+          }
+          .nb-editor p.nb-p {
+            margin: 4px 0;
+            outline: none;
+          }
+          .nb-editor p.nb-li {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            margin: 2px 0;
+          }
+          .nb-editor p.nb-li .nb-bullet {
+            color: #94a3b8;
+          }
+          .nb-editor [data-block-id]:empty::before {
+            content: "";
+          }
+        `}</style>
+      </div>)</ErrorBoundary>
   );
 }
 

@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import { useState, useEffect } from "react";
 import { apiClient } from "@/lib/api-client";
@@ -77,175 +78,172 @@ export default function AdaptersPage() {
   const totalErrors = adapters.reduce((sum, a) => sum + a.error_count, 0);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
-          <Plug className="h-6 w-6" />
-          Adapter Management
-        </h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Monitor CRM/ATS integrations and data flow health.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricTile
-          label="Connected"
-          value={adapters.length}
-          subtitle="Active adapters"
-          icon={<Plug className="h-4 w-4" />}
-          loading={loading}
-        />
-        <MetricTile
-          label="Total Synced"
-          value={totalSynced.toLocaleString()}
-          subtitle="All time"
-          icon={<Database className="h-4 w-4" />}
-          loading={loading}
-        />
-        <MetricTile
-          label="Total Errors"
-          value={totalErrors}
-          subtitle="Across all adapters"
-          icon={<AlertTriangle className="h-4 w-4" />}
-          loading={loading}
-        />
-        <MetricTile
-          label="Last Sync"
-          value={adapters.length > 0 && adapters[0].last_sync ? formatRelativeTime(adapters[0].last_sync) : "\u2014"}
-          subtitle="Most recent"
-          icon={<Clock className="h-4 w-4" />}
-          loading={loading}
-        />
-      </div>
-
-      <div className="space-y-4">
-        {loading ? (
-          Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-36 rounded-lg" />
-          ))
-        ) : (
-          adapters.map((adapter) => {
-            const config = statusConfig[adapter.status] || statusConfig.healthy;
-            const StatusIcon = config.icon;
-            const mappings = SCHEMA_MAPPINGS[adapter.adapter_name] || [];
-            const isExpanded = expandedAdapter === adapter.adapter_name;
-
-            return (
-              <Card key={adapter.adapter_name} className={`border ${adapter.status === "degraded" ? "border-amber-500/20" : adapter.status === "down" ? "border-red-500/20" : ""}`}>
-                <CardContent className="p-5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`rounded-full p-2 ${config.color}`}>
-                        <StatusIcon className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">{adapter.adapter_name}</h3>
-                        <p className="text-xs text-muted-foreground">
-                          Last sync: {adapter.last_sync ? formatRelativeTime(adapter.last_sync) : "Never"}
-                        </p>
-                      </div>
-                      <Badge variant="outline" className={config.color}>
-                        {config.label}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <p className="text-sm font-medium">{adapter.records_processed.toLocaleString()}</p>
-                        <p className="text-xs text-muted-foreground">records processed</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium">{adapter.error_count}</p>
-                        <p className="text-xs text-muted-foreground">errors</p>
-                      </div>
-                      <Button variant="outline" size="sm">
-                        <RefreshCw className="h-4 w-4 mr-1.5" />
-                        Sync Now
-                      </Button>
-                    </div>
-                  </div>
-
-                  {mappings.length > 0 && (
-                    <div className="mt-3">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-xs"
-                        onClick={() => setExpandedAdapter(isExpanded ? null : adapter.adapter_name)}
-                      >
-                        <ArrowDownToLine className="h-3 w-3 mr-1" />
-                        {isExpanded ? "Hide schema mapping" : "View schema mapping"}
-                      </Button>
-                      {isExpanded && (
-                        <div className="mt-2 rounded-md border overflow-hidden">
-                          <table className="w-full text-sm">
-                            <thead>
-                              <tr className="bg-muted border-b">
-                                <th className="text-left font-medium px-3 py-2">{adapter.adapter_name} Field</th>
-                                <th className="text-left font-medium px-3 py-2">Canonical Field</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {mappings.map((m) => (
-                                <tr key={m.from} className="border-b last:border-0">
-                                  <td className="px-3 py-1.5 font-mono text-xs text-muted-foreground">{m.from}</td>
-                                  <td className="px-3 py-1.5 font-mono text-xs">{m.to}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })
-        )}
-      </div>
-
-      <Card>
-        <CardContent className="p-5 space-y-4">
-          <h3 className="font-semibold flex items-center gap-2">
-            <Cpu className="h-5 w-5" />
-            AI Pipeline Health
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <MetricTile
-              label="Extraction Queue"
-              value={12}
-              subtitle="Pending"
-              icon={<Loader2 className="h-4 w-4" />}
-              loading={loading}
-            />
-            <MetricTile
-              label="Processing"
-              value={3}
-              subtitle="Active"
-              icon={<Cpu className="h-4 w-4" />}
-              loading={loading}
-            />
-            <MetricTile
-              label="Completed"
-              value={847}
-              subtitle="Total"
-              icon={<CheckCheck className="h-4 w-4" />}
-              loading={loading}
-            />
-            <MetricTile
-              label="Failed"
-              value={5}
-              subtitle="Total"
-              icon={<Ban className="h-4 w-4" />}
-              loading={loading}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Pipeline metrics refresh every 60 seconds
+    <ErrorBoundary>(<div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
+            <Plug className="h-6 w-6" />
+            Adapter Management
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Monitor CRM/ATS integrations and data flow health.
           </p>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <MetricTile
+            label="Connected"
+            value={adapters.length}
+            subtitle="Active adapters"
+            icon={<Plug className="h-4 w-4" />}
+            loading={loading}
+          />
+          <MetricTile
+            label="Total Synced"
+            value={totalSynced.toLocaleString()}
+            subtitle="All time"
+            icon={<Database className="h-4 w-4" />}
+            loading={loading}
+          />
+          <MetricTile
+            label="Total Errors"
+            value={totalErrors}
+            subtitle="Across all adapters"
+            icon={<AlertTriangle className="h-4 w-4" />}
+            loading={loading}
+          />
+          <MetricTile
+            label="Last Sync"
+            value={adapters.length > 0 && adapters[0].last_sync ? formatRelativeTime(adapters[0].last_sync) : "\u2014"}
+            subtitle="Most recent"
+            icon={<Clock className="h-4 w-4" />}
+            loading={loading}
+          />
+        </div>
+        <div className="space-y-4">
+          {loading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-36 rounded-lg" />
+            ))
+          ) : (
+            adapters.map((adapter) => {
+              const config = statusConfig[adapter.status] || statusConfig.healthy;
+              const StatusIcon = config.icon;
+              const mappings = SCHEMA_MAPPINGS[adapter.adapter_name] || [];
+              const isExpanded = expandedAdapter === adapter.adapter_name;
+
+              return (
+                <Card key={adapter.adapter_name} className={`border ${adapter.status === "degraded" ? "border-amber-500/20" : adapter.status === "down" ? "border-red-500/20" : ""}`}>
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`rounded-full p-2 ${config.color}`}>
+                          <StatusIcon className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">{adapter.adapter_name}</h3>
+                          <p className="text-xs text-muted-foreground">
+                            Last sync: {adapter.last_sync ? formatRelativeTime(adapter.last_sync) : "Never"}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className={config.color}>
+                          {config.label}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="text-sm font-medium">{adapter.records_processed.toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground">records processed</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium">{adapter.error_count}</p>
+                          <p className="text-xs text-muted-foreground">errors</p>
+                        </div>
+                        <Button variant="outline" size="sm">
+                          <RefreshCw className="h-4 w-4 mr-1.5" />
+                          Sync Now
+                        </Button>
+                      </div>
+                    </div>
+
+                    {mappings.length > 0 && (
+                      <div className="mt-3">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs"
+                          onClick={() => setExpandedAdapter(isExpanded ? null : adapter.adapter_name)}
+                        >
+                          <ArrowDownToLine className="h-3 w-3 mr-1" />
+                          {isExpanded ? "Hide schema mapping" : "View schema mapping"}
+                        </Button>
+                        {isExpanded && (
+                          <div className="mt-2 rounded-md border overflow-hidden">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="bg-muted border-b">
+                                  <th className="text-left font-medium px-3 py-2">{adapter.adapter_name} Field</th>
+                                  <th className="text-left font-medium px-3 py-2">Canonical Field</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {mappings.map((m) => (
+                                  <tr key={m.from} className="border-b last:border-0">
+                                    <td className="px-3 py-1.5 font-mono text-xs text-muted-foreground">{m.from}</td>
+                                    <td className="px-3 py-1.5 font-mono text-xs">{m.to}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
+        </div>
+        <Card>
+          <CardContent className="p-5 space-y-4">
+            <h3 className="font-semibold flex items-center gap-2">
+              <Cpu className="h-5 w-5" />
+              AI Pipeline Health
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <MetricTile
+                label="Extraction Queue"
+                value={12}
+                subtitle="Pending"
+                icon={<Loader2 className="h-4 w-4" />}
+                loading={loading}
+              />
+              <MetricTile
+                label="Processing"
+                value={3}
+                subtitle="Active"
+                icon={<Cpu className="h-4 w-4" />}
+                loading={loading}
+              />
+              <MetricTile
+                label="Completed"
+                value={847}
+                subtitle="Total"
+                icon={<CheckCheck className="h-4 w-4" />}
+                loading={loading}
+              />
+              <MetricTile
+                label="Failed"
+                value={5}
+                subtitle="Total"
+                icon={<Ban className="h-4 w-4" />}
+                loading={loading}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Pipeline metrics refresh every 60 seconds
+            </p>
+          </CardContent>
+        </Card>
+      </div>)</ErrorBoundary>
   );
 }

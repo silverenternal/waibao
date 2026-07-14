@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v9.1 — 市场行情 (T3607)
@@ -139,236 +140,233 @@ export default function MarketInsightsPage() {
   );
 
   return (
-    <TremorShell
-      title="市场行情"
-      subtitle="基于真实招聘数据的市场洞察 — 判断目标岗位的供需与薪资趋势"
-      badge={data?.provider ?? "—"}
-      toolbar={toolbar}
-    >
-      {/* filter bar */}
-      <Card>
-        <CardContent className="flex flex-wrap items-end gap-3 p-4">
-          <div className="min-w-[180px] flex-1">
-            <label className="mb-1 block text-xs text-muted-foreground">目标岗位</label>
-            <Input
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              placeholder="例:Python 后端 / 前端 / 算法"
-            />
-            <div className="mt-2 flex flex-wrap gap-1">
-              {ROLE_PRESETS.map((r) => (
-                <button
-                  key={r}
-                  onClick={() => setRole(r)}
-                  className={cn(
-                    "rounded-full border px-2 py-0.5 text-[11px] transition",
-                    role === r
-                      ? "border-blue-300 bg-blue-50 text-blue-700"
-                      : "border-slate-200 text-slate-600 hover:bg-slate-50",
-                  )}
-                >
-                  {r}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="min-w-[180px] flex-1">
-            <label className="mb-1 block text-xs text-muted-foreground">城市</label>
-            <Input
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              placeholder="上海"
-            />
-            <div className="mt-2 flex flex-wrap gap-1">
-              {CITY_PRESETS.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setCity(c)}
-                  className={cn(
-                    "rounded-full border px-2 py-0.5 text-[11px] transition",
-                    city === c
-                      ? "border-blue-300 bg-blue-50 text-blue-700"
-                      : "border-slate-200 text-slate-600 hover:bg-slate-50",
-                  )}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-          </div>
-          <Button onClick={() => void load()} disabled={loading}>
-            {loading ? (
-              <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-            ) : (
-              <Search className="mr-1.5 size-3.5" />
-            )}
-            刷新
-          </Button>
-        </CardContent>
-      </Card>
-
-      {error && (
-        <Card className="border-rose-200 bg-rose-50/60">
-          <CardContent className="flex items-center gap-3 p-3 text-sm text-rose-700">
-            <AlertTriangle className="size-4" />
-            <span>{error}</span>
-            <Button size="sm" variant="outline" className="ml-auto" onClick={() => void load()}>
-              重试
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* KPI band */}
-      <TremorKpiGrid>
-        <TremorKpiCard
-          title="薪资中位数"
-          value={stats.median || "—"}
-          unit={stats.median ? "k" : ""}
-          helper={stats.latest ? `${stats.latest.period} · ${role}` : "暂无数据"}
-        />
-        <TremorKpiCard
-          title="P25 分位"
-          value={stats.p25 || "—"}
-          unit={stats.p25 ? "k" : ""}
-          helper="入门薪资区间下界"
-        />
-        <TremorKpiCard
-          title="P75 分位"
-          value={stats.p75 || "—"}
-          unit={stats.p75 ? "k" : ""}
-          helper="资深薪资区间上界"
-        />
-        <TremorKpiCard
-          title="岗位样本"
-          value={stats.sample || 0}
-          unit="个"
-          helper={data?.sample_jobs?.length ? `样本 ${data.sample_jobs.length} 条岗位` : "尚未抓取"}
-        />
-      </TremorKpiGrid>
-
-      <Tabs defaultValue="salary" className="space-y-4">
-        <TabsList className="flex flex-wrap">
-          <TabsTrigger value="salary">
-            <Banknote className="mr-1.5 size-3.5" /> 薪资 / 趋势
-          </TabsTrigger>
-          <TabsTrigger value="skills">
-            <Sparkles className="mr-1.5 size-3.5" /> 热门技能
-          </TabsTrigger>
-          <TabsTrigger value="compare">
-            <Award className="mr-1.5 size-3.5" /> Offer 分位
-          </TabsTrigger>
-          <TabsTrigger value="jobs">
-            <Briefcase className="mr-1.5 size-3.5" /> 样本岗位
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="salary">
-          <div className="grid gap-4 lg:grid-cols-2">
-            <TremorPanel
-              title="薪资中位数趋势"
-              description="P25 / 中位 / P75 三条曲线"
-            >
-              <MarketSalaryChart data={data?.salary_trends ?? []} />
-            </TremorPanel>
-            <TremorPanel
-              title="岗位供给量趋势"
-              description="按月统计的样本岗位数"
-            >
-              <JobTrendChart
-                data={(data?.salary_trends ?? []).map((s) => ({
-                  period: s.period,
-                  job_count: s.sample_size ?? 0,
-                  median_k: s.median_k,
-                }))}
+    <ErrorBoundary>(<TremorShell
+        title="市场行情"
+        subtitle="基于真实招聘数据的市场洞察 — 判断目标岗位的供需与薪资趋势"
+        badge={data?.provider ?? "—"}
+        toolbar={toolbar}
+      >
+        {/* filter bar */}
+        <Card>
+          <CardContent className="flex flex-wrap items-end gap-3 p-4">
+            <div className="min-w-[180px] flex-1">
+              <label className="mb-1 block text-xs text-muted-foreground">目标岗位</label>
+              <Input
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                placeholder="例:Python 后端 / 前端 / 算法"
               />
-            </TremorPanel>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="skills">
-          <TremorPanel
-            title="热门技能需求"
-            description="分数越高表示招聘需求越强 · 点击查看岗位详情"
-          >
-            <HotSkillsRadar data={data?.hot_skills ?? []} />
-            <SkillBars data={data?.hot_skills ?? []} />
-          </TremorPanel>
-        </TabsContent>
-
-        <TabsContent value="compare">
-          <div className="grid gap-4 lg:grid-cols-2">
-            <TremorPanel
-              title="我的 Offer 分位"
-              description={`对比 ${role} · ${city} 整体水平`}
-            >
-              <CompareToMarket
-                myOffer={myOffer}
-                median={stats.median}
-                p25={stats.p25}
-                p75={stats.p75}
-                onChange={setMyOffer}
-              />
-            </TremorPanel>
-            <TremorPanel
-              title="分位对照表"
-              description="用最近一期数据估算"
-            >
-              <PercentileTable
-                role={role}
-                city={city}
-                median={stats.median}
-                p25={stats.p25}
-                p75={stats.p75}
-              />
-            </TremorPanel>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="jobs">
-          <TremorPanel
-            title="样本岗位"
-            description={`来源 ${data?.provider ?? "—"} · ${data?.sample_jobs?.length ?? 0} 条`}
-            actions={
-              <div className="flex items-center gap-1 text-xs">
-                {(
-                  [
-                    { key: "salary_desc", label: "薪资" },
-                    { key: "company", label: "公司" },
-                    { key: "title", label: "岗位" },
-                  ] as const
-                ).map((s) => (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {ROLE_PRESETS.map((r) => (
                   <button
-                    key={s.key}
-                    onClick={() => setSort(s.key)}
+                    key={r}
+                    onClick={() => setRole(r)}
                     className={cn(
-                      "rounded border px-2 py-0.5 transition",
-                      sort === s.key
+                      "rounded-full border px-2 py-0.5 text-[11px] transition",
+                      role === r
                         ? "border-blue-300 bg-blue-50 text-blue-700"
                         : "border-slate-200 text-slate-600 hover:bg-slate-50",
                     )}
                   >
-                    {s.label}
+                    {r}
                   </button>
                 ))}
               </div>
-            }
-          >
-            {!sortedJobs.length ? (
-              <p className="py-12 text-center text-sm text-muted-foreground">
-                暂无样本岗位 — 调整关键词再试
-              </p>
-            ) : (
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                {sortedJobs.map((j: JobPosting) => (
-                  <JobCard key={`${j.source}-${j.external_id}`} job={j} />
+            </div>
+            <div className="min-w-[180px] flex-1">
+              <label className="mb-1 block text-xs text-muted-foreground">城市</label>
+              <Input
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="上海"
+              />
+              <div className="mt-2 flex flex-wrap gap-1">
+                {CITY_PRESETS.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setCity(c)}
+                    className={cn(
+                      "rounded-full border px-2 py-0.5 text-[11px] transition",
+                      city === c
+                        ? "border-blue-300 bg-blue-50 text-blue-700"
+                        : "border-slate-200 text-slate-600 hover:bg-slate-50",
+                    )}
+                  >
+                    {c}
+                  </button>
                 ))}
               </div>
-            )}
-          </TremorPanel>
-        </TabsContent>
-      </Tabs>
-    </TremorShell>
+            </div>
+            <Button onClick={() => void load()} disabled={loading}>
+              {loading ? (
+                <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+              ) : (
+                <Search className="mr-1.5 size-3.5" />
+              )}
+              刷新
+            </Button>
+          </CardContent>
+        </Card>
+        {error && (
+          <Card className="border-rose-200 bg-rose-50/60">
+            <CardContent className="flex items-center gap-3 p-3 text-sm text-rose-700">
+              <AlertTriangle className="size-4" />
+              <span>{error}</span>
+              <Button size="sm" variant="outline" className="ml-auto" onClick={() => void load()}>
+                重试
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+        {/* KPI band */}
+        <TremorKpiGrid>
+          <TremorKpiCard
+            title="薪资中位数"
+            value={stats.median || "—"}
+            unit={stats.median ? "k" : ""}
+            helper={stats.latest ? `${stats.latest.period} · ${role}` : "暂无数据"}
+          />
+          <TremorKpiCard
+            title="P25 分位"
+            value={stats.p25 || "—"}
+            unit={stats.p25 ? "k" : ""}
+            helper="入门薪资区间下界"
+          />
+          <TremorKpiCard
+            title="P75 分位"
+            value={stats.p75 || "—"}
+            unit={stats.p75 ? "k" : ""}
+            helper="资深薪资区间上界"
+          />
+          <TremorKpiCard
+            title="岗位样本"
+            value={stats.sample || 0}
+            unit="个"
+            helper={data?.sample_jobs?.length ? `样本 ${data.sample_jobs.length} 条岗位` : "尚未抓取"}
+          />
+        </TremorKpiGrid>
+        <Tabs defaultValue="salary" className="space-y-4">
+          <TabsList className="flex flex-wrap">
+            <TabsTrigger value="salary">
+              <Banknote className="mr-1.5 size-3.5" /> 薪资 / 趋势
+            </TabsTrigger>
+            <TabsTrigger value="skills">
+              <Sparkles className="mr-1.5 size-3.5" /> 热门技能
+            </TabsTrigger>
+            <TabsTrigger value="compare">
+              <Award className="mr-1.5 size-3.5" /> Offer 分位
+            </TabsTrigger>
+            <TabsTrigger value="jobs">
+              <Briefcase className="mr-1.5 size-3.5" /> 样本岗位
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="salary">
+            <div className="grid gap-4 lg:grid-cols-2">
+              <TremorPanel
+                title="薪资中位数趋势"
+                description="P25 / 中位 / P75 三条曲线"
+              >
+                <MarketSalaryChart data={data?.salary_trends ?? []} />
+              </TremorPanel>
+              <TremorPanel
+                title="岗位供给量趋势"
+                description="按月统计的样本岗位数"
+              >
+                <JobTrendChart
+                  data={(data?.salary_trends ?? []).map((s) => ({
+                    period: s.period,
+                    job_count: s.sample_size ?? 0,
+                    median_k: s.median_k,
+                  }))}
+                />
+              </TremorPanel>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="skills">
+            <TremorPanel
+              title="热门技能需求"
+              description="分数越高表示招聘需求越强 · 点击查看岗位详情"
+            >
+              <HotSkillsRadar data={data?.hot_skills ?? []} />
+              <SkillBars data={data?.hot_skills ?? []} />
+            </TremorPanel>
+          </TabsContent>
+
+          <TabsContent value="compare">
+            <div className="grid gap-4 lg:grid-cols-2">
+              <TremorPanel
+                title="我的 Offer 分位"
+                description={`对比 ${role} · ${city} 整体水平`}
+              >
+                <CompareToMarket
+                  myOffer={myOffer}
+                  median={stats.median}
+                  p25={stats.p25}
+                  p75={stats.p75}
+                  onChange={setMyOffer}
+                />
+              </TremorPanel>
+              <TremorPanel
+                title="分位对照表"
+                description="用最近一期数据估算"
+              >
+                <PercentileTable
+                  role={role}
+                  city={city}
+                  median={stats.median}
+                  p25={stats.p25}
+                  p75={stats.p75}
+                />
+              </TremorPanel>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="jobs">
+            <TremorPanel
+              title="样本岗位"
+              description={`来源 ${data?.provider ?? "—"} · ${data?.sample_jobs?.length ?? 0} 条`}
+              actions={
+                <div className="flex items-center gap-1 text-xs">
+                  {(
+                    [
+                      { key: "salary_desc", label: "薪资" },
+                      { key: "company", label: "公司" },
+                      { key: "title", label: "岗位" },
+                    ] as const
+                  ).map((s) => (
+                    <button
+                      key={s.key}
+                      onClick={() => setSort(s.key)}
+                      className={cn(
+                        "rounded border px-2 py-0.5 transition",
+                        sort === s.key
+                          ? "border-blue-300 bg-blue-50 text-blue-700"
+                          : "border-slate-200 text-slate-600 hover:bg-slate-50",
+                      )}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              }
+            >
+              {!sortedJobs.length ? (
+                <p className="py-12 text-center text-sm text-muted-foreground">
+                  暂无样本岗位 — 调整关键词再试
+                </p>
+              ) : (
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {sortedJobs.map((j: JobPosting) => (
+                    <JobCard key={`${j.source}-${j.external_id}`} job={j} />
+                  ))}
+                </div>
+              )}
+            </TremorPanel>
+          </TabsContent>
+        </Tabs>
+      </TremorShell>)</ErrorBoundary>
   );
 }
 

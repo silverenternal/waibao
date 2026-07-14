@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v9.1 — 学习资源 (T3608)
@@ -252,327 +253,324 @@ export default function LearningPage() {
   );
 
   return (
-    <TremorShell
-      title="学习资源"
-      subtitle="聚合 Coursera / 极客时间 / 掘金小册 / 慕课网 / Bilibili 公开课"
-      badge={`${stats.count} 条结果`}
-      toolbar={toolbar}
-    >
-      {/* mode + input */}
-      <Card>
-        <CardContent className="flex flex-wrap items-end gap-3 p-4">
-          <div className="min-w-[220px] flex-1">
-            <label className="mb-1 block text-xs text-muted-foreground">
-              {mode === "search" ? "技能关键词" : "Gap skills (逗号分隔)"}
-            </label>
-            <Input
-              value={skill}
-              onChange={(e) => setSkill(e.target.value)}
-              placeholder={
-                mode === "search"
-                  ? "例:Python / FastAPI / Kubernetes"
-                  : "例:Python, FastAPI, Kubernetes"
-              }
-            />
-            {gapChips.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1">
-                {gapChips.map((g) => (
-                  <Badge
-                    key={g}
-                    variant="secondary"
-                    className="gap-1 bg-violet-100 text-violet-700"
-                  >
-                    <Tag className="size-3" />
-                    {g}
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant={mode === "search" ? "default" : "outline"}
-              onClick={() => setMode("search")}
-            >
-              <BookOpenCheck className="mr-1.5 size-3.5" /> 单技能搜索
-            </Button>
-            <Button
-              size="sm"
-              variant={mode === "recommend" ? "default" : "outline"}
-              onClick={() => setMode("recommend")}
-            >
-              <Sparkles className="mr-1.5 size-3.5" /> Gap 推荐
-            </Button>
-          </div>
-          <Button onClick={() => void submit()} disabled={loading}>
-            {loading ? (
-              <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-            ) : (
-              <Filter className="mr-1.5 size-3.5" />
-            )}
-            刷新
-          </Button>
-        </CardContent>
-      </Card>
-
-      {error && (
-        <Card className="border-rose-200 bg-rose-50/60">
-          <CardContent className="flex items-center gap-3 p-3 text-sm text-rose-700">
-            <AlertTriangle className="size-4" />
-            <span>{error}</span>
-            <Button
-              size="sm"
-              variant="outline"
-              className="ml-auto"
-              onClick={() => void submit()}
-            >
-              重试
+    <ErrorBoundary>(<TremorShell
+        title="学习资源"
+        subtitle="聚合 Coursera / 极客时间 / 掘金小册 / 慕课网 / Bilibili 公开课"
+        badge={`${stats.count} 条结果`}
+        toolbar={toolbar}
+      >
+        {/* mode + input */}
+        <Card>
+          <CardContent className="flex flex-wrap items-end gap-3 p-4">
+            <div className="min-w-[220px] flex-1">
+              <label className="mb-1 block text-xs text-muted-foreground">
+                {mode === "search" ? "技能关键词" : "Gap skills (逗号分隔)"}
+              </label>
+              <Input
+                value={skill}
+                onChange={(e) => setSkill(e.target.value)}
+                placeholder={
+                  mode === "search"
+                    ? "例:Python / FastAPI / Kubernetes"
+                    : "例:Python, FastAPI, Kubernetes"
+                }
+              />
+              {gapChips.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {gapChips.map((g) => (
+                    <Badge
+                      key={g}
+                      variant="secondary"
+                      className="gap-1 bg-violet-100 text-violet-700"
+                    >
+                      <Tag className="size-3" />
+                      {g}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant={mode === "search" ? "default" : "outline"}
+                onClick={() => setMode("search")}
+              >
+                <BookOpenCheck className="mr-1.5 size-3.5" /> 单技能搜索
+              </Button>
+              <Button
+                size="sm"
+                variant={mode === "recommend" ? "default" : "outline"}
+                onClick={() => setMode("recommend")}
+              >
+                <Sparkles className="mr-1.5 size-3.5" /> Gap 推荐
+              </Button>
+            </div>
+            <Button onClick={() => void submit()} disabled={loading}>
+              {loading ? (
+                <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+              ) : (
+                <Filter className="mr-1.5 size-3.5" />
+              )}
+              刷新
             </Button>
           </CardContent>
         </Card>
-      )}
+        {error && (
+          <Card className="border-rose-200 bg-rose-50/60">
+            <CardContent className="flex items-center gap-3 p-3 text-sm text-rose-700">
+              <AlertTriangle className="size-4" />
+              <span>{error}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="ml-auto"
+                onClick={() => void submit()}
+              >
+                重试
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+        {/* KPI band */}
+        <TremorKpiGrid>
+          <TremorKpiCard
+            title="结果数"
+            value={stats.count}
+            unit="条"
+            helper={mode === "recommend" ? "基于 Gap 推荐" : "基于关键词搜索"}
+          />
+          <TremorKpiCard
+            title="平均时长"
+            value={stats.avgHours ? stats.avgHours.toFixed(1) : "—"}
+            unit={stats.avgHours ? "h" : ""}
+            helper="完成课程平均所需"
+          />
+          <TremorKpiCard
+            title="平均评分"
+            value={stats.avgRating ? stats.avgRating.toFixed(1) : "—"}
+            helper={stats.avgRating ? "≥ 4.0 为优质" : "无评分数据"}
+          />
+          <TremorKpiCard
+            title="免费资源"
+            value={stats.free}
+            unit="条"
+            helper="筛选可降低成本"
+          />
+        </TremorKpiGrid>
+        <Tabs defaultValue="results" className="space-y-4">
+          <TabsList className="flex flex-wrap">
+            <TabsTrigger value="results">
+              <BookOpenCheck className="mr-1.5 size-3.5" /> 资源列表
+            </TabsTrigger>
+            <TabsTrigger value="picks">
+              <Award className="mr-1.5 size-3.5" /> Top 3
+            </TabsTrigger>
+            <TabsTrigger value="path">
+              <Lightbulb className="mr-1.5 size-3.5" /> 学习路径
+            </TabsTrigger>
+          </TabsList>
 
-      {/* KPI band */}
-      <TremorKpiGrid>
-        <TremorKpiCard
-          title="结果数"
-          value={stats.count}
-          unit="条"
-          helper={mode === "recommend" ? "基于 Gap 推荐" : "基于关键词搜索"}
-        />
-        <TremorKpiCard
-          title="平均时长"
-          value={stats.avgHours ? stats.avgHours.toFixed(1) : "—"}
-          unit={stats.avgHours ? "h" : ""}
-          helper="完成课程平均所需"
-        />
-        <TremorKpiCard
-          title="平均评分"
-          value={stats.avgRating ? stats.avgRating.toFixed(1) : "—"}
-          helper={stats.avgRating ? "≥ 4.0 为优质" : "无评分数据"}
-        />
-        <TremorKpiCard
-          title="免费资源"
-          value={stats.free}
-          unit="条"
-          helper="筛选可降低成本"
-        />
-      </TremorKpiGrid>
-
-      <Tabs defaultValue="results" className="space-y-4">
-        <TabsList className="flex flex-wrap">
-          <TabsTrigger value="results">
-            <BookOpenCheck className="mr-1.5 size-3.5" /> 资源列表
-          </TabsTrigger>
-          <TabsTrigger value="picks">
-            <Award className="mr-1.5 size-3.5" /> Top 3
-          </TabsTrigger>
-          <TabsTrigger value="path">
-            <Lightbulb className="mr-1.5 size-3.5" /> 学习路径
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="results">
-          <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
-            {/* filters */}
-            <TremorPanel
-              title="筛选"
-              description="按 level / 来源 / 语言 / 价格"
-              actions={
-                <Button size="sm" variant="ghost" onClick={resetFilters}>
-                  清空
-                </Button>
-              }
-            >
-              <FilterGroup
-                label="难度"
-                options={LEVELS.map((l) => ({ key: l.key, label: l.label }))}
-                active={filter.levels}
-                onToggle={(k) => toggleSet(filter.levels, k, (s) => ({ ...filter, levels: s }))}
-              />
-              <FilterGroup
-                label="来源"
-                options={PROVIDERS.map((p) => ({ key: p.key, label: p.label }))}
-                active={filter.providers}
-                onToggle={(k) => toggleSet(filter.providers, k, (s) => ({ ...filter, providers: s }))}
-              />
-              <div className="mt-3">
-                <p className="text-xs font-medium text-slate-700">语言</p>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {(
-                    [
-                      { key: "all", label: "全部" },
-                      { key: "zh", label: "中文" },
-                      { key: "en", label: "英文" },
-                    ] as const
-                  ).map((opt) => (
-                    <button
-                      key={opt.key}
-                      onClick={() => setFilter({ ...filter, language: opt.key })}
-                      className={cn(
-                        "rounded border px-2 py-0.5 text-[11px] transition",
-                        filter.language === opt.key
-                          ? "border-blue-300 bg-blue-50 text-blue-700"
-                          : "border-slate-200 text-slate-600 hover:bg-slate-50",
-                      )}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-3 space-y-1">
-                <Toggle
-                  label="仅免费"
-                  checked={filter.freeOnly}
-                  onChange={(v) => setFilter({ ...filter, freeOnly: v })}
+          <TabsContent value="results">
+            <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
+              {/* filters */}
+              <TremorPanel
+                title="筛选"
+                description="按 level / 来源 / 语言 / 价格"
+                actions={
+                  <Button size="sm" variant="ghost" onClick={resetFilters}>
+                    清空
+                  </Button>
+                }
+              >
+                <FilterGroup
+                  label="难度"
+                  options={LEVELS.map((l) => ({ key: l.key, label: l.label }))}
+                  active={filter.levels}
+                  onToggle={(k) => toggleSet(filter.levels, k, (s) => ({ ...filter, levels: s }))}
                 />
-                <Toggle
-                  label="短时 (< 6h)"
-                  checked={filter.shortOnly}
-                  onChange={(v) => setFilter({ ...filter, shortOnly: v })}
+                <FilterGroup
+                  label="来源"
+                  options={PROVIDERS.map((p) => ({ key: p.key, label: p.label }))}
+                  active={filter.providers}
+                  onToggle={(k) => toggleSet(filter.providers, k, (s) => ({ ...filter, providers: s }))}
                 />
-              </div>
-            </TremorPanel>
+                <div className="mt-3">
+                  <p className="text-xs font-medium text-slate-700">语言</p>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {(
+                      [
+                        { key: "all", label: "全部" },
+                        { key: "zh", label: "中文" },
+                        { key: "en", label: "英文" },
+                      ] as const
+                    ).map((opt) => (
+                      <button
+                        key={opt.key}
+                        onClick={() => setFilter({ ...filter, language: opt.key })}
+                        className={cn(
+                          "rounded border px-2 py-0.5 text-[11px] transition",
+                          filter.language === opt.key
+                            ? "border-blue-300 bg-blue-50 text-blue-700"
+                            : "border-slate-200 text-slate-600 hover:bg-slate-50",
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-            {/* results */}
+                <div className="mt-3 space-y-1">
+                  <Toggle
+                    label="仅免费"
+                    checked={filter.freeOnly}
+                    onChange={(v) => setFilter({ ...filter, freeOnly: v })}
+                  />
+                  <Toggle
+                    label="短时 (< 6h)"
+                    checked={filter.shortOnly}
+                    onChange={(v) => setFilter({ ...filter, shortOnly: v })}
+                  />
+                </div>
+              </TremorPanel>
+
+              {/* results */}
+              <TremorPanel
+                title="推荐结果"
+                description={`${filteredItems.length} / ${items.length} 条匹配`}
+                actions={
+                  <div className="flex items-center gap-1 text-xs">
+                    <span className="text-muted-foreground">排序:</span>
+                    {(
+                      [
+                        { key: "rating", label: "评分" },
+                        { key: "duration_asc", label: "时长 ↑" },
+                        { key: "duration_desc", label: "时长 ↓" },
+                        { key: "price", label: "价格" },
+                        { key: "title", label: "标题" },
+                      ] as const
+                    ).map((s) => (
+                      <button
+                        key={s.key}
+                        onClick={() => setSort(s.key)}
+                        className={cn(
+                          "rounded border px-2 py-0.5 transition",
+                          sort === s.key
+                            ? "border-blue-300 bg-blue-50 text-blue-700"
+                            : "border-slate-200 text-slate-600 hover:bg-slate-50",
+                        )}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                }
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center gap-2 py-12 text-sm text-slate-500">
+                    <Loader2 className="size-4 animate-spin" /> 加载中…
+                  </div>
+                ) : (
+                  <LearningResourceList
+                    items={filteredItems.map((it) => ({
+                      ...it,
+                      // 用 title+provider 作 key 时通过 favorites 标记
+                    }))}
+                    emptyText={
+                      mode === "search"
+                        ? "未找到相关资源 — 试试别的关键词或清空筛选"
+                        : "未找到推荐资源 — 调整 Gap skills 或清空筛选"
+                    }
+                  />
+                )}
+              </TremorPanel>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="picks">
             <TremorPanel
-              title="推荐结果"
-              description={`${filteredItems.length} / ${items.length} 条匹配`}
-              actions={
-                <div className="flex items-center gap-1 text-xs">
-                  <span className="text-muted-foreground">排序:</span>
-                  {(
-                    [
-                      { key: "rating", label: "评分" },
-                      { key: "duration_asc", label: "时长 ↑" },
-                      { key: "duration_desc", label: "时长 ↓" },
-                      { key: "price", label: "价格" },
-                      { key: "title", label: "标题" },
-                    ] as const
-                  ).map((s) => (
-                    <button
-                      key={s.key}
-                      onClick={() => setSort(s.key)}
-                      className={cn(
-                        "rounded border px-2 py-0.5 transition",
-                        sort === s.key
-                          ? "border-blue-300 bg-blue-50 text-blue-700"
-                          : "border-slate-200 text-slate-600 hover:bg-slate-50",
-                      )}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-              }
+              title="Top 3 高分精选"
+              description="基于当前筛选下评分排序的前三条"
             >
-              {loading ? (
-                <div className="flex items-center justify-center gap-2 py-12 text-sm text-slate-500">
-                  <Loader2 className="size-4 animate-spin" /> 加载中…
-                </div>
+              {stats.topPicks.length === 0 ? (
+                <p className="py-12 text-center text-sm text-muted-foreground">
+                  暂无数据
+                </p>
               ) : (
-                <LearningResourceList
-                  items={filteredItems.map((it) => ({
-                    ...it,
-                    // 用 title+provider 作 key 时通过 favorites 标记
-                  }))}
-                  emptyText={
-                    mode === "search"
-                      ? "未找到相关资源 — 试试别的关键词或清空筛选"
-                      : "未找到推荐资源 — 调整 Gap skills 或清空筛选"
-                  }
-                />
+                <div className="grid gap-3 md:grid-cols-3">
+                  {stats.topPicks.map((r, i) => {
+                    const key = `${r.provider}-${r.title}`;
+                    const isFav = favorites.has(key);
+                    return (
+                      <Card
+                        key={key}
+                        className="overflow-hidden border-amber-200 bg-gradient-to-br from-amber-50 to-white"
+                      >
+                        <CardContent className="space-y-2 p-4">
+                          <div className="flex items-start gap-2">
+                            <span className="grid size-7 place-items-center rounded-full bg-amber-500 text-xs font-bold text-white">
+                              {i + 1}
+                            </span>
+                            <p className="line-clamp-2 flex-1 text-sm font-semibold text-slate-800">
+                              {r.title}
+                            </p>
+                            <button
+                              onClick={() => toggleFavorite(key)}
+                              aria-label="收藏"
+                              className="text-slate-400 hover:text-rose-500"
+                            >
+                              <Heart
+                                className={cn(
+                                  "size-4",
+                                  isFav && "fill-rose-500 text-rose-500",
+                                )}
+                              />
+                            </button>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2 text-xs">
+                            <Badge variant="secondary">{r.provider}</Badge>
+                            <span className="inline-flex items-center gap-1 text-amber-600">
+                              <Star className="size-3 fill-current" />
+                              {r.rating?.toFixed(1) ?? "—"}
+                            </span>
+                            <span className="inline-flex items-center gap-1 text-muted-foreground">
+                              <Clock className="size-3" />
+                              {r.duration_hours?.toFixed(1) ?? "—"}h
+                            </span>
+                            <span className="text-muted-foreground">
+                              {r.price && r.price > 0 ? `¥${r.price}` : "免费"}
+                            </span>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full"
+                            onClick={() =>
+                              r.url && window.open(r.url, "_blank", "noreferrer")
+                            }
+                          >
+                            打开
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
               )}
             </TremorPanel>
-          </div>
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="picks">
-          <TremorPanel
-            title="Top 3 高分精选"
-            description="基于当前筛选下评分排序的前三条"
-          >
-            {stats.topPicks.length === 0 ? (
-              <p className="py-12 text-center text-sm text-muted-foreground">
-                暂无数据
-              </p>
-            ) : (
-              <div className="grid gap-3 md:grid-cols-3">
-                {stats.topPicks.map((r, i) => {
-                  const key = `${r.provider}-${r.title}`;
-                  const isFav = favorites.has(key);
-                  return (
-                    <Card
-                      key={key}
-                      className="overflow-hidden border-amber-200 bg-gradient-to-br from-amber-50 to-white"
-                    >
-                      <CardContent className="space-y-2 p-4">
-                        <div className="flex items-start gap-2">
-                          <span className="grid size-7 place-items-center rounded-full bg-amber-500 text-xs font-bold text-white">
-                            {i + 1}
-                          </span>
-                          <p className="line-clamp-2 flex-1 text-sm font-semibold text-slate-800">
-                            {r.title}
-                          </p>
-                          <button
-                            onClick={() => toggleFavorite(key)}
-                            aria-label="收藏"
-                            className="text-slate-400 hover:text-rose-500"
-                          >
-                            <Heart
-                              className={cn(
-                                "size-4",
-                                isFav && "fill-rose-500 text-rose-500",
-                              )}
-                            />
-                          </button>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2 text-xs">
-                          <Badge variant="secondary">{r.provider}</Badge>
-                          <span className="inline-flex items-center gap-1 text-amber-600">
-                            <Star className="size-3 fill-current" />
-                            {r.rating?.toFixed(1) ?? "—"}
-                          </span>
-                          <span className="inline-flex items-center gap-1 text-muted-foreground">
-                            <Clock className="size-3" />
-                            {r.duration_hours?.toFixed(1) ?? "—"}h
-                          </span>
-                          <span className="text-muted-foreground">
-                            {r.price && r.price > 0 ? `¥${r.price}` : "免费"}
-                          </span>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full"
-                          onClick={() =>
-                            r.url && window.open(r.url, "_blank", "noreferrer")
-                          }
-                        >
-                          打开
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </TremorPanel>
-        </TabsContent>
-
-        <TabsContent value="path">
-          <TremorPanel
-            title="学习路径建议"
-            description="基于当前关键词自动生成的速记路径"
-          >
-            <LearningPath skill={skill} chips={gapChips} />
-          </TremorPanel>
-        </TabsContent>
-      </Tabs>
-    </TremorShell>
+          <TabsContent value="path">
+            <TremorPanel
+              title="学习路径建议"
+              description="基于当前关键词自动生成的速记路径"
+            >
+              <LearningPath skill={skill} chips={gapChips} />
+            </TremorPanel>
+          </TabsContent>
+        </Tabs>
+      </TremorShell>)</ErrorBoundary>
   );
 }
 

@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v9.1 · 求职者核心 Dashboard
@@ -607,28 +608,26 @@ function MoodTrend() {
 
 export default function JobseekerHomePage() {
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-6 p-4 lg:p-8">
-      <CareBanner />
-      <KpiGrid />
-      <AiEntry />
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <RecommendedJobs />
+    <ErrorBoundary>(<div className="mx-auto flex max-w-7xl flex-col gap-6 p-4 lg:p-8">
+        <CareBanner />
+        <KpiGrid />
+        <AiEntry />
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <RecommendedJobs />
+          </div>
+          <div>
+            <TodoList />
+          </div>
         </div>
-        <div>
-          <TodoList />
+        <div className="grid gap-6 lg:grid-cols-5">
+          <div className="lg:col-span-3">
+            <ActivityChart />
+          </div>
+          <div className="lg:col-span-2">
+            <MoodTrend />
+          </div>
         </div>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-5">
-        <div className="lg:col-span-3">
-          <ActivityChart />
-        </div>
-        <div className="lg:col-span-2">
-          <MoodTrend />
-        </div>
-      </div>
-    </div>
+      </div>)</ErrorBoundary>
   );
 }

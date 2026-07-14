@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * Journal analytics page (T3606 / v9.1).
@@ -199,235 +200,235 @@ export default function JournalAnalyticsPage() {
 
   // ----------------------------------------------------------------- render
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100/50">
-      <TremorShell
-        title="日记 AI 分析"
-        subtitle="评级趋势 · 智能体建议 · 行动项追踪 · 告警时间线"
-        badge={`${stats.total} 篇 / ${days} 天`}
-        toolbar={
-          <>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push("/jobseeker/journal")}
-              className="gap-1"
-            >
-              <ArrowLeft className="size-3.5" /> 返回日记
-            </Button>
-            <div
-              className="flex items-center rounded-md border bg-white p-0.5"
-              role="radiogroup"
-              aria-label="时间范围"
-            >
-              {RANGES.map((r) => (
-                <button
-                  key={r.days}
-                  type="button"
-                  role="radio"
-                  aria-checked={r.days === days}
-                  onClick={() => setDays(r.days)}
-                  className={cn(
-                    "h-7 rounded px-2.5 text-xs font-medium transition",
-                    r.days === days
-                      ? "bg-slate-900 text-white"
-                      : "text-slate-600 hover:bg-slate-100",
-                  )}
-                >
-                  {r.label}
-                </button>
-              ))}
-            </div>
-            <Button
-              variant="outline"
-              size="icon-sm"
-              onClick={() => load(true)}
-              disabled={refreshing}
-              aria-label="刷新"
-            >
-              <RefreshCcw
-                className={cn("size-4", refreshing && "animate-spin")}
-              />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => router.push("/jobseeker/journal")}
-              className="gap-1"
-            >
-              <PenLine className="size-3.5" /> 写新日记
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => router.push("/jobseeker/journal/voice")}
-              className="gap-1"
-            >
-              <Mic className="size-3.5" /> 语音
-            </Button>
-          </>
-        }
-      >
-        {loading && <LoadingState />}
-        {error && !loading && (
-          <ErrorState message={error} onRetry={() => load(true)} />
-        )}
-
-        {!loading && !error && (
-          <>
-            {/* KPI 网格 */}
-            <TremorKpiGrid>
-              <TremorKpiCard
-                title="日记总数"
-                value={stats.total}
-                unit="篇"
-                helper={`最近 ${days} 天`}
-                spark={ratingSpark}
-              />
-              <TremorKpiCard
-                title="极佳 / 稳定"
-                value={stats.excellent + stats.good}
-                helper={`极佳 ${stats.excellent} · 稳定 ${stats.good}`}
-              />
-              <TremorKpiCard
-                title="需关注"
-                value={stats.warning}
-                helper={
-                  stats.warning > 0
-                    ? "留意近期负面信号"
-                    : "近期没有需要关注的"
-                }
-              />
-              <TremorKpiCard
-                title="警告累计"
-                value={stats.warningCount}
-                unit="条"
-                helper={
-                  stats.lastRating
-                    ? `最近评级: ${stats.lastRating}`
-                    : "暂无评级"
-                }
-              />
-            </TremorKpiGrid>
-
-            {/* 趋势图 */}
-            <TremorPanel
-              title="AI 评级趋势"
-              description={`按周聚合,堆叠面积 + 平均评级折线 · 最近 ${buckets.length} 周`}
-              actions={
-                <Badge variant="outline" className="text-[10px]">
-                  <Calendar className="mr-1 size-3" />
-                  {days} 天
-                </Badge>
-              }
-            >
-              {buckets.length === 0 ? (
-                <EmptyChart
-                  icon={TrendingUp}
-                  title="暂无可视化的日记记录"
-                  description="写几篇日记,智能体会自动生成评级并在此呈现趋势。"
-                  actionLabel="去写日记"
-                  onAction={() => router.push("/jobseeker/journal")}
-                />
-              ) : (
-                <JournalRatingTrend data={buckets} height={320} />
-              )}
-            </TremorPanel>
-
-            {/* 建议历史 + 警告时间线 */}
-            <div className="grid gap-4 lg:grid-cols-2">
-              <TremorPanel
-                title="智能体建议历史"
-                description="按评级过滤;展开后查看原文与警示"
-                actions={
-                  <div className="flex flex-wrap gap-1">
-                    {(
-                      [
-                        { key: "all", label: "全部" },
-                        { key: "excellent", label: "极佳" },
-                        { key: "good", label: "稳定" },
-                        { key: "warning", label: "需关注" },
-                      ] as Array<{ key: JournalRating | "all"; label: string }>
-                    ).map((f) => (
-                      <Button
-                        key={f.key}
-                        size="sm"
-                        variant={adviceFilter === f.key ? "default" : "outline"}
-                        onClick={() => setAdviceFilter(f.key)}
-                        className="h-7 text-xs"
-                      >
-                        {f.label}
-                      </Button>
-                    ))}
-                  </div>
-                }
-                className="h-full"
+    <ErrorBoundary>(<div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100/50">
+        <TremorShell
+          title="日记 AI 分析"
+          subtitle="评级趋势 · 智能体建议 · 行动项追踪 · 告警时间线"
+          badge={`${stats.total} 篇 / ${days} 天`}
+          toolbar={
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push("/jobseeker/journal")}
+                className="gap-1"
               >
-                {entries.length === 0 ? (
-                  <EmptyChart
-                    icon={Lightbulb}
-                    title="暂无建议"
-                    description="提交第一篇日记后,智能体会给出今日的改进建议。"
-                  />
-                ) : (
-                  <JournalAdviceList
-                    entries={entries.map((e) => ({
-                      id: e.id,
-                      journal_date: e.journal_date,
-                      content: e.content,
-                      mood_score: e.mood_score ?? null,
-                      ai_rating: e.ai_rating,
-                      ai_advice: e.ai_advice ?? null,
-                      ai_warnings: e.ai_warnings ?? [],
-                    }))}
-                    ratingFilter={adviceFilter}
-                    title=""
-                    description=""
-                  />
-                )}
-              </TremorPanel>
+                <ArrowLeft className="size-3.5" /> 返回日记
+              </Button>
+              <div
+                className="flex items-center rounded-md border bg-white p-0.5"
+                role="radiogroup"
+                aria-label="时间范围"
+              >
+                {RANGES.map((r) => (
+                  <button
+                    key={r.days}
+                    type="button"
+                    role="radio"
+                    aria-checked={r.days === days}
+                    onClick={() => setDays(r.days)}
+                    className={cn(
+                      "h-7 rounded px-2.5 text-xs font-medium transition",
+                      r.days === days
+                        ? "bg-slate-900 text-white"
+                        : "text-slate-600 hover:bg-slate-100",
+                    )}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="icon-sm"
+                onClick={() => load(true)}
+                disabled={refreshing}
+                aria-label="刷新"
+              >
+                <RefreshCcw
+                  className={cn("size-4", refreshing && "animate-spin")}
+                />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push("/jobseeker/journal")}
+                className="gap-1"
+              >
+                <PenLine className="size-3.5" /> 写新日记
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push("/jobseeker/journal/voice")}
+                className="gap-1"
+              >
+                <Mic className="size-3.5" /> 语音
+              </Button>
+            </>
+          }
+        >
+          {loading && <LoadingState />}
+          {error && !loading && (
+            <ErrorState message={error} onRetry={() => load(true)} />
+          )}
 
+          {!loading && !error && (
+            <>
+              {/* KPI 网格 */}
+              <TremorKpiGrid>
+                <TremorKpiCard
+                  title="日记总数"
+                  value={stats.total}
+                  unit="篇"
+                  helper={`最近 ${days} 天`}
+                  spark={ratingSpark}
+                />
+                <TremorKpiCard
+                  title="极佳 / 稳定"
+                  value={stats.excellent + stats.good}
+                  helper={`极佳 ${stats.excellent} · 稳定 ${stats.good}`}
+                />
+                <TremorKpiCard
+                  title="需关注"
+                  value={stats.warning}
+                  helper={
+                    stats.warning > 0
+                      ? "留意近期负面信号"
+                      : "近期没有需要关注的"
+                  }
+                />
+                <TremorKpiCard
+                  title="警告累计"
+                  value={stats.warningCount}
+                  unit="条"
+                  helper={
+                    stats.lastRating
+                      ? `最近评级: ${stats.lastRating}`
+                      : "暂无评级"
+                  }
+                />
+              </TremorKpiGrid>
+
+              {/* 趋势图 */}
               <TremorPanel
-                title="告警时间线"
-                description="按日记日期纵向展示,识别反复出现的警示"
+                title="AI 评级趋势"
+                description={`按周聚合,堆叠面积 + 平均评级折线 · 最近 ${buckets.length} 周`}
                 actions={
                   <Badge variant="outline" className="text-[10px]">
-                    {warningRows.length} 条
+                    <Calendar className="mr-1 size-3" />
+                    {days} 天
                   </Badge>
                 }
-                className="h-full"
               >
-                {warningRows.length === 0 ? (
+                {buckets.length === 0 ? (
                   <EmptyChart
-                    icon={AlertTriangle}
-                    title="近期日记无明显警告"
-                    description="继续保持 — 出现新警示时会自动出现在这里。"
+                    icon={TrendingUp}
+                    title="暂无可视化的日记记录"
+                    description="写几篇日记,智能体会自动生成评级并在此呈现趋势。"
+                    actionLabel="去写日记"
+                    onAction={() => router.push("/jobseeker/journal")}
                   />
                 ) : (
-                  <JournalWarningTimeline
-                    rows={warningRows}
-                    title=""
-                  />
+                  <JournalRatingTrend data={buckets} height={320} />
                 )}
               </TremorPanel>
-            </div>
 
-            {/* 行动项追踪 */}
-            <TremorPanel
-              title="行动项追踪"
-              description="三态:待办 / 进行中 / 已完成 · 也可手动创建"
-            >
-              <ActionItemTracker
-                items={items}
-                loading={false}
-                onToggleState={handleToggle}
-                onDismiss={handleDismiss}
-                onCreate={handleCreate}
-              />
-            </TremorPanel>
-          </>
-        )}
-      </TremorShell>
-    </div>
+              {/* 建议历史 + 警告时间线 */}
+              <div className="grid gap-4 lg:grid-cols-2">
+                <TremorPanel
+                  title="智能体建议历史"
+                  description="按评级过滤;展开后查看原文与警示"
+                  actions={
+                    <div className="flex flex-wrap gap-1">
+                      {(
+                        [
+                          { key: "all", label: "全部" },
+                          { key: "excellent", label: "极佳" },
+                          { key: "good", label: "稳定" },
+                          { key: "warning", label: "需关注" },
+                        ] as Array<{ key: JournalRating | "all"; label: string }>
+                      ).map((f) => (
+                        <Button
+                          key={f.key}
+                          size="sm"
+                          variant={adviceFilter === f.key ? "default" : "outline"}
+                          onClick={() => setAdviceFilter(f.key)}
+                          className="h-7 text-xs"
+                        >
+                          {f.label}
+                        </Button>
+                      ))}
+                    </div>
+                  }
+                  className="h-full"
+                >
+                  {entries.length === 0 ? (
+                    <EmptyChart
+                      icon={Lightbulb}
+                      title="暂无建议"
+                      description="提交第一篇日记后,智能体会给出今日的改进建议。"
+                    />
+                  ) : (
+                    <JournalAdviceList
+                      entries={entries.map((e) => ({
+                        id: e.id,
+                        journal_date: e.journal_date,
+                        content: e.content,
+                        mood_score: e.mood_score ?? null,
+                        ai_rating: e.ai_rating,
+                        ai_advice: e.ai_advice ?? null,
+                        ai_warnings: e.ai_warnings ?? [],
+                      }))}
+                      ratingFilter={adviceFilter}
+                      title=""
+                      description=""
+                    />
+                  )}
+                </TremorPanel>
+
+                <TremorPanel
+                  title="告警时间线"
+                  description="按日记日期纵向展示,识别反复出现的警示"
+                  actions={
+                    <Badge variant="outline" className="text-[10px]">
+                      {warningRows.length} 条
+                    </Badge>
+                  }
+                  className="h-full"
+                >
+                  {warningRows.length === 0 ? (
+                    <EmptyChart
+                      icon={AlertTriangle}
+                      title="近期日记无明显警告"
+                      description="继续保持 — 出现新警示时会自动出现在这里。"
+                    />
+                  ) : (
+                    <JournalWarningTimeline
+                      rows={warningRows}
+                      title=""
+                    />
+                  )}
+                </TremorPanel>
+              </div>
+
+              {/* 行动项追踪 */}
+              <TremorPanel
+                title="行动项追踪"
+                description="三态:待办 / 进行中 / 已完成 · 也可手动创建"
+              >
+                <ActionItemTracker
+                  items={items}
+                  loading={false}
+                  onToggleState={handleToggle}
+                  onDismiss={handleDismiss}
+                  onCreate={handleCreate}
+                />
+              </TremorPanel>
+            </>
+          )}
+        </TremorShell>
+      </div>)</ErrorBoundary>
   );
 }
 

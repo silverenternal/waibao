@@ -1,3 +1,4 @@
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import type { Metadata } from "next";
 import { fetchAPI, ApiError } from "@/lib/api";
 import { type MarketplacePlugin } from "@/lib/api-marketplace";
@@ -38,5 +39,5 @@ export default async function PluginDetailPage({
   params: { slug: string };
 }) {
   const initial = await loadPlugin(params.slug);
-  return <PluginDetailClient slug={params.slug} initial={initial} />;
+  return <ErrorBoundary><PluginDetailClient slug={params.slug} initial={initial} /></ErrorBoundary>;
 }

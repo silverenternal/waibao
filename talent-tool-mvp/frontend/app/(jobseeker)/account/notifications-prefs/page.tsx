@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v8.1 T3603 — 通知偏好设置
@@ -36,60 +37,60 @@ export default function NotificationPrefsPage() {
   const [saved, setSaved] = React.useState(false);
 
   return (
-    <div className="container mx-auto p-6 space-y-4 max-w-2xl">
-      <h1 className="text-2xl font-bold">通知偏好</h1>
-      <Card className="p-4 space-y-4">
-        <div>
-          <Label>每天最多推送条数</Label>
-          <Input
-            type="number"
-            min="0"
-            max="20"
-            value={maxPerDay}
-            onChange={(e) => setMaxPerDay(parseInt(e.target.value || "0", 10))}
-            className="mt-1"
-          />
-        </div>
-        <QuietHoursPicker
-          start={quietStart}
-          end={quietEnd}
-          onChange={(s, e) => {
-            setQuietStart(s);
-            setQuietEnd(e);
-          }}
-        />
-        <div>
-          <Label className="mb-2 block">订阅触发</Label>
-          <div className="space-y-2">
-            {TRIGGERS.map((t) => (
-              <label
-                key={t.id}
-                className="flex items-center justify-between p-2 bg-slate-50 rounded"
-              >
-                <span className="text-sm">{t.label}</span>
-                <input
-                  type="checkbox"
-                  checked={enabled[t.id] ?? false}
-                  onChange={(e) =>
-                    setEnabled((p) => ({ ...p, [t.id]: e.target.checked }))
-                  }
-                />
-              </label>
-            ))}
+    <ErrorBoundary>(<div className="container mx-auto p-6 space-y-4 max-w-2xl">
+        <h1 className="text-2xl font-bold">通知偏好</h1>
+        <Card className="p-4 space-y-4">
+          <div>
+            <Label>每天最多推送条数</Label>
+            <Input
+              type="number"
+              min="0"
+              max="20"
+              value={maxPerDay}
+              onChange={(e) => setMaxPerDay(parseInt(e.target.value || "0", 10))}
+              className="mt-1"
+            />
           </div>
-        </div>
-        <Button
-          onClick={() => {
-            setSaved(true);
-            setTimeout(() => setSaved(false), 2000);
-          }}
-        >
-          保存偏好
-        </Button>
-        {saved ? (
-          <p className="text-sm text-green-600">已保存</p>
-        ) : null}
-      </Card>
-    </div>
+          <QuietHoursPicker
+            start={quietStart}
+            end={quietEnd}
+            onChange={(s, e) => {
+              setQuietStart(s);
+              setQuietEnd(e);
+            }}
+          />
+          <div>
+            <Label className="mb-2 block">订阅触发</Label>
+            <div className="space-y-2">
+              {TRIGGERS.map((t) => (
+                <label
+                  key={t.id}
+                  className="flex items-center justify-between p-2 bg-slate-50 rounded"
+                >
+                  <span className="text-sm">{t.label}</span>
+                  <input
+                    type="checkbox"
+                    checked={enabled[t.id] ?? false}
+                    onChange={(e) =>
+                      setEnabled((p) => ({ ...p, [t.id]: e.target.checked }))
+                    }
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
+          <Button
+            onClick={() => {
+              setSaved(true);
+              setTimeout(() => setSaved(false), 2000);
+            }}
+          >
+            保存偏好
+          </Button>
+          {saved ? (
+            <p className="text-sm text-green-600">已保存</p>
+          ) : null}
+        </Card>
+      </div>)</ErrorBoundary>
   );
 }

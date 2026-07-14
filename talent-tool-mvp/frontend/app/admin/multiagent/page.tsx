@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * T2703: Multi-Agent (CrewAI vendor-in) admin monitor page.
@@ -87,120 +88,115 @@ export default function MultiAgentAdminPage(): React.JSX.Element {
   }, [scenario, goal, pattern, consensus, maxRounds]);
 
   return (
-    <main className="mx-auto max-w-7xl p-6 space-y-6">
-      <header>
-        <h1 className="text-3xl font-semibold">Multi-Agent Orchestration</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          CrewAI vendor-in. Run one of the 4 core scenarios and inspect each
-          agent&apos;s output, vote tally, and consensus decision in real time.
-        </p>
-      </header>
-
-      {/* Scenario picker */}
-      <section className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        {SCENARIOS.map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => setScenario(s)}
-            className={`text-left p-3 rounded-md border transition ${
-              scenario === s
-                ? "border-primary bg-primary/5"
-                : "hover:border-primary/40"
-            }`}
-          >
-            <div className="font-medium">{SCENARIO_LABEL[s]}</div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {SCENARIO_DESCRIPTION[s]}
-            </div>
-          </button>
-        ))}
-      </section>
-
-      {/* Controls */}
-      <section className="rounded-md border p-4 grid grid-cols-1 md:grid-cols-4 gap-3">
-        <label className="text-sm md:col-span-2">
-          <span className="block font-medium mb-1">Goal</span>
-          <input
-            value={goal}
-            onChange={(e) => setGoal(e.target.value)}
-            className="w-full border rounded px-2 py-1 text-sm bg-background"
-          />
-        </label>
-        <label className="text-sm">
-          <span className="block font-medium mb-1">Pattern (override)</span>
-          <select
-            value={pattern}
-            onChange={(e) => setPattern(e.target.value as CollaborationPattern)}
-            className="w-full border rounded px-2 py-1 text-sm bg-background"
-          >
-            <option value="">— default —</option>
-            {PATTERN_OPTIONS.map((p) => (
-              <option key={p} value={p}>{p}</option>
-            ))}
-          </select>
-        </label>
-        <label className="text-sm">
-          <span className="block font-medium mb-1">Consensus</span>
-          <select
-            value={consensus}
-            onChange={(e) => setConsensus(e.target.value as ConsensusStrategy)}
-            className="w-full border rounded px-2 py-1 text-sm bg-background"
-          >
-            <option value="">— default —</option>
-            {CONSENSUS_OPTIONS.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        </label>
-        <label className="text-sm">
-          <span className="block font-medium mb-1">Max rounds</span>
-          <input
-            type="number"
-            min={1}
-            max={10}
-            value={maxRounds}
-            onChange={(e) => setMaxRounds(Number(e.target.value) || 1)}
-            className="w-full border rounded px-2 py-1 text-sm bg-background"
-          />
-        </label>
-        <div className="md:col-span-3 flex items-end justify-end">
-          <button
-            type="button"
-            onClick={run}
-            disabled={busy}
-            className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
-          >
-            {busy ? "Running…" : "Run scenario"}
-          </button>
-        </div>
-      </section>
-
-      {error && (
-        <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm">
-          {error}
-        </div>
-      )}
-
-      {result && <RunReport result={result} />}
-
-      {history.length > 0 && (
-        <section className="space-y-2">
-          <h2 className="text-lg font-semibold">Recent runs</h2>
-          <ul className="rounded-md border divide-y">
-            {history.map((r) => (
-              <li
-                key={r.run_id}
-                className="px-3 py-2 text-xs flex justify-between"
-              >
-                <span>{SCENARIO_LABEL[r.task.scenario]} — {r.task.goal}</span>
-                <span className="font-mono">{r.status}</span>
-              </li>
-            ))}
-          </ul>
+    <ErrorBoundary>(<main className="mx-auto max-w-7xl p-6 space-y-6">
+        <header>
+          <h1 className="text-3xl font-semibold">Multi-Agent Orchestration</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            CrewAI vendor-in. Run one of the 4 core scenarios and inspect each
+            agent&apos;s output, vote tally, and consensus decision in real time.
+          </p>
+        </header>
+        {/* Scenario picker */}
+        <section className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          {SCENARIOS.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setScenario(s)}
+              className={`text-left p-3 rounded-md border transition ${
+                scenario === s
+                  ? "border-primary bg-primary/5"
+                  : "hover:border-primary/40"
+              }`}
+            >
+              <div className="font-medium">{SCENARIO_LABEL[s]}</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {SCENARIO_DESCRIPTION[s]}
+              </div>
+            </button>
+          ))}
         </section>
-      )}
-    </main>
+        {/* Controls */}
+        <section className="rounded-md border p-4 grid grid-cols-1 md:grid-cols-4 gap-3">
+          <label className="text-sm md:col-span-2">
+            <span className="block font-medium mb-1">Goal</span>
+            <input
+              value={goal}
+              onChange={(e) => setGoal(e.target.value)}
+              className="w-full border rounded px-2 py-1 text-sm bg-background"
+            />
+          </label>
+          <label className="text-sm">
+            <span className="block font-medium mb-1">Pattern (override)</span>
+            <select
+              value={pattern}
+              onChange={(e) => setPattern(e.target.value as CollaborationPattern)}
+              className="w-full border rounded px-2 py-1 text-sm bg-background"
+            >
+              <option value="">— default —</option>
+              {PATTERN_OPTIONS.map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm">
+            <span className="block font-medium mb-1">Consensus</span>
+            <select
+              value={consensus}
+              onChange={(e) => setConsensus(e.target.value as ConsensusStrategy)}
+              className="w-full border rounded px-2 py-1 text-sm bg-background"
+            >
+              <option value="">— default —</option>
+              {CONSENSUS_OPTIONS.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm">
+            <span className="block font-medium mb-1">Max rounds</span>
+            <input
+              type="number"
+              min={1}
+              max={10}
+              value={maxRounds}
+              onChange={(e) => setMaxRounds(Number(e.target.value) || 1)}
+              className="w-full border rounded px-2 py-1 text-sm bg-background"
+            />
+          </label>
+          <div className="md:col-span-3 flex items-end justify-end">
+            <button
+              type="button"
+              onClick={run}
+              disabled={busy}
+              className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
+            >
+              {busy ? "Running…" : "Run scenario"}
+            </button>
+          </div>
+        </section>
+        {error && (
+          <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm">
+            {error}
+          </div>
+        )}
+        {result && <RunReport result={result} />}
+        {history.length > 0 && (
+          <section className="space-y-2">
+            <h2 className="text-lg font-semibold">Recent runs</h2>
+            <ul className="rounded-md border divide-y">
+              {history.map((r) => (
+                <li
+                  key={r.run_id}
+                  className="px-3 py-2 text-xs flex justify-between"
+                >
+                  <span>{SCENARIO_LABEL[r.task.scenario]} — {r.task.goal}</span>
+                  <span className="font-mono">{r.status}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </main>)</ErrorBoundary>
   );
 }
 

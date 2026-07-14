@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v9.1 · 求职者 AI 聊天 (Open WebUI 风格)
@@ -514,328 +515,326 @@ export default function JobseekerChatPage() {
 
   // -------- 渲染 --------
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-background">
-      {/* 左:会话列表 */}
-      <aside className="hidden w-72 shrink-0 border-r bg-muted/20 lg:flex lg:flex-col">
-        <div className="flex items-center justify-between px-4 py-3">
-          <h2 className="text-sm font-semibold">对话</h2>
-          <Button size="icon-sm" variant="ghost" onClick={newSession}>
-            <Plus className="size-4" />
-            <span className="sr-only">新建对话</span>
-          </Button>
-        </div>
-        <div className="px-3 pb-2">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="搜索对话"
-              className="h-8 w-full rounded-md border bg-background pl-7 pr-2 text-xs outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
-            />
-          </div>
-        </div>
-        <Separator />
-        <ScrollArea className="flex-1">
-          <ul className="space-y-0.5 p-2">
-            {filteredSessions.map((s) => {
-              const active = s.id === activeId;
-              return (
-                <li key={s.id} className="group relative">
-                  <button
-                    onClick={() => setActiveId(s.id)}
-                    className={cn(
-                      "flex w-full flex-col items-start gap-0.5 rounded-lg px-3 py-2 text-left text-sm transition-colors",
-                      active
-                        ? "bg-primary/10 text-foreground"
-                        : "hover:bg-muted",
-                    )}
-                  >
-                    <div className="flex w-full items-center gap-1.5">
-                      {s.pinned ? (
-                        <Sparkles className="size-3 text-amber-500" />
-                      ) : (
-                        <MessageDot />
-                      )}
-                      <span className="truncate font-medium">{s.title}</span>
-                      {s.unread ? (
-                        <span className="ml-auto inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground">
-                          {s.unread}
-                        </span>
-                      ) : null}
-                    </div>
-                    <span className="line-clamp-1 text-xs text-muted-foreground">
-                      {s.preview}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">
-                      {s.updatedAt}
-                    </span>
-                  </button>
-                  <div className="absolute right-1 top-1 hidden gap-0.5 group-hover:flex">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        renameSession(s.id);
-                      }}
-                      className="rounded p-1 text-muted-foreground hover:bg-background"
-                      aria-label="重命名"
-                    >
-                      <Pencil className="size-3" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteSession(s.id);
-                      }}
-                      className="rounded p-1 text-muted-foreground hover:bg-background"
-                      aria-label="删除"
-                    >
-                      <Trash2 className="size-3" />
-                    </button>
-                  </div>
-                </li>
-              );
-            })}
-            {filteredSessions.length === 0 && (
-              <li className="px-3 py-6 text-center text-xs text-muted-foreground">
-                没找到匹配的对话
-              </li>
-            )}
-          </ul>
-        </ScrollArea>
-        <div className="border-t p-3 text-[11px] text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <Avatar className="size-6">
-              <AvatarFallback>我</AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="font-medium text-foreground">已登录</p>
-              <p>档案完整度 86%</p>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      {/* 中:消息流 */}
-      <main className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center justify-between border-b px-4">
-          <div className="flex min-w-0 items-center gap-2">
-            <UserAvatar name="AI Copilot" status="online" className="size-7" />
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">
-                {activeSession?.title ?? "新对话"}
-              </p>
-              <p className="text-[11px] text-muted-foreground">
-                {streaming
-                  ? "AI 正在生成回答…"
-                  : "AI Copilot · 基于你的档案 + 近期日记"}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Badge variant="secondary" className="hidden sm:inline-flex">
-              <Sparkles className="mr-1 size-3" />
-              上下文已加载
-            </Badge>
-            <Button size="icon-sm" variant="ghost" aria-label="朗读">
-              <Volume2 className="size-4" />
+    <ErrorBoundary>(<div className="flex h-[calc(100vh-4rem)] bg-background">
+        {/* 左:会话列表 */}
+        <aside className="hidden w-72 shrink-0 border-r bg-muted/20 lg:flex lg:flex-col">
+          <div className="flex items-center justify-between px-4 py-3">
+            <h2 className="text-sm font-semibold">对话</h2>
+            <Button size="icon-sm" variant="ghost" onClick={newSession}>
+              <Plus className="size-4" />
+              <span className="sr-only">新建对话</span>
             </Button>
           </div>
-        </header>
-
-        <div
-          className="relative flex-1 overflow-y-auto"
-          onScroll={(e) => {
-            const el = e.currentTarget;
-            const nearBottom =
-              el.scrollHeight - el.scrollTop - el.clientHeight < 120;
-            setShowJump(!nearBottom);
-          }}
-        >
-          <div className="mx-auto w-full max-w-3xl px-4 py-6">
-            {activeMessages.length === 0 ? (
-              <EmptyChatState onPick={(text) => setDraft(text)} />
-            ) : (
-              <MessageList
-                messages={activeMessages}
-                onLike={() => {}}
-                onDislike={() => {}}
-                onRegenerate={() => {}}
-              />
-            )}
-            <div ref={endRef} />
-          </div>
-
-          {showJump && (
-            <Button
-              size="icon"
-              variant="secondary"
-              className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full shadow-md"
-              onClick={() => {
-                setShowJump(false);
-                endRef.current?.scrollIntoView({ behavior: "smooth" });
-              }}
-            >
-              <ArrowDown className="size-4" />
-            </Button>
-          )}
-        </div>
-
-        {/* 输入区 */}
-        <div className="border-t bg-background/80 px-4 py-3 backdrop-blur">
-          <div className="mx-auto w-full max-w-3xl">
-            {attachments.length > 0 && (
-              <div className="mb-2 flex flex-wrap gap-2">
-                {attachments.map((a) => (
-                  <div
-                    key={a.id}
-                    className="flex items-center gap-2 rounded-md border bg-muted/40 px-2 py-1 text-xs"
-                  >
-                    <FileText className="size-3.5 text-muted-foreground" />
-                    <span className="max-w-[160px] truncate">{a.name}</span>
-                    <span className="text-muted-foreground">
-                      {formatSize(a.size)}
-                    </span>
-                    <button
-                      onClick={() =>
-                        setAttachments((prev) =>
-                          prev.filter((p) => p.id !== a.id),
-                        )
-                      }
-                      aria-label="移除附件"
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      <X className="size-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {speech.listening && (
-              <div className="mb-2 inline-flex items-center gap-2 rounded-md bg-rose-500/10 px-2 py-1 text-xs text-rose-600">
-                <span className="relative flex size-2">
-                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-rose-500 opacity-75" />
-                  <span className="relative inline-flex size-2 rounded-full bg-rose-500" />
-                </span>
-                正在听写 · 松开结束
-              </div>
-            )}
-
-            <div className="flex items-end gap-2 rounded-2xl border bg-card p-2 shadow-sm">
+          <div className="px-3 pb-2">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" />
               <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                className="hidden"
-                onChange={(e) => onPickFiles(e.target.files)}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="搜索对话"
+                className="h-8 w-full rounded-md border bg-background pl-7 pr-2 text-xs outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
               />
+            </div>
+          </div>
+          <Separator />
+          <ScrollArea className="flex-1">
+            <ul className="space-y-0.5 p-2">
+              {filteredSessions.map((s) => {
+                const active = s.id === activeId;
+                return (
+                  <li key={s.id} className="group relative">
+                    <button
+                      onClick={() => setActiveId(s.id)}
+                      className={cn(
+                        "flex w-full flex-col items-start gap-0.5 rounded-lg px-3 py-2 text-left text-sm transition-colors",
+                        active
+                          ? "bg-primary/10 text-foreground"
+                          : "hover:bg-muted",
+                      )}
+                    >
+                      <div className="flex w-full items-center gap-1.5">
+                        {s.pinned ? (
+                          <Sparkles className="size-3 text-amber-500" />
+                        ) : (
+                          <MessageDot />
+                        )}
+                        <span className="truncate font-medium">{s.title}</span>
+                        {s.unread ? (
+                          <span className="ml-auto inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground">
+                            {s.unread}
+                          </span>
+                        ) : null}
+                      </div>
+                      <span className="line-clamp-1 text-xs text-muted-foreground">
+                        {s.preview}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {s.updatedAt}
+                      </span>
+                    </button>
+                    <div className="absolute right-1 top-1 hidden gap-0.5 group-hover:flex">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          renameSession(s.id);
+                        }}
+                        className="rounded p-1 text-muted-foreground hover:bg-background"
+                        aria-label="重命名"
+                      >
+                        <Pencil className="size-3" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteSession(s.id);
+                        }}
+                        className="rounded p-1 text-muted-foreground hover:bg-background"
+                        aria-label="删除"
+                      >
+                        <Trash2 className="size-3" />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+              {filteredSessions.length === 0 && (
+                <li className="px-3 py-6 text-center text-xs text-muted-foreground">
+                  没找到匹配的对话
+                </li>
+              )}
+            </ul>
+          </ScrollArea>
+          <div className="border-t p-3 text-[11px] text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Avatar className="size-6">
+                <AvatarFallback>我</AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-medium text-foreground">已登录</p>
+                <p>档案完整度 86%</p>
+              </div>
+            </div>
+          </div>
+        </aside>
+        {/* 中:消息流 */}
+        <main className="flex min-w-0 flex-1 flex-col">
+          <header className="flex h-14 shrink-0 items-center justify-between border-b px-4">
+            <div className="flex min-w-0 items-center gap-2">
+              <UserAvatar name="AI Copilot" status="online" className="size-7" />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold">
+                  {activeSession?.title ?? "新对话"}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {streaming
+                    ? "AI 正在生成回答…"
+                    : "AI Copilot · 基于你的档案 + 近期日记"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Badge variant="secondary" className="hidden sm:inline-flex">
+                <Sparkles className="mr-1 size-3" />
+                上下文已加载
+              </Badge>
+              <Button size="icon-sm" variant="ghost" aria-label="朗读">
+                <Volume2 className="size-4" />
+              </Button>
+            </div>
+          </header>
+
+          <div
+            className="relative flex-1 overflow-y-auto"
+            onScroll={(e) => {
+              const el = e.currentTarget;
+              const nearBottom =
+                el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+              setShowJump(!nearBottom);
+            }}
+          >
+            <div className="mx-auto w-full max-w-3xl px-4 py-6">
+              {activeMessages.length === 0 ? (
+                <EmptyChatState onPick={(text) => setDraft(text)} />
+              ) : (
+                <MessageList
+                  messages={activeMessages}
+                  onLike={() => {}}
+                  onDislike={() => {}}
+                  onRegenerate={() => {}}
+                />
+              )}
+              <div ref={endRef} />
+            </div>
+
+            {showJump && (
               <Button
                 size="icon"
-                variant="ghost"
-                onClick={() => fileInputRef.current?.click()}
-                aria-label="附件"
-              >
-                <Paperclip className="size-4" />
-              </Button>
-              <Textarea
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    send();
-                  }
+                variant="secondary"
+                className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full shadow-md"
+                onClick={() => {
+                  setShowJump(false);
+                  endRef.current?.scrollIntoView({ behavior: "smooth" });
                 }}
-                placeholder="问问 Copilot …(Shift + Enter 换行)"
-                rows={1}
-                className="min-h-8 flex-1 resize-none border-0 bg-transparent px-1 py-1.5 text-sm shadow-none focus-visible:ring-0"
-              />
-              {speech.supported && (
-                <Button
-                  size="icon"
-                  variant={speech.listening ? "default" : "ghost"}
-                  onClick={() =>
-                    speech.listening ? speech.stop() : speech.start()
-                  }
-                  aria-label={speech.listening ? "停止听写" : "开始听写"}
-                >
-                  {speech.listening ? (
-                    <MicOff className="size-4" />
-                  ) : (
-                    <Mic className="size-4" />
-                  )}
-                </Button>
-              )}
-              {streaming ? (
-                <Button
-                  size="icon"
-                  variant="destructive"
-                  onClick={stopStreaming}
-                  aria-label="停止生成"
-                >
-                  <Square className="size-4" />
-                </Button>
-              ) : (
-                <Button
-                  size="icon"
-                  onClick={send}
-                  disabled={!draft.trim() && attachments.length === 0}
-                  aria-label="发送"
-                >
-                  <Send className="size-4" />
-                </Button>
-              )}
-            </div>
-            <p className="mt-1.5 text-center text-[11px] text-muted-foreground">
-              AI 回答可能不准确,请核实重要信息。快捷键 ⌘/Ctrl + K
-              唤起更多。
-            </p>
+              >
+                <ArrowDown className="size-4" />
+              </Button>
+            )}
           </div>
-        </div>
-      </main>
 
-      {/* 右:上下文 / 提示 */}
-      <aside className="hidden w-80 shrink-0 border-l bg-muted/20 xl:flex xl:flex-col">
-        <div className="border-b p-4">
-          <Card>
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-sm">当前上下文</CardTitle>
-              <CardDescription>
-                Copilot 已自动加载以下信息,你可以手动管理。
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2 text-xs">
-              <ContextRow label="基础档案" value="已加载" tone="ok" />
-              <ContextRow label="最近 5 份推荐岗位" value="已加载" tone="ok" />
-              <ContextRow label="本周日记 / 情绪" value="已加载" tone="ok" />
-              <ContextRow label="Tidewave 面试记录" value="已加载" tone="ok" />
-              <ContextRow label="顾问 Lily 最近消息" value="未启用" tone="off" />
-            </CardContent>
-          </Card>
-        </div>
-        <ScrollArea className="flex-1 px-4 py-4">
-          <h3 className="mb-2 text-xs font-semibold text-muted-foreground">
-            推荐提示词
-          </h3>
-          <ul className="space-y-2">
-            {SUGGESTIONS.map((s) => (
-              <li key={s.title}>
-                <button
-                  onClick={() => setDraft(s.prompt)}
-                  className="w-full rounded-lg border bg-card p-3 text-left text-xs transition-colors hover:bg-muted/60"
+          {/* 输入区 */}
+          <div className="border-t bg-background/80 px-4 py-3 backdrop-blur">
+            <div className="mx-auto w-full max-w-3xl">
+              {attachments.length > 0 && (
+                <div className="mb-2 flex flex-wrap gap-2">
+                  {attachments.map((a) => (
+                    <div
+                      key={a.id}
+                      className="flex items-center gap-2 rounded-md border bg-muted/40 px-2 py-1 text-xs"
+                    >
+                      <FileText className="size-3.5 text-muted-foreground" />
+                      <span className="max-w-[160px] truncate">{a.name}</span>
+                      <span className="text-muted-foreground">
+                        {formatSize(a.size)}
+                      </span>
+                      <button
+                        onClick={() =>
+                          setAttachments((prev) =>
+                            prev.filter((p) => p.id !== a.id),
+                          )
+                        }
+                        aria-label="移除附件"
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {speech.listening && (
+                <div className="mb-2 inline-flex items-center gap-2 rounded-md bg-rose-500/10 px-2 py-1 text-xs text-rose-600">
+                  <span className="relative flex size-2">
+                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-rose-500 opacity-75" />
+                    <span className="relative inline-flex size-2 rounded-full bg-rose-500" />
+                  </span>
+                  正在听写 · 松开结束
+                </div>
+              )}
+
+              <div className="flex items-end gap-2 rounded-2xl border bg-card p-2 shadow-sm">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => onPickFiles(e.target.files)}
+                />
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => fileInputRef.current?.click()}
+                  aria-label="附件"
                 >
-                  <p className="font-medium text-foreground">{s.title}</p>
-                  <p className="mt-0.5 line-clamp-2 text-muted-foreground">
-                    {s.prompt}
-                  </p>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </ScrollArea>
-      </aside>
-    </div>
+                  <Paperclip className="size-4" />
+                </Button>
+                <Textarea
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      send();
+                    }
+                  }}
+                  placeholder="问问 Copilot …(Shift + Enter 换行)"
+                  rows={1}
+                  className="min-h-8 flex-1 resize-none border-0 bg-transparent px-1 py-1.5 text-sm shadow-none focus-visible:ring-0"
+                />
+                {speech.supported && (
+                  <Button
+                    size="icon"
+                    variant={speech.listening ? "default" : "ghost"}
+                    onClick={() =>
+                      speech.listening ? speech.stop() : speech.start()
+                    }
+                    aria-label={speech.listening ? "停止听写" : "开始听写"}
+                  >
+                    {speech.listening ? (
+                      <MicOff className="size-4" />
+                    ) : (
+                      <Mic className="size-4" />
+                    )}
+                  </Button>
+                )}
+                {streaming ? (
+                  <Button
+                    size="icon"
+                    variant="destructive"
+                    onClick={stopStreaming}
+                    aria-label="停止生成"
+                  >
+                    <Square className="size-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    size="icon"
+                    onClick={send}
+                    disabled={!draft.trim() && attachments.length === 0}
+                    aria-label="发送"
+                  >
+                    <Send className="size-4" />
+                  </Button>
+                )}
+              </div>
+              <p className="mt-1.5 text-center text-[11px] text-muted-foreground">
+                AI 回答可能不准确,请核实重要信息。快捷键 ⌘/Ctrl + K
+                唤起更多。
+              </p>
+            </div>
+          </div>
+        </main>
+        {/* 右:上下文 / 提示 */}
+        <aside className="hidden w-80 shrink-0 border-l bg-muted/20 xl:flex xl:flex-col">
+          <div className="border-b p-4">
+            <Card>
+              <CardHeader className="space-y-1">
+                <CardTitle className="text-sm">当前上下文</CardTitle>
+                <CardDescription>
+                  Copilot 已自动加载以下信息,你可以手动管理。
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2 text-xs">
+                <ContextRow label="基础档案" value="已加载" tone="ok" />
+                <ContextRow label="最近 5 份推荐岗位" value="已加载" tone="ok" />
+                <ContextRow label="本周日记 / 情绪" value="已加载" tone="ok" />
+                <ContextRow label="Tidewave 面试记录" value="已加载" tone="ok" />
+                <ContextRow label="顾问 Lily 最近消息" value="未启用" tone="off" />
+              </CardContent>
+            </Card>
+          </div>
+          <ScrollArea className="flex-1 px-4 py-4">
+            <h3 className="mb-2 text-xs font-semibold text-muted-foreground">
+              推荐提示词
+            </h3>
+            <ul className="space-y-2">
+              {SUGGESTIONS.map((s) => (
+                <li key={s.title}>
+                  <button
+                    onClick={() => setDraft(s.prompt)}
+                    className="w-full rounded-lg border bg-card p-3 text-left text-xs transition-colors hover:bg-muted/60"
+                  >
+                    <p className="font-medium text-foreground">{s.title}</p>
+                    <p className="mt-0.5 line-clamp-2 text-muted-foreground">
+                      {s.prompt}
+                    </p>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </ScrollArea>
+        </aside>
+      </div>)</ErrorBoundary>
   );
 }
 

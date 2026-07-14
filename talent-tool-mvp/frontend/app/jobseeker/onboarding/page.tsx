@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
@@ -244,200 +245,197 @@ export default function OnboardingPage() {
     setDraft((d) => ({ ...d, [key]: v }));
 
   return (
-    <div className="min-h-screen bg-slate-50/60">
-      {/* Top bar */}
-      <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-6">
-          <div>
-            <h1 className="text-base font-semibold">建档向导</h1>
-            <p className="text-xs text-muted-foreground">
-              完成 4 步,即可开始智能匹配
-            </p>
+    <ErrorBoundary>(<div className="min-h-screen bg-slate-50/60">
+        {/* Top bar */}
+        <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
+          <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-6">
+            <div>
+              <h1 className="text-base font-semibold">建档向导</h1>
+              <p className="text-xs text-muted-foreground">
+                完成 4 步,即可开始智能匹配
+              </p>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => router.push("/jobseeker")}>
+              跳过
+            </Button>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => router.push("/jobseeker")}>
-            跳过
-          </Button>
-        </div>
-        <Progress value={progressPct} className="h-1 rounded-none" />
-      </header>
-
-      {/* Stepper */}
-      <nav
-        aria-label="建档步骤"
-        className="mx-auto max-w-4xl px-4 pt-6 sm:px-6"
-      >
-        <ol className="flex items-center justify-between gap-2 overflow-x-auto">
-          {STEPS.map((s, i) => {
-            const isCurrent = i === stepIdx;
-            const isDone = i < stepIdx;
-            const Icon = s.icon;
-            return (
-              <li key={s.key} className="flex flex-1 items-center">
-                <div className="flex flex-col items-center text-center">
-                  <div
-                    className={cn(
-                      "grid size-9 place-items-center rounded-full border-2 transition-colors",
-                      isDone && "border-primary bg-primary text-primary-foreground",
-                      isCurrent && "border-primary bg-primary/10 text-primary",
-                      !isDone && !isCurrent && "border-muted-foreground/30 text-muted-foreground",
-                    )}
-                  >
-                    {isDone ? <Check className="size-4" /> : <Icon className="size-4" />}
+          <Progress value={progressPct} className="h-1 rounded-none" />
+        </header>
+        {/* Stepper */}
+        <nav
+          aria-label="建档步骤"
+          className="mx-auto max-w-4xl px-4 pt-6 sm:px-6"
+        >
+          <ol className="flex items-center justify-between gap-2 overflow-x-auto">
+            {STEPS.map((s, i) => {
+              const isCurrent = i === stepIdx;
+              const isDone = i < stepIdx;
+              const Icon = s.icon;
+              return (
+                <li key={s.key} className="flex flex-1 items-center">
+                  <div className="flex flex-col items-center text-center">
+                    <div
+                      className={cn(
+                        "grid size-9 place-items-center rounded-full border-2 transition-colors",
+                        isDone && "border-primary bg-primary text-primary-foreground",
+                        isCurrent && "border-primary bg-primary/10 text-primary",
+                        !isDone && !isCurrent && "border-muted-foreground/30 text-muted-foreground",
+                      )}
+                    >
+                      {isDone ? <Check className="size-4" /> : <Icon className="size-4" />}
+                    </div>
+                    <span
+                      className={cn(
+                        "mt-1.5 text-[11px] font-medium sm:text-xs",
+                        isCurrent ? "text-foreground" : "text-muted-foreground",
+                      )}
+                    >
+                      {s.title}
+                    </span>
                   </div>
-                  <span
-                    className={cn(
-                      "mt-1.5 text-[11px] font-medium sm:text-xs",
-                      isCurrent ? "text-foreground" : "text-muted-foreground",
-                    )}
-                  >
-                    {s.title}
-                  </span>
-                </div>
-                {i < STEPS.length - 1 && (
-                  <div
-                    className={cn(
-                      "mx-2 h-0.5 flex-1 rounded-full transition-colors",
-                      i < stepIdx ? "bg-primary" : "bg-muted",
-                    )}
-                  />
-                )}
-              </li>
-            );
-          })}
-        </ol>
-      </nav>
-
-      {/* Step content */}
-      <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
-        <div className="mb-5">
-          <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
-            {step.title}
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">{step.description}</p>
-        </div>
-
-        <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
-          {/* Left: step body */}
-          <div className="space-y-5">
-            {step.key === "upload" && (
-              <ResumeUpload
-                onOCRComplete={handleOCRComplete}
-                onComplete={() => setUploaded(true)}
-                folder="resumes"
-              />
-            )}
-
-            {step.key === "confirm" && (
-              <ConfirmStep
-                draft={draft}
-                update={update}
-                loading={loadingProfile}
-              />
-            )}
-
-            {step.key === "supplement" && (
-              <SupplementStep
-                draft={draft}
-                update={update}
-                fields={fields}
-              />
-            )}
-
-            {step.key === "done" && <DoneStep draft={draft} />}
+                  {i < STEPS.length - 1 && (
+                    <div
+                      className={cn(
+                        "mx-2 h-0.5 flex-1 rounded-full transition-colors",
+                        i < stepIdx ? "bg-primary" : "bg-muted",
+                      )}
+                    />
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
+        {/* Step content */}
+        <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
+          <div className="mb-5">
+            <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
+              {step.title}
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">{step.description}</p>
           </div>
 
-          {/* Right: completeness sidebar (hidden on small screens for upload step) */}
-          <aside
-            className={cn(
-              "space-y-4",
-              step.key === "upload" ? "lg:block" : "lg:block",
-            )}
-          >
-            <ProfileCompleteness
-              fields={fields}
-              title="档案完整度"
-              showFieldList={step.key !== "upload"}
-            />
-            {step.key === "supplement" && missingCount > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">补全提示</CardTitle>
-                  <CardDescription>
-                    以下字段越完整,推荐越精准
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-1.5 text-xs text-muted-foreground">
-                    {fields
-                      .filter((f) => f.status !== "filled")
-                      .slice(0, 5)
-                      .map((f) => (
-                        <li key={f.key} className="flex items-center gap-2">
-                          <span
-                            className={cn(
-                              "size-1.5 rounded-full",
-                              f.status === "weak" ? "bg-amber-500" : "bg-rose-500",
-                            )}
-                          />
-                          <span>{f.label}</span>
-                          <Badge
-                            variant="outline"
-                            className="ml-auto h-4 px-1 text-[9px]"
-                          >
-                            {f.status === "weak" ? "建议" : "缺失"}
-                          </Badge>
-                        </li>
-                      ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            )}
-          </aside>
-        </div>
-      </main>
+          <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
+            {/* Left: step body */}
+            <div className="space-y-5">
+              {step.key === "upload" && (
+                <ResumeUpload
+                  onOCRComplete={handleOCRComplete}
+                  onComplete={() => setUploaded(true)}
+                  folder="resumes"
+                />
+              )}
 
-      {/* Bottom nav */}
-      <footer className="sticky bottom-0 border-t bg-background/80 backdrop-blur">
-        <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={goBack}
-            disabled={isFirst}
-          >
-            <ArrowLeft className="mr-1 size-4" />
-            上一步
-          </Button>
+              {step.key === "confirm" && (
+                <ConfirmStep
+                  draft={draft}
+                  update={update}
+                  loading={loadingProfile}
+                />
+              )}
 
-          <p className="hidden text-xs text-muted-foreground sm:block">
-            第 {stepIdx + 1} / {STEPS.length} 步
-          </p>
+              {step.key === "supplement" && (
+                <SupplementStep
+                  draft={draft}
+                  update={update}
+                  fields={fields}
+                />
+              )}
 
-          {isLast ? (
-            <Button
-              size="sm"
-              onClick={() => router.push("/match")}
-              className="min-w-28"
+              {step.key === "done" && <DoneStep draft={draft} />}
+            </div>
+
+            {/* Right: completeness sidebar (hidden on small screens for upload step) */}
+            <aside
+              className={cn(
+                "space-y-4",
+                step.key === "upload" ? "lg:block" : "lg:block",
+              )}
             >
-              开始匹配
-              <ArrowRight className="ml-1 size-4" />
-            </Button>
-          ) : (
+              <ProfileCompleteness
+                fields={fields}
+                title="档案完整度"
+                showFieldList={step.key !== "upload"}
+              />
+              {step.key === "supplement" && missingCount > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">补全提示</CardTitle>
+                    <CardDescription>
+                      以下字段越完整,推荐越精准
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-1.5 text-xs text-muted-foreground">
+                      {fields
+                        .filter((f) => f.status !== "filled")
+                        .slice(0, 5)
+                        .map((f) => (
+                          <li key={f.key} className="flex items-center gap-2">
+                            <span
+                              className={cn(
+                                "size-1.5 rounded-full",
+                                f.status === "weak" ? "bg-amber-500" : "bg-rose-500",
+                              )}
+                            />
+                            <span>{f.label}</span>
+                            <Badge
+                              variant="outline"
+                              className="ml-auto h-4 px-1 text-[9px]"
+                            >
+                              {f.status === "weak" ? "建议" : "缺失"}
+                            </Badge>
+                          </li>
+                        ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              )}
+            </aside>
+          </div>
+        </main>
+        {/* Bottom nav */}
+        <footer className="sticky bottom-0 border-t bg-background/80 backdrop-blur">
+          <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
             <Button
+              variant="ghost"
               size="sm"
-              onClick={
-                step.key === "supplement" ? handleFinish : goNext
-              }
-              disabled={!canGoNext}
-              className="min-w-28"
+              onClick={goBack}
+              disabled={isFirst}
             >
-              下一步
-              <ArrowRight className="ml-1 size-4" />
+              <ArrowLeft className="mr-1 size-4" />
+              上一步
             </Button>
-          )}
-        </div>
-      </footer>
-    </div>
+
+            <p className="hidden text-xs text-muted-foreground sm:block">
+              第 {stepIdx + 1} / {STEPS.length} 步
+            </p>
+
+            {isLast ? (
+              <Button
+                size="sm"
+                onClick={() => router.push("/match")}
+                className="min-w-28"
+              >
+                开始匹配
+                <ArrowRight className="ml-1 size-4" />
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                onClick={
+                  step.key === "supplement" ? handleFinish : goNext
+                }
+                disabled={!canGoNext}
+                className="min-w-28"
+              >
+                下一步
+                <ArrowRight className="ml-1 size-4" />
+              </Button>
+            )}
+          </div>
+        </footer>
+      </div>)</ErrorBoundary>
   );
 }
 
@@ -625,7 +623,6 @@ function SupplementStep({
           </CardDescription>
         </CardHeader>
       </Card>
-
       <div className="grid gap-3">
         {renderers.map((r) => {
           const meta = fields.find((f) => f.key === r.key);

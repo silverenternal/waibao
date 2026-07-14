@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * Policy detail page (T601).
@@ -69,52 +70,51 @@ export default function PolicyDetailPage() {
   }, [id]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
-      <header className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center gap-3 px-6 py-4">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => router.push("/employer/policy")}
-            aria-label="返回制度库"
-          >
-            <ArrowLeft className="size-4" />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
-              <FileText className="size-5 text-blue-500" />
-              制度详情
-            </h1>
-            <p className="truncate text-xs text-muted-foreground">
-              {doc?.title ?? "加载中…"}
-            </p>
+    <ErrorBoundary>(<div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
+        <header className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur">
+          <div className="mx-auto flex max-w-5xl items-center gap-3 px-6 py-4">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => router.push("/employer/policy")}
+              aria-label="返回制度库"
+            >
+              <ArrowLeft className="size-4" />
+            </Button>
+            <div className="min-w-0 flex-1">
+              <h1 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+                <FileText className="size-5 text-blue-500" />
+                制度详情
+              </h1>
+              <p className="truncate text-xs text-muted-foreground">
+                {doc?.title ?? "加载中…"}
+              </p>
+            </div>
           </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-5xl space-y-4 px-6 py-6">
-        <PolicyDetail
-          doc={doc}
-          clauses={clauses}
-          loading={loading}
-          error={error}
-          onBack={() => router.push("/employer/policy")}
-        />
-
-        <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <header className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
-            <Search className="size-4 text-blue-500" />
-            跳转到其他制度
-          </header>
-          <PolicySearch
-            corpus={corpus}
-            mode="local"
-            placeholder="从制度库中搜索其他条目…"
-            onSelect={(item) => router.push(`/employer/policy/${item.id}`)}
+        </header>
+        <main className="mx-auto max-w-5xl space-y-4 px-6 py-6">
+          <PolicyDetail
+            doc={doc}
+            clauses={clauses}
+            loading={loading}
+            error={error}
+            onBack={() => router.push("/employer/policy")}
           />
-        </div>
-      </main>
-    </div>
+
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <header className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+              <Search className="size-4 text-blue-500" />
+              跳转到其他制度
+            </header>
+            <PolicySearch
+              corpus={corpus}
+              mode="local"
+              placeholder="从制度库中搜索其他条目…"
+              onSelect={(item) => router.push(`/employer/policy/${item.id}`)}
+            />
+          </div>
+        </main>
+      </div>)</ErrorBoundary>
   );
 }
 

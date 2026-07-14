@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * /interviews/[id] (T1305) — 单场视频面试详情.
@@ -85,34 +86,32 @@ export default function InterviewDetailPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4 p-6">
-      <div className="flex items-center justify-between">
-        <Link
-          href="/interviews"
-          className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
-        >
-          <ArrowLeft className="h-4 w-4" /> All interviews
-        </Link>
-        {interview.status !== "canceled" && interview.status !== "ended" && (
-          <Button variant="destructive" onClick={onCancel} disabled={canceling}>
-            {canceling ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Trash2 className="mr-2 h-4 w-4" />
-            )}
-            Cancel
-          </Button>
-        )}
-      </div>
-
-      <VideoMeetingCard interview={interview} />
-
-      <CalendarSync
-        employerId={interview.id /* fallback if employer not loaded */}
-        videoInterviewId={interview.id}
-        syncedTo={[]}
-        accessTokens={{}}
-      />
-    </div>
+    <ErrorBoundary>(<div className="mx-auto max-w-3xl space-y-4 p-6">
+        <div className="flex items-center justify-between">
+          <Link
+            href="/interviews"
+            className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft className="h-4 w-4" /> All interviews
+          </Link>
+          {interview.status !== "canceled" && interview.status !== "ended" && (
+            <Button variant="destructive" onClick={onCancel} disabled={canceling}>
+              {canceling ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              Cancel
+            </Button>
+          )}
+        </div>
+        <VideoMeetingCard interview={interview} />
+        <CalendarSync
+          employerId={interview.id /* fallback if employer not loaded */}
+          videoInterviewId={interview.id}
+          syncedTo={[]}
+          accessTokens={{}}
+        />
+      </div>)</ErrorBoundary>
   );
 }

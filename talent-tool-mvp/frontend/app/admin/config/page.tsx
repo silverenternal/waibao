@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * Admin / Config Center (v6.0 T2102)
@@ -105,92 +106,90 @@ export default function AdminConfigCenterPage() {
   const selectedRecord = items.find((i) => `${i.scope}/${i.key}` === selected);
 
   return (
-    <div className="container mx-auto p-6">
-      <header className="mb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Config Center</h1>
-          <p className="text-sm text-slate-500">
-            Live, version-controlled runtime configuration.{" "}
-            {connected ? (
-              <span className="text-emerald-500">● SSE live</span>
+    <ErrorBoundary>(<div className="container mx-auto p-6">
+        <header className="mb-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">Config Center</h1>
+            <p className="text-sm text-slate-500">
+              Live, version-controlled runtime configuration.{" "}
+              {connected ? (
+                <span className="text-emerald-500">● SSE live</span>
+              ) : (
+                <span className="text-slate-400">○ SSE offline</span>
+              )}
+            </p>
+          </div>
+          <div>
+            <select
+              value={scopeFilter}
+              onChange={(e) => setScopeFilter(e.target.value)}
+              className="rounded border px-2 py-1 text-sm"
+            >
+              <option value="">All scopes</option>
+              {SCOPES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+        </header>
+        {error && (
+          <div className="mb-4 rounded border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            {error}
+          </div>
+        )}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[280px_1fr]">
+          <aside className="rounded border p-3">
+            {loading ? (
+              <p className="text-sm text-slate-400">Loading…</p>
             ) : (
-              <span className="text-slate-400">○ SSE offline</span>
+              <ul className="space-y-2 text-sm">
+                {SCOPES.map((scope) => {
+                  const rows = grouped[scope] ?? [];
+                  if (rows.length === 0) return null;
+                  return (
+                    <li key={scope}>
+                      <p className="font-mono text-xs uppercase text-slate-500">
+                        {scope}
+                      </p>
+                      <ul className="mt-1 space-y-1">
+                        {rows.map((r) => (
+                          <li key={`${r.scope}/${r.key}`}>
+                            <button
+                              type="button"
+                              onClick={() => setSelected(`${r.scope}/${r.key}`)}
+                              className={
+                                "w-full rounded px-2 py-1 text-left hover:bg-slate-100 " +
+                                (selected === `${r.scope}/${r.key}` ? "bg-slate-200" : "")
+                              }
+                            >
+                              {r.key}
+                              <span className="ml-1 text-xs text-slate-400">
+                                v{r.version}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </li>
+                  );
+                })}
+              </ul>
             )}
-          </p>
-        </div>
-        <div>
-          <select
-            value={scopeFilter}
-            onChange={(e) => setScopeFilter(e.target.value)}
-            className="rounded border px-2 py-1 text-sm"
-          >
-            <option value="">All scopes</option>
-            {SCOPES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </div>
-      </header>
+          </aside>
 
-      {error && (
-        <div className="mb-4 rounded border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-          {error}
+          <main>
+            {selectedRecord ? (
+              <ConfigEditor record={selectedRecord} onSaved={load} />
+            ) : (
+              <div className="rounded border p-6 text-sm text-slate-400">
+                Select a key on the left to edit.
+              </div>
+            )}
+          </main>
         </div>
-      )}
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-[280px_1fr]">
-        <aside className="rounded border p-3">
-          {loading ? (
-            <p className="text-sm text-slate-400">Loading…</p>
-          ) : (
-            <ul className="space-y-2 text-sm">
-              {SCOPES.map((scope) => {
-                const rows = grouped[scope] ?? [];
-                if (rows.length === 0) return null;
-                return (
-                  <li key={scope}>
-                    <p className="font-mono text-xs uppercase text-slate-500">
-                      {scope}
-                    </p>
-                    <ul className="mt-1 space-y-1">
-                      {rows.map((r) => (
-                        <li key={`${r.scope}/${r.key}`}>
-                          <button
-                            type="button"
-                            onClick={() => setSelected(`${r.scope}/${r.key}`)}
-                            className={
-                              "w-full rounded px-2 py-1 text-left hover:bg-slate-100 " +
-                              (selected === `${r.scope}/${r.key}` ? "bg-slate-200" : "")
-                            }
-                          >
-                            {r.key}
-                            <span className="ml-1 text-xs text-slate-400">
-                              v{r.version}
-                            </span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </aside>
-
-        <main>
-          {selectedRecord ? (
-            <ConfigEditor record={selectedRecord} onSaved={load} />
-          ) : (
-            <div className="rounded border p-6 text-sm text-slate-400">
-              Select a key on the left to edit.
-            </div>
-          )}
-        </main>
-      </div>
-    </div>
+      </div>)</ErrorBoundary>
   );
 }
 

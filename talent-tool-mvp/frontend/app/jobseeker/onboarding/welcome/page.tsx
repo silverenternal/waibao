@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v9.1 — 求职者 4 步 onboarding 向导.
@@ -267,157 +268,154 @@ export default function OnboardingWelcomePage() {
     setState((p) => ({ ...p, [key]: v }));
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-indigo-50/40 dark:from-slate-950 dark:via-slate-950 dark:to-indigo-950/30">
-      {/* 顶部 */}
-      <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-2">
-            <span className="grid size-7 place-items-center rounded-md bg-primary/10 text-primary">
-              <Sparkles className="size-3.5" aria-hidden="true" />
-            </span>
-            <div>
-              <h1 className="text-sm font-semibold sm:text-base">欢迎使用 waibao</h1>
-              <p className="text-[11px] text-muted-foreground">
-                4 步开启智能求职
-              </p>
-            </div>
-          </div>
-          <Button variant="ghost" size="sm" onClick={() => router.push("/jobseeker")}>
-            稍后再说
-          </Button>
-        </div>
-        <Progress
-          value={progressPct}
-          className="h-1 rounded-none"
-          aria-label={`进度 ${progressPct}%`}
-        />
-      </header>
-
-      {/* 步骤指示 */}
-      <nav aria-label="Onboarding 步骤" className="mx-auto max-w-4xl px-4 pt-6 sm:px-6">
-        <ol className="flex items-center justify-between gap-2">
-          {STEPS.map((s, i) => {
-            const isCurrent = i === stepIdx;
-            const isDone = i < stepIdx;
-            const Icon = s.icon;
-            return (
-              <li key={s.key} className="flex flex-1 items-center">
-                <div className="flex flex-col items-center text-center">
-                  <div
-                    className={cn(
-                      "grid size-9 place-items-center rounded-full border-2 transition-colors sm:size-10",
-                      isDone && "border-primary bg-primary text-primary-foreground",
-                      isCurrent && "border-primary bg-primary/10 text-primary",
-                      !isDone &&
-                        !isCurrent &&
-                        "border-muted-foreground/30 text-muted-foreground",
-                    )}
-                    aria-current={isCurrent ? "step" : undefined}
-                  >
-                    {isDone ? (
-                      <Check className="size-4" aria-hidden="true" />
-                    ) : (
-                      <Icon className="size-4" aria-hidden="true" />
-                    )}
-                  </div>
-                  <span
-                    className={cn(
-                      "mt-1.5 text-[10px] font-medium sm:text-xs",
-                      isCurrent ? "text-foreground" : "text-muted-foreground",
-                    )}
-                  >
-                    {s.short}
-                  </span>
-                </div>
-                {i < STEPS.length - 1 && (
-                  <div
-                    className={cn(
-                      "mx-2 h-0.5 flex-1 rounded-full transition-colors",
-                      i < stepIdx ? "bg-primary" : "bg-muted",
-                    )}
-                  />
-                )}
-              </li>
-            );
-          })}
-        </ol>
-      </nav>
-
-      {/* 主内容 */}
-      <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-10">
-        <div className="mb-5 text-center sm:mb-6">
-          <Badge variant="outline" className="text-[10px]">
-            第 {stepIdx + 1} / {STEPS.length} 步
-          </Badge>
-          <h2 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
-            {step.title}
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-            {step.description}
-          </p>
-        </div>
-
-        <div className="mx-auto max-w-2xl">
-          {step.key === "welcome" && (
-            <WelcomeStep
-              goal={state.goal}
-              onChange={(g) => update("goal", g)}
-            />
-          )}
-          {step.key === "profile" && (
-            <ProfileStep state={state} update={update} />
-          )}
-          {step.key === "preferences" && (
-            <PreferencesStep state={state} update={update} />
-          )}
-          {step.key === "done" && <DoneStep state={state} />}
-        </div>
-      </main>
-
-      {/* 底部导航 */}
-      <footer className="sticky bottom-0 border-t bg-background/80 backdrop-blur">
-        <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={goBack}
-            disabled={stepIdx === 0}
-          >
-            <ArrowLeft className="mr-1 size-4" aria-hidden="true" />
-            上一步
-          </Button>
-
-          {step.key !== "done" ? (
+    <ErrorBoundary>(<div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-indigo-50/40 dark:from-slate-950 dark:via-slate-950 dark:to-indigo-950/30">
+        {/* 顶部 */}
+        <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
+          <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-6">
             <div className="flex items-center gap-2">
-              {step.key !== "welcome" && (
-                <Button variant="ghost" size="sm" onClick={skip}>
-                  <SkipForward className="mr-1 size-4" aria-hidden="true" />
-                  跳过
+              <span className="grid size-7 place-items-center rounded-md bg-primary/10 text-primary">
+                <Sparkles className="size-3.5" aria-hidden="true" />
+              </span>
+              <div>
+                <h1 className="text-sm font-semibold sm:text-base">欢迎使用 waibao</h1>
+                <p className="text-[11px] text-muted-foreground">
+                  4 步开启智能求职
+                </p>
+              </div>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => router.push("/jobseeker")}>
+              稍后再说
+            </Button>
+          </div>
+          <Progress
+            value={progressPct}
+            className="h-1 rounded-none"
+            aria-label={`进度 ${progressPct}%`}
+          />
+        </header>
+        {/* 步骤指示 */}
+        <nav aria-label="Onboarding 步骤" className="mx-auto max-w-4xl px-4 pt-6 sm:px-6">
+          <ol className="flex items-center justify-between gap-2">
+            {STEPS.map((s, i) => {
+              const isCurrent = i === stepIdx;
+              const isDone = i < stepIdx;
+              const Icon = s.icon;
+              return (
+                <li key={s.key} className="flex flex-1 items-center">
+                  <div className="flex flex-col items-center text-center">
+                    <div
+                      className={cn(
+                        "grid size-9 place-items-center rounded-full border-2 transition-colors sm:size-10",
+                        isDone && "border-primary bg-primary text-primary-foreground",
+                        isCurrent && "border-primary bg-primary/10 text-primary",
+                        !isDone &&
+                          !isCurrent &&
+                          "border-muted-foreground/30 text-muted-foreground",
+                      )}
+                      aria-current={isCurrent ? "step" : undefined}
+                    >
+                      {isDone ? (
+                        <Check className="size-4" aria-hidden="true" />
+                      ) : (
+                        <Icon className="size-4" aria-hidden="true" />
+                      )}
+                    </div>
+                    <span
+                      className={cn(
+                        "mt-1.5 text-[10px] font-medium sm:text-xs",
+                        isCurrent ? "text-foreground" : "text-muted-foreground",
+                      )}
+                    >
+                      {s.short}
+                    </span>
+                  </div>
+                  {i < STEPS.length - 1 && (
+                    <div
+                      className={cn(
+                        "mx-2 h-0.5 flex-1 rounded-full transition-colors",
+                        i < stepIdx ? "bg-primary" : "bg-muted",
+                      )}
+                    />
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
+        {/* 主内容 */}
+        <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-10">
+          <div className="mb-5 text-center sm:mb-6">
+            <Badge variant="outline" className="text-[10px]">
+              第 {stepIdx + 1} / {STEPS.length} 步
+            </Badge>
+            <h2 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
+              {step.title}
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground sm:text-base">
+              {step.description}
+            </p>
+          </div>
+
+          <div className="mx-auto max-w-2xl">
+            {step.key === "welcome" && (
+              <WelcomeStep
+                goal={state.goal}
+                onChange={(g) => update("goal", g)}
+              />
+            )}
+            {step.key === "profile" && (
+              <ProfileStep state={state} update={update} />
+            )}
+            {step.key === "preferences" && (
+              <PreferencesStep state={state} update={update} />
+            )}
+            {step.key === "done" && <DoneStep state={state} />}
+          </div>
+        </main>
+        {/* 底部导航 */}
+        <footer className="sticky bottom-0 border-t bg-background/80 backdrop-blur">
+          <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={goBack}
+              disabled={stepIdx === 0}
+            >
+              <ArrowLeft className="mr-1 size-4" aria-hidden="true" />
+              上一步
+            </Button>
+
+            {step.key !== "done" ? (
+              <div className="flex items-center gap-2">
+                {step.key !== "welcome" && (
+                  <Button variant="ghost" size="sm" onClick={skip}>
+                    <SkipForward className="mr-1 size-4" aria-hidden="true" />
+                    跳过
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  onClick={goNext}
+                  disabled={!canGoNext}
+                  className="min-w-28"
+                >
+                  下一步
+                  <ArrowRight className="ml-1 size-4" aria-hidden="true" />
                 </Button>
-              )}
+              </div>
+            ) : (
               <Button
                 size="sm"
-                onClick={goNext}
-                disabled={!canGoNext}
-                className="min-w-28"
+                onClick={finish}
+                className="min-w-28 bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-700 hover:to-violet-700"
               >
-                下一步
+                前往工作台
                 <ArrowRight className="ml-1 size-4" aria-hidden="true" />
               </Button>
-            </div>
-          ) : (
-            <Button
-              size="sm"
-              onClick={finish}
-              className="min-w-28 bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-700 hover:to-violet-700"
-            >
-              前往工作台
-              <ArrowRight className="ml-1 size-4" aria-hidden="true" />
-            </Button>
-          )}
-        </div>
-      </footer>
-    </div>
+            )}
+          </div>
+        </footer>
+      </div>)</ErrorBoundary>
   );
 }
 

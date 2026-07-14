@@ -1,9 +1,10 @@
+"use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 /**
  * Cost dashboard admin page (T806).
  *
  * 展示:总成本 / per-provider / per-tenant / 日趋势 / cache 命中率.
  */
-"use client";
 
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -75,106 +76,102 @@ export default function CostDashboardPage() {
   }, [refresh]);
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Cost Dashboard</h1>
-          <p className="text-sm text-muted-foreground">
-            LLM cost aggregated by tenant / provider / model. Persisted to Supabase
-            within ~30 seconds of each call.
-          </p>
+    <ErrorBoundary>(<div className="p-6 space-y-6">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold">Cost Dashboard</h1>
+            <p className="text-sm text-muted-foreground">
+              LLM cost aggregated by tenant / provider / model. Persisted to Supabase
+              within ~30 seconds of each call.
+            </p>
+          </div>
+          <div className="flex items-end gap-3 flex-wrap">
+            <div className="space-y-1">
+              <Label className="text-xs">Since</Label>
+              <Select value={String(sinceDays)} onValueChange={(v) => v && setSinceDays(Number(v))}>
+                <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {SINCE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Tenant</Label>
+              <Select value={tenantFilter} onValueChange={(v) => v && setTenantFilter(v)}>
+                <SelectTrigger className="w-44">
+                  <SelectValue placeholder="All tenants" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  {(tenants || []).map((t) => (
+                    <SelectItem key={t.tenant_id} value={t.tenant_id}>
+                      {t.tenant_id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button variant="outline" onClick={refresh} disabled={loading}>
+              Refresh
+            </Button>
+          </div>
         </div>
-        <div className="flex items-end gap-3 flex-wrap">
-          <div className="space-y-1">
-            <Label className="text-xs">Since</Label>
-            <Select value={String(sinceDays)} onValueChange={(v) => v && setSinceDays(Number(v))}>
-              <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {SINCE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Tenant</Label>
-            <Select value={tenantFilter} onValueChange={(v) => v && setTenantFilter(v)}>
-              <SelectTrigger className="w-44">
-                <SelectValue placeholder="All tenants" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                {(tenants || []).map((t) => (
-                  <SelectItem key={t.tenant_id} value={t.tenant_id}>
-                    {t.tenant_id}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button variant="outline" onClick={refresh} disabled={loading}>
-            Refresh
-          </Button>
+        {error && (
+          <Card>
+            <CardContent className="text-sm text-destructive py-3">{error}</CardContent>
+          </Card>
+        )}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <SummaryTile
+            label="Total Cost"
+            value={summary ? `$${summary.total_cost_usd.toFixed(2)}` : "—"}
+            sub={`Last ${sinceDays}d`}
+            loading={loading}
+          />
+          <SummaryTile
+            label="Providers Active"
+            value={summary ? summary.by_provider.length.toString() : "—"}
+            sub="Distinct providers"
+            loading={loading}
+          />
+          <SummaryTile
+            label="Tenants Active"
+            value={summary ? summary.by_tenant.length.toString() : "—"}
+            sub="Distinct tenants"
+            loading={loading}
+          />
         </div>
-      </div>
-
-      {error && (
-        <Card>
-          <CardContent className="text-sm text-destructive py-3">{error}</CardContent>
-        </Card>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <SummaryTile
-          label="Total Cost"
-          value={summary ? `$${summary.total_cost_usd.toFixed(2)}` : "—"}
-          sub={`Last ${sinceDays}d`}
-          loading={loading}
-        />
-        <SummaryTile
-          label="Providers Active"
-          value={summary ? summary.by_provider.length.toString() : "—"}
-          sub="Distinct providers"
-          loading={loading}
-        />
-        <SummaryTile
-          label="Tenants Active"
-          value={summary ? summary.by_tenant.length.toString() : "—"}
-          sub="Distinct tenants"
-          loading={loading}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {cacheStats ? (
-          <CacheHitRateGauge stats={cacheStats} />
-        ) : (
-          <Skeleton className="h-72" />
-        )}
-        {summary ? (
-          <CostByProviderChart data={summary.by_provider} />
-        ) : (
-          <Skeleton className="h-72 lg:col-span-2" />
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {summary ? (
-          <div className="lg:col-span-2">
-            <DailyCostTrend data={summary.daily_trend} />
-          </div>
-        ) : (
-          <Skeleton className="h-72 lg:col-span-2" />
-        )}
-        {summary ? (
-          <CostByTenantTable data={summary.by_tenant} />
-        ) : (
-          <Skeleton className="h-72" />
-        )}
-      </div>
-    </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {cacheStats ? (
+            <CacheHitRateGauge stats={cacheStats} />
+          ) : (
+            <Skeleton className="h-72" />
+          )}
+          {summary ? (
+            <CostByProviderChart data={summary.by_provider} />
+          ) : (
+            <Skeleton className="h-72 lg:col-span-2" />
+          )}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {summary ? (
+            <div className="lg:col-span-2">
+              <DailyCostTrend data={summary.daily_trend} />
+            </div>
+          ) : (
+            <Skeleton className="h-72 lg:col-span-2" />
+          )}
+          {summary ? (
+            <CostByTenantTable data={summary.by_tenant} />
+          ) : (
+            <Skeleton className="h-72" />
+          )}
+        </div>
+      </div>)</ErrorBoundary>
   );
 }
 

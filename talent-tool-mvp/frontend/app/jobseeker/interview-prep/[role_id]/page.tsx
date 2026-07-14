@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * /jobseeker/interview-prep/[role_id] — v9.1 角色准备练习
@@ -649,214 +650,213 @@ export default function InterviewPrepPage(props: { params: Promise<{ role_id: st
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b">
-        <div className="max-w-5xl mx-auto px-6 py-5 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-              <span aria-hidden>{meta.icon}</span> 角色准备 · {meta.label}
-            </h1>
-            <p className="text-sm text-slate-500 mt-1">{meta.summary}</p>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <Link
-              href="/jobseeker/interview"
-              className="text-slate-500 hover:text-slate-700"
-            >
-              ← 面试中心
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-5xl mx-auto p-6 space-y-4">
-        {/* 进度条 */}
-        <section className="bg-white rounded-2xl shadow-sm p-4" aria-label="答题进度">
-          <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
-            <span>第 {activeIdx + 1} / {questions.length} 题</span>
-            <span>已完成 {answeredCount} 题</span>
-          </div>
-          <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-sky-500 transition-all"
-              style={{ width: `${((activeIdx + 1) / questions.length) * 100}%` }}
-              role="progressbar"
-              aria-valuenow={activeIdx + 1}
-              aria-valuemin={1}
-              aria-valuemax={questions.length}
-            />
-          </div>
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {questions.map((q, i) => {
-              const done = !!answers[q.id];
-              const active = i === activeIdx;
-              return (
-                <button
-                  key={q.id}
-                  onClick={() => setActiveIdx(i)}
-                  className={`min-w-8 h-8 px-2 rounded-full text-xs flex items-center justify-center ${
-                    active
-                      ? "bg-sky-600 text-white"
-                      : done
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-slate-100 text-slate-500"
-                  }`}
-                  aria-label={`第 ${i + 1} 题 ${done ? "已完成" : "未完成"}`}
-                >
-                  {i + 1}
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        {activeQ && (
-          <section
-            className="bg-white rounded-2xl shadow-sm p-5 space-y-4"
-            data-testid="prep-question"
-            aria-label="当前题目"
-          >
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-500">
-                {activeQ.kind_label}
-              </span>
-              <span className="text-xs text-slate-400">
-                建议 {Math.round(activeQ.expected_seconds / 60)} 分钟
-              </span>
+    <ErrorBoundary>(<div className="min-h-screen bg-slate-50">
+        <header className="bg-white border-b">
+          <div className="max-w-5xl mx-auto px-6 py-5 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                <span aria-hidden>{meta.icon}</span> 角色准备 · {meta.label}
+              </h1>
+              <p className="text-sm text-slate-500 mt-1">{meta.summary}</p>
             </div>
-            <h2 className="text-lg font-semibold text-slate-900">{activeQ.title}</h2>
-            <p className="text-slate-700 leading-relaxed">{activeQ.prompt}</p>
-            {activeQ.hints.length > 0 && (
-              <ul className="text-xs text-slate-500 list-disc pl-4 space-y-0.5">
-                {activeQ.hints.map((h, i) => (
-                  <li key={i}>{h}</li>
-                ))}
-              </ul>
-            )}
-            {activeQ.keywords.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                <span className="text-xs text-slate-500">命中关键词:</span>
-                {activeQ.keywords.map((k) => (
-                  <span
-                    key={k}
-                    className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-50 text-slate-600 border border-slate-200"
-                  >
-                    {k}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {activeAnswer ? (
-              <div className="space-y-3">
-                <div
-                  className={`rounded-xl border p-4 ${
-                    activeAnswer.band === "excellent"
-                      ? "bg-emerald-50 border-emerald-200"
-                      : activeAnswer.band === "good"
-                      ? "bg-sky-50 border-sky-200"
-                      : activeAnswer.band === "fair"
-                      ? "bg-amber-50 border-amber-200"
-                      : "bg-rose-50 border-rose-200"
-                  }`}
-                  data-testid="prep-result"
-                >
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded font-medium ${BAND_COLOR[activeAnswer.band]}`}
-                    >
-                      {BAND_LABEL[activeAnswer.band]} · {activeAnswer.score.toFixed(1)} 分
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      {activeAnswer.char_count} 字 · {activeAnswer.word_count} 词
-                      {activeAnswer.provider && ` · 转写自 ${activeAnswer.provider}`}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-sm text-slate-700 italic">「{activeAnswer.feedback}」</p>
-                  {activeAnswer.hits.length > 0 && (
-                    <p className="mt-1 text-xs text-emerald-700">
-                      ✓ 命中: {activeAnswer.hits.join("、")}
-                    </p>
-                  )}
-                  {activeAnswer.misses.length > 0 && (
-                    <p className="mt-1 text-xs text-amber-700">
-                      ⚠ 建议补: {activeAnswer.misses.slice(0, 6).join("、")}
-                    </p>
-                  )}
-                </div>
-                <details className="text-xs text-slate-500">
-                  <summary className="cursor-pointer">查看你的回答</summary>
-                  <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">
-                    {activeAnswer.text}
-                  </p>
-                </details>
-              </div>
-            ) : (
-              <AnswerInput
-                key={answerInputKey}
-                ref={textRef}
-                expectedSeconds={activeQ.expected_seconds}
-                onVoice={handleVoice}
-                onError={setError}
-                onChangeText={setText}
-                onSnapshot={setText}
-              />
-            )}
-
-            {error && (
+            <div className="flex items-center gap-2 text-sm">
+              <Link
+                href="/jobseeker/interview"
+                className="text-slate-500 hover:text-slate-700"
+              >
+                ← 面试中心
+              </Link>
+            </div>
+          </div>
+        </header>
+        <div className="max-w-5xl mx-auto p-6 space-y-4">
+          {/* 进度条 */}
+          <section className="bg-white rounded-2xl shadow-sm p-4" aria-label="答题进度">
+            <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
+              <span>第 {activeIdx + 1} / {questions.length} 题</span>
+              <span>已完成 {answeredCount} 题</span>
+            </div>
+            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
               <div
-                className="bg-rose-50 text-rose-700 text-sm rounded p-2"
-                role="alert"
-              >
-                {error}
-              </div>
-            )}
-
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
-              <button
-                onClick={handlePrev}
-                disabled={activeIdx === 0}
-                className="px-4 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 disabled:opacity-50 text-sm"
-              >
-                ← 上一题
-              </button>
-              <div className="flex gap-2">
-                {!activeAnswer && (
+                className="h-full bg-sky-500 transition-all"
+                style={{ width: `${((activeIdx + 1) / questions.length) * 100}%` }}
+                role="progressbar"
+                aria-valuenow={activeIdx + 1}
+                aria-valuemin={1}
+                aria-valuemax={questions.length}
+              />
+            </div>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {questions.map((q, i) => {
+                const done = !!answers[q.id];
+                const active = i === activeIdx;
+                return (
                   <button
-                    onClick={handleSave}
-                    disabled={!text.trim()}
-                    data-testid="save-answer"
-                    className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium disabled:opacity-50 hover:bg-emerald-700"
+                    key={q.id}
+                    onClick={() => setActiveIdx(i)}
+                    className={`min-w-8 h-8 px-2 rounded-full text-xs flex items-center justify-center ${
+                      active
+                        ? "bg-sky-600 text-white"
+                        : done
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-slate-100 text-slate-500"
+                    }`}
+                    aria-label={`第 ${i + 1} 题 ${done ? "已完成" : "未完成"}`}
                   >
-                    保存本题
+                    {i + 1}
                   </button>
-                )}
-                <button
-                  onClick={handleNext}
-                  data-testid="next-question"
-                  className="px-4 py-2 rounded-lg bg-sky-600 text-white text-sm font-medium hover:bg-sky-700"
-                >
-                  {activeIdx + 1 === questions.length ? "生成反馈报告 →" : "下一题 →"}
-                </button>
-              </div>
+                );
+              })}
             </div>
           </section>
-        )}
 
-        {answeredCount >= questions.length && !report && (
-          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-sm text-emerald-800 flex items-center justify-between">
-            <span>🎉 全部 {questions.length} 题已作答,可以生成反馈报告了。</span>
-            <button
-              onClick={generateReport}
-              className="px-4 py-1.5 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700"
-              data-testid="generate-report"
+          {activeQ && (
+            <section
+              className="bg-white rounded-2xl shadow-sm p-5 space-y-4"
+              data-testid="prep-question"
+              aria-label="当前题目"
             >
-              生成反馈报告
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-500">
+                  {activeQ.kind_label}
+                </span>
+                <span className="text-xs text-slate-400">
+                  建议 {Math.round(activeQ.expected_seconds / 60)} 分钟
+                </span>
+              </div>
+              <h2 className="text-lg font-semibold text-slate-900">{activeQ.title}</h2>
+              <p className="text-slate-700 leading-relaxed">{activeQ.prompt}</p>
+              {activeQ.hints.length > 0 && (
+                <ul className="text-xs text-slate-500 list-disc pl-4 space-y-0.5">
+                  {activeQ.hints.map((h, i) => (
+                    <li key={i}>{h}</li>
+                  ))}
+                </ul>
+              )}
+              {activeQ.keywords.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  <span className="text-xs text-slate-500">命中关键词:</span>
+                  {activeQ.keywords.map((k) => (
+                    <span
+                      key={k}
+                      className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-50 text-slate-600 border border-slate-200"
+                    >
+                      {k}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {activeAnswer ? (
+                <div className="space-y-3">
+                  <div
+                    className={`rounded-xl border p-4 ${
+                      activeAnswer.band === "excellent"
+                        ? "bg-emerald-50 border-emerald-200"
+                        : activeAnswer.band === "good"
+                        ? "bg-sky-50 border-sky-200"
+                        : activeAnswer.band === "fair"
+                        ? "bg-amber-50 border-amber-200"
+                        : "bg-rose-50 border-rose-200"
+                    }`}
+                    data-testid="prep-result"
+                  >
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded font-medium ${BAND_COLOR[activeAnswer.band]}`}
+                      >
+                        {BAND_LABEL[activeAnswer.band]} · {activeAnswer.score.toFixed(1)} 分
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        {activeAnswer.char_count} 字 · {activeAnswer.word_count} 词
+                        {activeAnswer.provider && ` · 转写自 ${activeAnswer.provider}`}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm text-slate-700 italic">「{activeAnswer.feedback}」</p>
+                    {activeAnswer.hits.length > 0 && (
+                      <p className="mt-1 text-xs text-emerald-700">
+                        ✓ 命中: {activeAnswer.hits.join("、")}
+                      </p>
+                    )}
+                    {activeAnswer.misses.length > 0 && (
+                      <p className="mt-1 text-xs text-amber-700">
+                        ⚠ 建议补: {activeAnswer.misses.slice(0, 6).join("、")}
+                      </p>
+                    )}
+                  </div>
+                  <details className="text-xs text-slate-500">
+                    <summary className="cursor-pointer">查看你的回答</summary>
+                    <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">
+                      {activeAnswer.text}
+                    </p>
+                  </details>
+                </div>
+              ) : (
+                <AnswerInput
+                  key={answerInputKey}
+                  ref={textRef}
+                  expectedSeconds={activeQ.expected_seconds}
+                  onVoice={handleVoice}
+                  onError={setError}
+                  onChangeText={setText}
+                  onSnapshot={setText}
+                />
+              )}
+
+              {error && (
+                <div
+                  className="bg-rose-50 text-rose-700 text-sm rounded p-2"
+                  role="alert"
+                >
+                  {error}
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+                <button
+                  onClick={handlePrev}
+                  disabled={activeIdx === 0}
+                  className="px-4 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 disabled:opacity-50 text-sm"
+                >
+                  ← 上一题
+                </button>
+                <div className="flex gap-2">
+                  {!activeAnswer && (
+                    <button
+                      onClick={handleSave}
+                      disabled={!text.trim()}
+                      data-testid="save-answer"
+                      className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium disabled:opacity-50 hover:bg-emerald-700"
+                    >
+                      保存本题
+                    </button>
+                  )}
+                  <button
+                    onClick={handleNext}
+                    data-testid="next-question"
+                    className="px-4 py-2 rounded-lg bg-sky-600 text-white text-sm font-medium hover:bg-sky-700"
+                  >
+                    {activeIdx + 1 === questions.length ? "生成反馈报告 →" : "下一题 →"}
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {answeredCount >= questions.length && !report && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-sm text-emerald-800 flex items-center justify-between">
+              <span>🎉 全部 {questions.length} 题已作答,可以生成反馈报告了。</span>
+              <button
+                onClick={generateReport}
+                className="px-4 py-1.5 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700"
+                data-testid="generate-report"
+              >
+                生成反馈报告
+              </button>
+            </div>
+          )}
+        </div>
+      </div>)</ErrorBoundary>
   );
 }
 

@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import * as React from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,39 +34,39 @@ export default function CompanySearchPage() {
   }, [query]);
 
   return (
-    <div className="container mx-auto p-6 space-y-4">
-      <h1 className="text-2xl font-bold">公司搜索</h1>
-      <Input
-        placeholder="输入公司名称 (例如 字节 / bytedance / Tencent)"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        autoFocus
-      />
-      {loading && (
-        <div className="text-sm text-slate-500">搜索中…</div>
-      )}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {results.map((c) => (
-          <a key={c.id} href={`/company/${c.id}`}>
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="font-medium">{c.name}</div>
-                    <div className="text-xs text-slate-500">{c.industry}</div>
+    <ErrorBoundary>(<div className="container mx-auto p-6 space-y-4">
+        <h1 className="text-2xl font-bold">公司搜索</h1>
+        <Input
+          placeholder="输入公司名称 (例如 字节 / bytedance / Tencent)"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          autoFocus
+        />
+        {loading && (
+          <div className="text-sm text-slate-500">搜索中…</div>
+        )}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {results.map((c) => (
+            <a key={c.id} href={`/company/${c.id}`}>
+              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="font-medium">{c.name}</div>
+                      <div className="text-xs text-slate-500">{c.industry}</div>
+                    </div>
+                    <div className="text-amber-600 font-bold">
+                      ★ {c.rating.toFixed(1)}
+                    </div>
                   </div>
-                  <div className="text-amber-600 font-bold">
-                    ★ {c.rating.toFixed(1)}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </a>
-        ))}
-      </div>
-      {!loading && query && results.length === 0 && (
-        <div className="text-sm text-slate-500">未找到匹配的公司</div>
-      )}
-    </div>
+                </CardContent>
+              </Card>
+            </a>
+          ))}
+        </div>
+        {!loading && query && results.length === 0 && (
+          <div className="text-sm text-slate-500">未找到匹配的公司</div>
+        )}
+      </div>)</ErrorBoundary>
   );
 }

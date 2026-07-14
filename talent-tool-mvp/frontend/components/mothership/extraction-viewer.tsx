@@ -8,7 +8,7 @@ import { Loader2, Save, RotateCcw, Sparkles } from "lucide-react";
 import { ExtractionField } from "./extraction-field";
 import { SourceBadge } from "./source-badge";
 import type { Candidate } from "@/contracts/canonical";
-import { MOCK_CANDIDATES } from "@/lib/mock-data";
+import { MOCK_CANDIDATES } from "@/mocks/data";
 import { cn } from "@/lib/utils";
 
 interface ExtractionViewerProps {

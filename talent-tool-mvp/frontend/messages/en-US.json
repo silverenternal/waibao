@@ -41,10 +41,7 @@
     "send": "Send",
     "languageZh": "Simplified Chinese",
     "languageEn": "English",
-    "languageJa": "Japanese",
-    "languageChanged": "Language switched",
-    "loadingMore": "Load more",
-    "backToTop": "Back to top"
+    "languageJa": "Japanese"
   },
   "nav": {
     "jobseekerHome": "My Space",
@@ -120,10 +117,22 @@
     "greetingBody": "Tell me about your work, mood, and worries — I will listen and offer advice.",
     "inputPlaceholder": "Say something to the agent...",
     "suggestions": {
-      "writeJournal": { "label": "Write journal", "text": "I worked on an AI project today, found it rewarding" },
-      "viewMatches": { "label": "View matches", "text": "Show me jobs that fit me" },
-      "careerPlan": { "label": "Career plan", "text": "I want to become an AI product manager — how do I plan this?" },
-      "chatMood": { "label": "Talk mood", "text": "I feel a bit anxious today" }
+      "writeJournal": {
+        "label": "Write journal",
+        "text": "I worked on an AI project today, found it rewarding"
+      },
+      "viewMatches": {
+        "label": "View matches",
+        "text": "Show me jobs that fit me"
+      },
+      "careerPlan": {
+        "label": "Career plan",
+        "text": "I want to become an AI product manager — how do I plan this?"
+      },
+      "chatMood": {
+        "label": "Talk mood",
+        "text": "I feel a bit anxious today"
+      }
     }
   },
   "employer": {
@@ -305,5 +314,92 @@
     "button": "Escalate to Human",
     "ticketCreated": "Ticket created",
     "selectDepartment": "Select department"
+  },
+  "seo": {
+    "home": {
+      "title": "AI-Powered Talent Platform",
+      "description": "Intelligent candidate matching, copilot dashboards, and multi-persona workflows for modern recruitment.",
+      "keywords": [
+        "recruitment",
+        "talent platform",
+        "candidate matching",
+        "AI hiring",
+        "ATS",
+        "copilot"
+      ]
+    },
+    "pricing": {
+      "title": "Pricing",
+      "description": "Transparent subscription plans for teams of every size. Start free, scale as you hire.",
+      "keywords": [
+        "pricing",
+        "subscription",
+        "plans",
+        "recruitment pricing"
+      ]
+    },
+    "marketplace": {
+      "title": "Service Marketplace",
+      "description": "Browse and subscribe to certified recruitment services, integrations, and AI agents.",
+      "keywords": [
+        "marketplace",
+        "recruitment services",
+        "integrations",
+        "AI agents"
+      ]
+    },
+    "services": {
+      "title": "Public Service Catalog",
+      "description": "Discover every available service, its tier, and how to subscribe.",
+      "keywords": [
+        "service catalog",
+        "recruitment services",
+        "subscribe"
+      ]
+    },
+    "developers": {
+      "title": "Developer Portal",
+      "description": "API keys, webhooks, SDKs, and a live sandbox to build on the RecruitTech platform.",
+      "keywords": [
+        "developer portal",
+        "API",
+        "webhooks",
+        "SDK",
+        "sandbox"
+      ]
+    },
+    "legal": {
+      "title": "Legal",
+      "description": "Terms, privacy, DPA, and cookie policies for the RecruitTech platform.",
+      "keywords": [
+        "legal",
+        "privacy",
+        "terms",
+        "DPA",
+        "cookies"
+      ]
+    },
+    "status": {
+      "title": "System Status",
+      "description": "Real-time service availability and historical uptime for RecruitTech.",
+      "keywords": [
+        "status",
+        "uptime",
+        "availability"
+      ]
+    }
+  },
+  "forms": {
+    "required": "This field is required",
+    "invalidEmail": "Please enter a valid email address",
+    "minLength": "Must be at least {min} characters",
+    "maxLength": "Must be at most {max} characters",
+    "invalidUrl": "Please enter a valid URL",
+    "invalidNumber": "Please enter a valid number",
+    "passwordMismatch": "Passwords do not match",
+    "submitting": "Submitting...",
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "genericError": "Please fix the errors below"
   }
 }

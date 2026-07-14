@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v9.1 — /jobseeker/offers — Offer 列表 + 新建
@@ -984,8 +985,8 @@ function SkeletonList() {
 // ---------- Suspense 包裹(Next.js 16 useSearchParams 要求) ----------
 export default function OffersPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-slate-400">加载中…</div>}>
-      <OffersPageInner />
-    </Suspense>
+    <ErrorBoundary>(<Suspense fallback={<div className="p-8 text-slate-400">加载中…</div>}>
+        <OffersPageInner />
+      </Suspense>)</ErrorBoundary>
   );
 }

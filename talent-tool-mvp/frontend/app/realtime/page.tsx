@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * /realtime — T2201 GPT-4o Realtime 实时语音对话主页.
@@ -57,93 +58,92 @@ export default function RealtimePage() {
   const scenarioObj = SCENARIOS.find((s) => s.value === scenario) ?? SCENARIOS[0];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-sky-50">
-      <header className="bg-white border-b px-6 py-4">
-        <h1 className="text-xl font-semibold flex items-center gap-2">
-          <span aria-hidden>🎙️</span> GPT-4o Realtime · 实时语音对话
-        </h1>
-        <p className="text-sm text-slate-500 mt-1">
-          基于 OpenAI Realtime API, 支持服务端 VAD / 工具调用 / 中断。
-        </p>
-      </header>
-
-      <div className="max-w-4xl mx-auto p-6 space-y-6">
-        <section className="bg-white rounded-2xl shadow-sm p-5 space-y-4">
-          <div>
-            <h2 className="text-sm font-semibold text-slate-800 mb-2">场景</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {SCENARIOS.map((s) => (
-                <button
-                  key={s.value}
-                  onClick={() => setScenario(s.value)}
-                  aria-pressed={scenario === s.value}
-                  className={`px-3 py-2 text-sm rounded-lg border transition ${
-                    scenario === s.value
-                      ? "border-sky-500 bg-sky-50 text-sky-700"
-                      : "border-slate-200 hover:border-slate-400"
-                  }`}
-                  data-testid={`scenario-${s.value}`}
-                >
-                  {s.label}
-                </button>
-              ))}
+    <ErrorBoundary>(<div className="min-h-screen bg-gradient-to-b from-slate-50 to-sky-50">
+        <header className="bg-white border-b px-6 py-4">
+          <h1 className="text-xl font-semibold flex items-center gap-2">
+            <span aria-hidden>🎙️</span> GPT-4o Realtime · 实时语音对话
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            基于 OpenAI Realtime API, 支持服务端 VAD / 工具调用 / 中断。
+          </p>
+        </header>
+        <div className="max-w-4xl mx-auto p-6 space-y-6">
+          <section className="bg-white rounded-2xl shadow-sm p-5 space-y-4">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-800 mb-2">场景</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {SCENARIOS.map((s) => (
+                  <button
+                    key={s.value}
+                    onClick={() => setScenario(s.value)}
+                    aria-pressed={scenario === s.value}
+                    className={`px-3 py-2 text-sm rounded-lg border transition ${
+                      scenario === s.value
+                        ? "border-sky-500 bg-sky-50 text-sky-700"
+                        : "border-slate-200 hover:border-slate-400"
+                    }`}
+                    data-testid={`scenario-${s.value}`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-          <div>
-            <h2 className="text-sm font-semibold text-slate-800 mb-2">声音</h2>
-            <div className="flex flex-wrap gap-2">
-              {VOICES.map((v) => (
-                <button
-                  key={v.value}
-                  onClick={() => setVoice(v.value)}
-                  aria-pressed={voice === v.value}
-                  className={`px-3 py-1.5 text-xs rounded-full border ${
-                    voice === v.value
-                      ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                      : "border-slate-200 hover:border-slate-400"
-                  }`}
-                >
-                  {v.label}
-                </button>
-              ))}
+            <div>
+              <h2 className="text-sm font-semibold text-slate-800 mb-2">声音</h2>
+              <div className="flex flex-wrap gap-2">
+                {VOICES.map((v) => (
+                  <button
+                    key={v.value}
+                    onClick={() => setVoice(v.value)}
+                    aria-pressed={voice === v.value}
+                    className={`px-3 py-1.5 text-xs rounded-full border ${
+                      voice === v.value
+                        ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                        : "border-slate-200 hover:border-slate-400"
+                    }`}
+                  >
+                    {v.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        </section>
-
-        <RealtimeVoice
-          voice={voice}
-          model="gpt-4o-realtime-preview"
-          instructions={scenarioObj.instructions}
-          onComplete={setFinalTranscript}
-        />
-
-        {finalTranscript.length > 0 && (
-          <section className="bg-white rounded-2xl shadow-sm p-5 space-y-2">
-            <h2 className="text-sm font-semibold text-slate-800">本场对话存档</h2>
-            <div className="space-y-1 text-sm text-slate-700 max-h-64 overflow-y-auto">
-              {finalTranscript.map((t, i) => (
-                <div
-                  key={i}
-                  className={`p-2 rounded ${
-                    t.role === "user" ? "bg-sky-50" : "bg-slate-50"
-                  }`}
-                >
-                  <span className="text-xs text-slate-400 mr-2">
-                    {t.role === "user" ? "你" : "AI"}
-                  </span>
-                  {t.text}
-                </div>
-              ))}
-            </div>
-            <button
-              onClick={() => setFinalTranscript([])}
-              className="text-xs text-slate-500 hover:text-slate-800"
-            >
-              清空
-            </button>
           </section>
-        )}
-      </div>
-    </div>
+
+          <RealtimeVoice
+            voice={voice}
+            model="gpt-4o-realtime-preview"
+            instructions={scenarioObj.instructions}
+            onComplete={setFinalTranscript}
+          />
+
+          {finalTranscript.length > 0 && (
+            <section className="bg-white rounded-2xl shadow-sm p-5 space-y-2">
+              <h2 className="text-sm font-semibold text-slate-800">本场对话存档</h2>
+              <div className="space-y-1 text-sm text-slate-700 max-h-64 overflow-y-auto">
+                {finalTranscript.map((t, i) => (
+                  <div
+                    key={i}
+                    className={`p-2 rounded ${
+                      t.role === "user" ? "bg-sky-50" : "bg-slate-50"
+                    }`}
+                  >
+                    <span className="text-xs text-slate-400 mr-2">
+                      {t.role === "user" ? "你" : "AI"}
+                    </span>
+                    {t.text}
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => setFinalTranscript([])}
+                className="text-xs text-slate-500 hover:text-slate-800"
+              >
+                清空
+              </button>
+            </section>
+          )}
+        </div>
+      </div>)</ErrorBoundary>
   );
 }

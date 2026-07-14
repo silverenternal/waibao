@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v9.1 — 职业规划主页 (T3605/T3606)
@@ -373,331 +374,327 @@ export default function CareerPlanPage() {
   );
 
   return (
-    <TremorShell
-      title="🎯 职业规划"
-      subtitle="智能体基于你的画像、需求和市场行情生成多层次规划"
-      badge={plan ? "已生成" : "待生成"}
-      toolbar={toolbar}
-    >
-      {!plan && !loading && (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center gap-3 py-14 text-center">
-            <Sparkles className="size-8 text-violet-500" />
-            <p className="max-w-md text-sm text-slate-500">
-              还没有可用的职业规划。点击右上角「生成规划」,智能体将根据你的画像、需求缺口与最新市场行情,
-              拆解出短/中/长期目标、推荐岗位、补充技能缺口,并自动生成打卡与调整建议。
-            </p>
-            <Button onClick={() => void generate()} disabled={loading}>
-              <Wand2 className="mr-1.5 size-3.5" /> 立即生成
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+    <ErrorBoundary>(<TremorShell
+        title="🎯 职业规划"
+        subtitle="智能体基于你的画像、需求和市场行情生成多层次规划"
+        badge={plan ? "已生成" : "待生成"}
+        toolbar={toolbar}
+      >
+        {!plan && !loading && (
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center gap-3 py-14 text-center">
+              <Sparkles className="size-8 text-violet-500" />
+              <p className="max-w-md text-sm text-slate-500">
+                还没有可用的职业规划。点击右上角「生成规划」,智能体将根据你的画像、需求缺口与最新市场行情,
+                拆解出短/中/长期目标、推荐岗位、补充技能缺口,并自动生成打卡与调整建议。
+              </p>
+              <Button onClick={() => void generate()} disabled={loading}>
+                <Wand2 className="mr-1.5 size-3.5" /> 立即生成
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+        {loading && !plan && (
+          <Card>
+            <CardContent className="py-10 text-center text-sm text-slate-500">
+              智能体正在拆解目标 · 评估缺口 · 起草规划,大约需要 10-30 秒…
+            </CardContent>
+          </Card>
+        )}
+        {error && (
+          <Card className="border-rose-200 bg-rose-50/60">
+            <CardContent className="flex items-center gap-3 p-3 text-sm text-rose-700">
+              <AlertTriangle className="size-4" />
+              <span>{error}</span>
+              <Button size="sm" variant="outline" className="ml-auto" onClick={() => void generate()}>
+                重试
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+        {plan && (
+          <>
+            {/* KPI band */}
+            <TremorKpiGrid>
+              <TremorKpiCard
+                title="总体进度"
+                value={`${overallPct}%`}
+                helper={overallPct > 0 ? "继续按计划推进" : "尚无进度"}
+                delta={overallPct > 0 ? overallPct : undefined}
+              />
+              <TremorKpiCard
+                title="行动计划"
+                value={
+                  (plan.short_term?.length ?? 0) +
+                  (plan.mid_term?.length ?? 0) +
+                  (plan.long_term?.length ?? 0)
+                }
+                unit="项"
+                helper={`短期 ${plan.short_term?.length ?? 0} · 中期 ${plan.mid_term?.length ?? 0} · 长期 ${plan.long_term?.length ?? 0}`}
+              />
+              <TremorKpiCard
+                title="推荐岗位"
+                value={plan.recommended_roles?.length ?? 0}
+                unit="个"
+                helper={
+                  plan.recommended_roles?.length
+                    ? `匹配度 ${Math.round(
+                        Math.max(
+                          ...plan.recommended_roles.map((r) => r.match_score ?? 0),
+                        ) * 100,
+                      )}%`
+                    : "尚未推荐"
+                }
+              />
+              <TremorKpiCard
+                title="技能缺口"
+                value={plan.skill_gaps?.length ?? 0}
+                unit="项"
+                helper={`${plan.skill_gaps?.filter((g) => g.importance === "high").length ?? 0} 项高优先级`}
+              />
+            </TremorKpiGrid>
 
-      {loading && !plan && (
-        <Card>
-          <CardContent className="py-10 text-center text-sm text-slate-500">
-            智能体正在拆解目标 · 评估缺口 · 起草规划,大约需要 10-30 秒…
-          </CardContent>
-        </Card>
-      )}
+            {/* tabs */}
+            <Tabs defaultValue="overview" className="space-y-4">
+              <TabsList className="flex flex-wrap">
+                <TabsTrigger value="overview">
+                  <Target className="mr-1.5 size-3.5" /> 概览
+                </TabsTrigger>
+                <TabsTrigger value="gantt">
+                  <Clock className="mr-1.5 size-3.5" /> 甘特图
+                </TabsTrigger>
+                <TabsTrigger value="suggestions">
+                  <Lightbulb className="mr-1.5 size-3.5" /> AI 建议
+                </TabsTrigger>
+                <TabsTrigger value="subnav">
+                  <ExternalLink className="mr-1.5 size-3.5" /> 子页面
+                </TabsTrigger>
+              </TabsList>
 
-      {error && (
-        <Card className="border-rose-200 bg-rose-50/60">
-          <CardContent className="flex items-center gap-3 p-3 text-sm text-rose-700">
-            <AlertTriangle className="size-4" />
-            <span>{error}</span>
-            <Button size="sm" variant="outline" className="ml-auto" onClick={() => void generate()}>
-              重试
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+              {/* ====== overview ====== */}
+              <TabsContent value="overview">
+                <div className="grid gap-4 lg:grid-cols-3">
+                  {buckets?.map((b) => (
+                    <BucketColumn key={b.key} bucket={b.key} items={b.items} />
+                  ))}
+                </div>
 
-      {plan && (
-        <>
-          {/* KPI band */}
-          <TremorKpiGrid>
-            <TremorKpiCard
-              title="总体进度"
-              value={`${overallPct}%`}
-              helper={overallPct > 0 ? "继续按计划推进" : "尚无进度"}
-              delta={overallPct > 0 ? overallPct : undefined}
-            />
-            <TremorKpiCard
-              title="行动计划"
-              value={
-                (plan.short_term?.length ?? 0) +
-                (plan.mid_term?.length ?? 0) +
-                (plan.long_term?.length ?? 0)
-              }
-              unit="项"
-              helper={`短期 ${plan.short_term?.length ?? 0} · 中期 ${plan.mid_term?.length ?? 0} · 长期 ${plan.long_term?.length ?? 0}`}
-            />
-            <TremorKpiCard
-              title="推荐岗位"
-              value={plan.recommended_roles?.length ?? 0}
-              unit="个"
-              helper={
-                plan.recommended_roles?.length
-                  ? `匹配度 ${Math.round(
-                      Math.max(
-                        ...plan.recommended_roles.map((r) => r.match_score ?? 0),
-                      ) * 100,
-                    )}%`
-                  : "尚未推荐"
-              }
-            />
-            <TremorKpiCard
-              title="技能缺口"
-              value={plan.skill_gaps?.length ?? 0}
-              unit="项"
-              helper={`${plan.skill_gaps?.filter((g) => g.importance === "high").length ?? 0} 项高优先级`}
-            />
-          </TremorKpiGrid>
-
-          {/* tabs */}
-          <Tabs defaultValue="overview" className="space-y-4">
-            <TabsList className="flex flex-wrap">
-              <TabsTrigger value="overview">
-                <Target className="mr-1.5 size-3.5" /> 概览
-              </TabsTrigger>
-              <TabsTrigger value="gantt">
-                <Clock className="mr-1.5 size-3.5" /> 甘特图
-              </TabsTrigger>
-              <TabsTrigger value="suggestions">
-                <Lightbulb className="mr-1.5 size-3.5" /> AI 建议
-              </TabsTrigger>
-              <TabsTrigger value="subnav">
-                <ExternalLink className="mr-1.5 size-3.5" /> 子页面
-              </TabsTrigger>
-            </TabsList>
-
-            {/* ====== overview ====== */}
-            <TabsContent value="overview">
-              <div className="grid gap-4 lg:grid-cols-3">
-                {buckets?.map((b) => (
-                  <BucketColumn key={b.key} bucket={b.key} items={b.items} />
-                ))}
-              </div>
-
-              {/* recommended roles + skill gaps */}
-              <div className="mt-4 grid gap-4 lg:grid-cols-3">
-                <TremorPanel
-                  title="推荐岗位"
-                  description="基于画像 + 缺口匹配排序"
-                  className="lg:col-span-2"
-                >
-                  {plan.recommended_roles?.length ? (
-                    <ul className="space-y-2">
-                      {plan.recommended_roles.slice(0, 5).map((r, i) => {
-                        const pct = Math.round((r.match_score ?? 0) * 100);
-                        return (
-                          <li
-                            key={`${r.title}-${i}`}
-                            className="flex items-center gap-3 rounded-lg border bg-white/60 p-3 transition hover:bg-white"
-                          >
-                            <Briefcase className="size-4 text-blue-500" />
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-medium text-slate-800">
-                                {r.title}
-                              </p>
-                              {r.reason && (
-                                <p className="line-clamp-1 text-xs text-muted-foreground">
-                                  {r.reason}
+                {/* recommended roles + skill gaps */}
+                <div className="mt-4 grid gap-4 lg:grid-cols-3">
+                  <TremorPanel
+                    title="推荐岗位"
+                    description="基于画像 + 缺口匹配排序"
+                    className="lg:col-span-2"
+                  >
+                    {plan.recommended_roles?.length ? (
+                      <ul className="space-y-2">
+                        {plan.recommended_roles.slice(0, 5).map((r, i) => {
+                          const pct = Math.round((r.match_score ?? 0) * 100);
+                          return (
+                            <li
+                              key={`${r.title}-${i}`}
+                              className="flex items-center gap-3 rounded-lg border bg-white/60 p-3 transition hover:bg-white"
+                            >
+                              <Briefcase className="size-4 text-blue-500" />
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-medium text-slate-800">
+                                  {r.title}
                                 </p>
+                                {r.reason && (
+                                  <p className="line-clamp-1 text-xs text-muted-foreground">
+                                    {r.reason}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex w-24 flex-col items-end gap-1">
+                                <span className="text-sm font-semibold text-blue-600 tabular-nums">
+                                  {pct}%
+                                </span>
+                                <Progress value={pct} className="h-1" />
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    ) : (
+                      <p className="py-6 text-center text-xs text-muted-foreground">
+                        暂无推荐岗位
+                      </p>
+                    )}
+                  </TremorPanel>
+
+                  <TremorPanel
+                    title="技能缺口"
+                    description="按重要性排序"
+                    actions={
+                      plan.skill_gaps?.length ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => router.push("/jobseeker/plan/learning")}
+                        >
+                          <BookOpenCheck className="mr-1.5 size-3.5" /> 去学习
+                        </Button>
+                      ) : null
+                    }
+                  >
+                    {plan.skill_gaps?.length ? (
+                      <ul className="space-y-2">
+                        {plan.skill_gaps.map((g, i) => (
+                          <li
+                            key={`${g.skill}-${i}`}
+                            className="flex items-center justify-between gap-2 rounded-md border bg-white/40 px-2 py-1.5 text-sm"
+                          >
+                            <span className="truncate font-medium text-slate-800">
+                              {g.skill}
+                            </span>
+                            <span
+                              className={cn(
+                                "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                                IMPORTANCE_TONE[g.importance] ?? IMPORTANCE_TONE.low,
                               )}
-                            </div>
-                            <div className="flex w-24 flex-col items-end gap-1">
-                              <span className="text-sm font-semibold text-blue-600 tabular-nums">
-                                {pct}%
-                              </span>
-                              <Progress value={pct} className="h-1" />
+                            >
+                              {g.importance}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="py-6 text-center text-xs text-muted-foreground">
+                        没有明显缺口,继续巩固即可
+                      </p>
+                    )}
+                  </TremorPanel>
+                </div>
+              </TabsContent>
+
+              {/* ====== gantt ====== */}
+              <TabsContent value="gantt">
+                <div className="grid gap-4 lg:grid-cols-3">
+                  <TremorPanel
+                    title="规划甘特图"
+                    description="横轴时间, 纵轴任务. 蓝/绿 = 进行中/已完成, 红 = 高优先级"
+                    className="lg:col-span-2"
+                  >
+                    <PlanGantt tasks={ganttTasks} milestones={ganttMilestones} />
+                  </TremorPanel>
+                  <TremorPanel
+                    title="里程碑"
+                    description="关键节点到期提醒"
+                  >
+                    {plan.milestones?.length ? (
+                      <ul className="space-y-2">
+                        {plan.milestones.map((m, i) => (
+                          <li
+                            key={`${m.title}-${i}`}
+                            className="flex items-start gap-2 rounded-md border bg-white/60 p-2 text-xs"
+                          >
+                            {m.completed ? (
+                              <CheckCircle2 className="mt-0.5 size-4 text-emerald-500" />
+                            ) : (
+                              <Clock className="mt-0.5 size-4 text-amber-500" />
+                            )}
+                            <div className="flex-1">
+                              <p className="font-medium text-slate-800">{m.title}</p>
+                              <p className="text-[11px] text-muted-foreground">
+                                目标 {m.target_date}
+                              </p>
                             </div>
                           </li>
-                        );
-                      })}
-                    </ul>
-                  ) : (
-                    <p className="py-6 text-center text-xs text-muted-foreground">
-                      暂无推荐岗位
-                    </p>
-                  )}
-                </TremorPanel>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="py-6 text-center text-xs text-muted-foreground">
+                        暂无里程碑
+                      </p>
+                    )}
+                  </TremorPanel>
+                </div>
+              </TabsContent>
 
-                <TremorPanel
-                  title="技能缺口"
-                  description="按重要性排序"
-                  actions={
-                    plan.skill_gaps?.length ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => router.push("/jobseeker/plan/learning")}
-                      >
-                        <BookOpenCheck className="mr-1.5 size-3.5" /> 去学习
-                      </Button>
-                    ) : null
-                  }
-                >
-                  {plan.skill_gaps?.length ? (
-                    <ul className="space-y-2">
-                      {plan.skill_gaps.map((g, i) => (
-                        <li
-                          key={`${g.skill}-${i}`}
-                          className="flex items-center justify-between gap-2 rounded-md border bg-white/40 px-2 py-1.5 text-sm"
-                        >
-                          <span className="truncate font-medium text-slate-800">
-                            {g.skill}
-                          </span>
-                          <span
-                            className={cn(
-                              "rounded-full px-2 py-0.5 text-[11px] font-medium",
-                              IMPORTANCE_TONE[g.importance] ?? IMPORTANCE_TONE.low,
-                            )}
+              {/* ====== suggestions ====== */}
+              <TabsContent value="suggestions">
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <TremorPanel
+                    title="AI 调整建议"
+                    description="基于进度与缺口动态生成的建议"
+                  >
+                    <AdjustmentSuggestionList suggestions={suggestions} />
+                  </TremorPanel>
+                  <TremorPanel
+                    title="学习路径"
+                    description="按缺口映射到对应课程/任务"
+                  >
+                    {plan.learning_paths?.length ? (
+                      <ul className="space-y-2">
+                        {plan.learning_paths.map((lp, i) => (
+                          <li
+                            key={`${lp.title}-${i}`}
+                            className="rounded-md border bg-white/60 p-3"
                           >
-                            {g.importance}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="py-6 text-center text-xs text-muted-foreground">
-                      没有明显缺口,继续巩固即可
-                    </p>
-                  )}
-                </TremorPanel>
-              </div>
-            </TabsContent>
-
-            {/* ====== gantt ====== */}
-            <TabsContent value="gantt">
-              <div className="grid gap-4 lg:grid-cols-3">
-                <TremorPanel
-                  title="规划甘特图"
-                  description="横轴时间, 纵轴任务. 蓝/绿 = 进行中/已完成, 红 = 高优先级"
-                  className="lg:col-span-2"
-                >
-                  <PlanGantt tasks={ganttTasks} milestones={ganttMilestones} />
-                </TremorPanel>
-                <TremorPanel
-                  title="里程碑"
-                  description="关键节点到期提醒"
-                >
-                  {plan.milestones?.length ? (
-                    <ul className="space-y-2">
-                      {plan.milestones.map((m, i) => (
-                        <li
-                          key={`${m.title}-${i}`}
-                          className="flex items-start gap-2 rounded-md border bg-white/60 p-2 text-xs"
-                        >
-                          {m.completed ? (
-                            <CheckCircle2 className="mt-0.5 size-4 text-emerald-500" />
-                          ) : (
-                            <Clock className="mt-0.5 size-4 text-amber-500" />
-                          )}
-                          <div className="flex-1">
-                            <p className="font-medium text-slate-800">{m.title}</p>
-                            <p className="text-[11px] text-muted-foreground">
-                              目标 {m.target_date}
-                            </p>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="py-6 text-center text-xs text-muted-foreground">
-                      暂无里程碑
-                    </p>
-                  )}
-                </TremorPanel>
-              </div>
-            </TabsContent>
-
-            {/* ====== suggestions ====== */}
-            <TabsContent value="suggestions">
-              <div className="grid gap-4 lg:grid-cols-2">
-                <TremorPanel
-                  title="AI 调整建议"
-                  description="基于进度与缺口动态生成的建议"
-                >
-                  <AdjustmentSuggestionList suggestions={suggestions} />
-                </TremorPanel>
-                <TremorPanel
-                  title="学习路径"
-                  description="按缺口映射到对应课程/任务"
-                >
-                  {plan.learning_paths?.length ? (
-                    <ul className="space-y-2">
-                      {plan.learning_paths.map((lp, i) => (
-                        <li
-                          key={`${lp.title}-${i}`}
-                          className="rounded-md border bg-white/60 p-3"
-                        >
-                          <div className="flex items-center gap-2">
-                            <GraduationCap className="size-4 text-blue-500" />
-                            <span className="text-sm font-medium text-slate-800">
-                              {lp.title}
-                            </span>
-                            {lp.duration && (
-                              <Badge variant="outline" className="ml-auto text-[10px]">
-                                {lp.duration}
-                              </Badge>
+                            <div className="flex items-center gap-2">
+                              <GraduationCap className="size-4 text-blue-500" />
+                              <span className="text-sm font-medium text-slate-800">
+                                {lp.title}
+                              </span>
+                              {lp.duration && (
+                                <Badge variant="outline" className="ml-auto text-[10px]">
+                                  {lp.duration}
+                                </Badge>
+                              )}
+                            </div>
+                            {lp.items && lp.items.length > 0 && (
+                              <ul className="mt-2 list-disc pl-5 text-xs text-muted-foreground">
+                                {lp.items.map((it, k) => (
+                                  <li key={k}>{it}</li>
+                                ))}
+                              </ul>
                             )}
-                          </div>
-                          {lp.items && lp.items.length > 0 && (
-                            <ul className="mt-2 list-disc pl-5 text-xs text-muted-foreground">
-                              {lp.items.map((it, k) => (
-                                <li key={k}>{it}</li>
-                              ))}
-                            </ul>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="py-6 text-center text-xs text-muted-foreground">
-                      暂无学习路径
-                    </p>
-                  )}
-                </TremorPanel>
-              </div>
-            </TabsContent>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="py-6 text-center text-xs text-muted-foreground">
+                        暂无学习路径
+                      </p>
+                    )}
+                  </TremorPanel>
+                </div>
+              </TabsContent>
 
-            {/* ====== subnav ====== */}
-            <TabsContent value="subnav">
-              <div className="grid gap-3 sm:grid-cols-3">
-                <SubnavCard
-                  href="/jobseeker/plan/progress"
-                  icon={<TrendingUp className="size-5 text-emerald-500" />}
-                  title="执行进度"
-                  desc="按里程碑 + 打卡记录"
-                />
-                <SubnavCard
-                  href="/jobseeker/plan/market-insights"
-                  icon={<Compass className="size-5 text-blue-500" />}
-                  title="市场行情"
-                  desc="薪资 · 趋势 · 热门技能"
-                />
-                <SubnavCard
-                  href="/jobseeker/plan/learning"
-                  icon={<BookOpenCheck className="size-5 text-violet-500" />}
-                  title="学习资源"
-                  desc="Gap 推荐 + 单技能搜索"
-                />
-              </div>
-            </TabsContent>
-          </Tabs>
-        </>
-      )}
-
-      <CheckinModal
-        open={checkinOpen}
-        onOpenChange={setCheckinOpen}
-        items={checkinItems}
-        onSubmit={onCheckin}
-      />
-    </TremorShell>
+              {/* ====== subnav ====== */}
+              <TabsContent value="subnav">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <SubnavCard
+                    href="/jobseeker/plan/progress"
+                    icon={<TrendingUp className="size-5 text-emerald-500" />}
+                    title="执行进度"
+                    desc="按里程碑 + 打卡记录"
+                  />
+                  <SubnavCard
+                    href="/jobseeker/plan/market-insights"
+                    icon={<Compass className="size-5 text-blue-500" />}
+                    title="市场行情"
+                    desc="薪资 · 趋势 · 热门技能"
+                  />
+                  <SubnavCard
+                    href="/jobseeker/plan/learning"
+                    icon={<BookOpenCheck className="size-5 text-violet-500" />}
+                    title="学习资源"
+                    desc="Gap 推荐 + 单技能搜索"
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
+          </>
+        )}
+        <CheckinModal
+          open={checkinOpen}
+          onOpenChange={setCheckinOpen}
+          items={checkinItems}
+          onSubmit={onCheckin}
+        />
+      </TremorShell>)</ErrorBoundary>
   );
 }
 

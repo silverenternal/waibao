@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v8.0 T3501 — Single Service detail / override / rollback.
@@ -117,165 +118,163 @@ export default function ServiceDetailPage(): React.ReactElement {
   }
 
   return (
-    <main className="mx-auto max-w-5xl space-y-6 p-6">
-      <header className="flex items-end justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">
-            {detail?.display_name ?? name}
-          </h1>
-          <p className="font-mono text-xs text-slate-500">{name}</p>
-        </div>
-        <button
-          onClick={() => router.push("/admin/services")}
-          className="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm"
-        >
-          ← Back
-        </button>
-      </header>
+    <ErrorBoundary>(<main className="mx-auto max-w-5xl space-y-6 p-6">
+        <header className="flex items-end justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-900">
+              {detail?.display_name ?? name}
+            </h1>
+            <p className="font-mono text-xs text-slate-500">{name}</p>
+          </div>
+          <button
+            onClick={() => router.push("/admin/services")}
+            className="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm"
+          >
+            ← Back
+          </button>
+        </header>
+        {error ? (
+          <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </div>
+        ) : null}
+        {detail ? (
+          <>
+            <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <Stat label="Status" value={detail.status} />
+              <Stat label="Plan" value={detail.plan_required} />
+              <Stat label="Category" value={detail.category} />
+            </section>
 
-      {error ? (
-        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
-        </div>
-      ) : null}
-
-      {detail ? (
-        <>
-          <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <Stat label="Status" value={detail.status} />
-            <Stat label="Plan" value={detail.plan_required} />
-            <Stat label="Category" value={detail.category} />
-          </section>
-
-          <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <h2 className="mb-3 text-lg font-medium">Change status</h2>
-            <div className="flex flex-wrap gap-2">
-              {STATUSES.map((s) => (
-                <button
-                  key={s}
-                  disabled={saving}
-                  onClick={() => setStatus(s)}
-                  className={
-                    "rounded-md border px-3 py-1 text-sm " +
-                    (detail.status === s
-                      ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                      : "border-slate-300 bg-white hover:bg-slate-50")
-                  }
-                >
-                  {s}
-                </button>
-              ))}
-              <button
-                disabled={saving}
-                onClick={rollback}
-                className="ml-auto rounded-md border border-amber-300 bg-amber-50 px-3 py-1 text-sm text-amber-800 hover:bg-amber-100"
-              >
-                1-key rollback
-              </button>
-            </div>
-            <textarea
-              placeholder="Reason (audit log)…"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className="mt-3 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              rows={2}
-            />
-          </section>
-
-          <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <h2 className="mb-3 text-lg font-medium">Per-org override</h2>
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
-              <input
-                placeholder="org_id"
-                value={orgId}
-                onChange={(e) => setOrgId(e.target.value)}
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-              />
-              <select
-                value={overrideStatus}
-                onChange={(e) => setOverrideStatus(e.target.value as Status)}
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-              >
-                {STATUSES.filter((s) => s !== "beta").map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-              <button
-                disabled={!orgId || saving}
-                onClick={applyOverride}
-                className="rounded-md border border-slate-900 bg-slate-900 px-3 py-2 text-sm text-white hover:bg-black disabled:opacity-50"
-              >
-                Apply override
-              </button>
-            </div>
-          </section>
-
-          <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <h2 className="mb-3 text-lg font-medium">Dependency graph</h2>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <div className="mb-1 text-xs uppercase tracking-wide text-slate-500">
-                  Declared dependencies
-                </div>
-                <ul className="list-disc pl-5 text-sm">
-                  {(detail.declared_dependencies ?? []).map((d) => (
-                    <li key={d} className="font-mono">{d}</li>
-                  ))}
-                  {(detail.declared_dependencies ?? []).length === 0 ? (
-                    <li className="text-slate-400">none</li>
-                  ) : null}
-                </ul>
-              </div>
-              <div>
-                <div className="mb-1 text-xs uppercase tracking-wide text-slate-500">
-                  Resolved (transitive)
-                </div>
-                <ul className="list-disc pl-5 text-sm">
-                  {(detail.dependencies_resolved ?? []).map((d) => (
-                    <li key={d} className="font-mono">{d}</li>
-                  ))}
-                </ul>
-              </div>
-              <div className="md:col-span-2">
-                <div className="mb-1 text-xs uppercase tracking-wide text-slate-500">
-                  Dependents (services that require this one)
-                </div>
-                <ul className="list-disc pl-5 text-sm">
-                  {(detail.dependents ?? []).map((d) => (
-                    <li key={d} className="font-mono">{d}</li>
-                  ))}
-                  {(detail.dependents ?? []).length === 0 ? (
-                    <li className="text-slate-400">none</li>
-                  ) : null}
-                </ul>
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <h2 className="mb-3 text-lg font-medium">Roles allowed</h2>
-            <ul className="flex flex-wrap gap-2 text-xs">
-              {(detail.roles_allowed ?? []).length === 0 ? (
-                <li className="text-slate-400">any</li>
-              ) : (
-                detail.roles_allowed.map((r) => (
-                  <li
-                    key={r}
-                    className="rounded-full bg-indigo-50 px-2 py-1 text-indigo-700"
+            <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+              <h2 className="mb-3 text-lg font-medium">Change status</h2>
+              <div className="flex flex-wrap gap-2">
+                {STATUSES.map((s) => (
+                  <button
+                    key={s}
+                    disabled={saving}
+                    onClick={() => setStatus(s)}
+                    className={
+                      "rounded-md border px-3 py-1 text-sm " +
+                      (detail.status === s
+                        ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                        : "border-slate-300 bg-white hover:bg-slate-50")
+                    }
                   >
-                    {r}
-                  </li>
-                ))
-              )}
-            </ul>
-          </section>
-        </>
-      ) : (
-        <div className="rounded-md border border-slate-200 bg-white p-6 text-center text-slate-500">
-          Loading service…
-        </div>
-      )}
-    </main>
+                    {s}
+                  </button>
+                ))}
+                <button
+                  disabled={saving}
+                  onClick={rollback}
+                  className="ml-auto rounded-md border border-amber-300 bg-amber-50 px-3 py-1 text-sm text-amber-800 hover:bg-amber-100"
+                >
+                  1-key rollback
+                </button>
+              </div>
+              <textarea
+                placeholder="Reason (audit log)…"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                className="mt-3 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                rows={2}
+              />
+            </section>
+
+            <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+              <h2 className="mb-3 text-lg font-medium">Per-org override</h2>
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
+                <input
+                  placeholder="org_id"
+                  value={orgId}
+                  onChange={(e) => setOrgId(e.target.value)}
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                />
+                <select
+                  value={overrideStatus}
+                  onChange={(e) => setOverrideStatus(e.target.value as Status)}
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                >
+                  {STATUSES.filter((s) => s !== "beta").map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+                <button
+                  disabled={!orgId || saving}
+                  onClick={applyOverride}
+                  className="rounded-md border border-slate-900 bg-slate-900 px-3 py-2 text-sm text-white hover:bg-black disabled:opacity-50"
+                >
+                  Apply override
+                </button>
+              </div>
+            </section>
+
+            <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+              <h2 className="mb-3 text-lg font-medium">Dependency graph</h2>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <div className="mb-1 text-xs uppercase tracking-wide text-slate-500">
+                    Declared dependencies
+                  </div>
+                  <ul className="list-disc pl-5 text-sm">
+                    {(detail.declared_dependencies ?? []).map((d) => (
+                      <li key={d} className="font-mono">{d}</li>
+                    ))}
+                    {(detail.declared_dependencies ?? []).length === 0 ? (
+                      <li className="text-slate-400">none</li>
+                    ) : null}
+                  </ul>
+                </div>
+                <div>
+                  <div className="mb-1 text-xs uppercase tracking-wide text-slate-500">
+                    Resolved (transitive)
+                  </div>
+                  <ul className="list-disc pl-5 text-sm">
+                    {(detail.dependencies_resolved ?? []).map((d) => (
+                      <li key={d} className="font-mono">{d}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="md:col-span-2">
+                  <div className="mb-1 text-xs uppercase tracking-wide text-slate-500">
+                    Dependents (services that require this one)
+                  </div>
+                  <ul className="list-disc pl-5 text-sm">
+                    {(detail.dependents ?? []).map((d) => (
+                      <li key={d} className="font-mono">{d}</li>
+                    ))}
+                    {(detail.dependents ?? []).length === 0 ? (
+                      <li className="text-slate-400">none</li>
+                    ) : null}
+                  </ul>
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+              <h2 className="mb-3 text-lg font-medium">Roles allowed</h2>
+              <ul className="flex flex-wrap gap-2 text-xs">
+                {(detail.roles_allowed ?? []).length === 0 ? (
+                  <li className="text-slate-400">any</li>
+                ) : (
+                  detail.roles_allowed.map((r) => (
+                    <li
+                      key={r}
+                      className="rounded-full bg-indigo-50 px-2 py-1 text-indigo-700"
+                    >
+                      {r}
+                    </li>
+                  ))
+                )}
+              </ul>
+            </section>
+          </>
+        ) : (
+          <div className="rounded-md border border-slate-200 bg-white p-6 text-center text-slate-500">
+            Loading service…
+          </div>
+        )}
+      </main>)</ErrorBoundary>
   );
 }
 

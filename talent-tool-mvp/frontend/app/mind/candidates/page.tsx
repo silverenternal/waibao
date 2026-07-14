@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
@@ -151,102 +152,98 @@ export default function CandidateBrowsePage() {
   const selectedRole = roles.find((r) => r.id === selectedRoleId);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Matched Candidates</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            AI-matched candidates for your active roles
-          </p>
+    <ErrorBoundary>(<div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-foreground">Matched Candidates</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              AI-matched candidates for your active roles
+            </p>
+          </div>
+
+          {/* Role Selector */}
+          <Select
+            value={selectedRoleId ?? ""}
+            onValueChange={(val) => val && handleSelectRole(val)}
+          >
+            <SelectTrigger className="w-full md:w-72">
+              {selectedRoleId
+                ? roles.find((r) => r.id === selectedRoleId)?.title ?? "Select a role"
+                : "Select a role"}
+            </SelectTrigger>
+            <SelectContent>
+              {roles.map((role) => (
+                <SelectItem key={role.id} value={role.id}>
+                  <div className="flex items-center gap-2">
+                    <Briefcase className="h-4 w-4 text-muted-foreground/60" />
+                    {role.title}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-
-        {/* Role Selector */}
-        <Select
-          value={selectedRoleId ?? ""}
-          onValueChange={(val) => val && handleSelectRole(val)}
-        >
-          <SelectTrigger className="w-full md:w-72">
-            {selectedRoleId
-              ? roles.find((r) => r.id === selectedRoleId)?.title ?? "Select a role"
-              : "Select a role"}
-          </SelectTrigger>
-          <SelectContent>
-            {roles.map((role) => (
-              <SelectItem key={role.id} value={role.id}>
-                <div className="flex items-center gap-2">
-                  <Briefcase className="h-4 w-4 text-muted-foreground/60" />
-                  {role.title}
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Summary bar */}
-      {selectedRole && !loading && (
-        <div className="flex flex-wrap items-center gap-2 md:gap-4 text-sm text-muted-foreground">
-          <span>{sortedMatches.length} candidates matched</span>
-          <span className="text-muted-foreground/40">|</span>
-          <span className="text-emerald-400">
-            {sortedMatches.filter((m) => m.match.confidence === "strong").length} strong
-          </span>
-          <span className="text-amber-400">
-            {sortedMatches.filter((m) => m.match.confidence === "good").length} good
-          </span>
-          <span className="text-muted-foreground/60">
-            {sortedMatches.filter((m) => m.match.confidence === "possible").length} possible
-          </span>
+        {/* Summary bar */}
+        {selectedRole && !loading && (
+          <div className="flex flex-wrap items-center gap-2 md:gap-4 text-sm text-muted-foreground">
+            <span>{sortedMatches.length} candidates matched</span>
+            <span className="text-muted-foreground/40">|</span>
+            <span className="text-emerald-400">
+              {sortedMatches.filter((m) => m.match.confidence === "strong").length} strong
+            </span>
+            <span className="text-amber-400">
+              {sortedMatches.filter((m) => m.match.confidence === "good").length} good
+            </span>
+            <span className="text-muted-foreground/60">
+              {sortedMatches.filter((m) => m.match.confidence === "possible").length} possible
+            </span>
+          </div>
+        )}
+        {/* Filter Bar + View Toggle */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <CandidateFilterBar
+            filters={filters}
+            onChange={setFilters}
+            availableSkills={availableSkills}
+          />
+          <ViewToggle view={view} onChange={setView} />
         </div>
-      )}
-
-      {/* Filter Bar + View Toggle */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <CandidateFilterBar
-          filters={filters}
-          onChange={setFilters}
-          availableSkills={availableSkills}
-        />
-        <ViewToggle view={view} onChange={setView} />
-      </div>
-
-      {/* Content */}
-      {loading ? (
-        <LoadingSkeleton variant="card" count={3} />
-      ) : sortedMatches.length === 0 ? (
-        <EmptyState
-          icon={Users}
-          title="No candidates found"
-          description={
-            matches.length > 0
-              ? "Try adjusting your filters to see more candidates."
-              : "No matches have been generated for this role yet. Check back soon."
-          }
-        />
-      ) : view === "grid" ? (
-        <CandidateGrid
-          matches={sortedMatches}
-          onShortlist={handleShortlist}
-          onDismiss={(id) => setDismissTarget(id)}
-          onRequestIntro={handleRequestIntro}
-        />
-      ) : (
-        <CandidateList
-          matches={sortedMatches}
-          onShortlist={handleShortlist}
-          onDismiss={(id) => setDismissTarget(id)}
-          onRequestIntro={handleRequestIntro}
-        />
-      )}
-
-      {/* Dismiss Dialog */}
-      {dismissTarget && (
-        <DismissDialog
-          onConfirm={(reason) => handleDismiss(dismissTarget, reason)}
-          onCancel={() => setDismissTarget(null)}
-        />
-      )}
-    </div>
+        {/* Content */}
+        {loading ? (
+          <LoadingSkeleton variant="card" count={3} />
+        ) : sortedMatches.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title="No candidates found"
+            description={
+              matches.length > 0
+                ? "Try adjusting your filters to see more candidates."
+                : "No matches have been generated for this role yet. Check back soon."
+            }
+          />
+        ) : view === "grid" ? (
+          <CandidateGrid
+            matches={sortedMatches}
+            onShortlist={handleShortlist}
+            onDismiss={(id) => setDismissTarget(id)}
+            onRequestIntro={handleRequestIntro}
+          />
+        ) : (
+          <CandidateList
+            matches={sortedMatches}
+            onShortlist={handleShortlist}
+            onDismiss={(id) => setDismissTarget(id)}
+            onRequestIntro={handleRequestIntro}
+          />
+        )}
+        {/* Dismiss Dialog */}
+        {dismissTarget && (
+          <DismissDialog
+            onConfirm={(reason) => handleDismiss(dismissTarget, reason)}
+            onCancel={() => setDismissTarget(null)}
+          />
+        )}
+      </div>)</ErrorBoundary>
   );
 }

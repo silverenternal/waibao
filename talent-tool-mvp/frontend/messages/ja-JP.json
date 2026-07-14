@@ -41,10 +41,7 @@
     "send": "送信",
     "languageZh": "Simplified Chinese",
     "languageEn": "English",
-    "languageJa": "Japanese",
-    "languageChanged": "言語が切り替わりました",
-    "loadingMore": "もっと読み込む",
-    "backToTop": "トップへ戻る"
+    "languageJa": "Japanese"
   },
   "nav": {
     "jobseekerHome": "My Space",
@@ -120,10 +117,22 @@
     "greetingBody": "仕事、気分、心配事を聞かせてください — 聞いてアドバイスします。",
     "inputPlaceholder": "エージェントに何か言ってみてください...",
     "suggestions": {
-      "writeJournal": { "label": "日記を書く", "text": "今日 AI プロジェクトをやった、収穫があった" },
-      "viewMatches": { "label": "マッチを見る", "text": "自分に合った仕事を見せて" },
-      "careerPlan": { "label": "キャリアプラン", "text": "AI プロダクトマネージャーになりたい — どう計画する？" },
-      "chatMood": { "label": "気分を話す", "text": "今日ちょっと不安" }
+      "writeJournal": {
+        "label": "日記を書く",
+        "text": "今日 AI プロジェクトをやった、収穫があった"
+      },
+      "viewMatches": {
+        "label": "マッチを見る",
+        "text": "自分に合った仕事を見せて"
+      },
+      "careerPlan": {
+        "label": "キャリアプラン",
+        "text": "AI プロダクトマネージャーになりたい — どう計画する？"
+      },
+      "chatMood": {
+        "label": "気分を話す",
+        "text": "今日ちょっと不安"
+      }
     }
   },
   "employer": {
@@ -305,5 +314,92 @@
     "button": "Escalate to Human",
     "ticketCreated": "Ticket created",
     "selectDepartment": "Select department"
+  },
+  "seo": {
+    "home": {
+      "title": "AI搭載タレントプラットフォーム",
+      "description": "インテリジェントな候補者マッチング、コパイロットダッシュボード、マルチペルソナワークフローを提供。",
+      "keywords": [
+        "採用",
+        "タレントプラットフォーム",
+        "候補者マッチング",
+        "AI採用",
+        "ATS",
+        "コパイロット"
+      ]
+    },
+    "pricing": {
+      "title": "料金プラン",
+      "description": "あらゆる規模のチーム向けの透明なサブスクリプションプラン。無料で開始、採用に応じて拡張。",
+      "keywords": [
+        "料金",
+        "サブスクリプション",
+        "プラン",
+        "採用料金"
+      ]
+    },
+    "marketplace": {
+      "title": "サービスマーケットプレイス",
+      "description": "認定済みの採用サービス、統合、AIエージェントを閲覧・購読。",
+      "keywords": [
+        "マーケットプレイス",
+        "採用サービス",
+        "統合",
+        "AIエージェント"
+      ]
+    },
+    "services": {
+      "title": "公開サービスカタログ",
+      "description": "利用可能なすべてのサービス、ティア、購読方法を発見。",
+      "keywords": [
+        "サービスカタログ",
+        "採用サービス",
+        "購読"
+      ]
+    },
+    "developers": {
+      "title": "開発者ポータル",
+      "description": "APIキー、Webhooks、SDK、ライブサンドボックスでプラットフォームに構築。",
+      "keywords": [
+        "開発者ポータル",
+        "API",
+        "Webhooks",
+        "SDK",
+        "サンドボックス"
+      ]
+    },
+    "legal": {
+      "title": "法的情報",
+      "description": "RecruitTechプラットフォームの利用規約、プライバシー、DPA、Cookieポリシー。",
+      "keywords": [
+        "法務",
+        "プライバシー",
+        "規約",
+        "DPA",
+        "Cookie"
+      ]
+    },
+    "status": {
+      "title": "システムステータス",
+      "description": "RecruitTechのリアルタイムサービス可用性と稼働率。",
+      "keywords": [
+        "ステータス",
+        "稼働時間",
+        "可用性"
+      ]
+    }
+  },
+  "forms": {
+    "required": "この項目は必須です",
+    "invalidEmail": "有効なメールアドレスを入力してください",
+    "minLength": "{min} 文字以上でなければなりません",
+    "maxLength": "{max} 文字以下でなければなりません",
+    "invalidUrl": "有効な URL を入力してください",
+    "invalidNumber": "有効な数値を入力してください",
+    "passwordMismatch": "パスワードが一致しません",
+    "submitting": "送信中...",
+    "submit": "送信",
+    "cancel": "キャンセル",
+    "genericError": "下記のエラーを修正してください"
   }
 }

@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 /**
  * T1501 - ATS 集成管理列表 / 配置
  *
@@ -75,83 +76,82 @@ export default function ATSIntegrationsPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">ATS 集成</h1>
-          <p className="text-sm text-muted-foreground">
-            Greenhouse / Lever 双向同步,每 15 分钟自动拉取并解决冲突。
-          </p>
-        </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger>
-            <Button>新建集成</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>新建 ATS 集成</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3">
-              <div>
-                <Label>Provider</Label>
-                <Select value={form.provider} onValueChange={(v) => setForm({ ...form, provider: typeof v === 'string' ? v : form.provider })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="greenhouse">Greenhouse (Harvest)</SelectItem>
-                    <SelectItem value="lever">Lever</SelectItem>
-                    <SelectItem value="mock_ats">Mock (开发)</SelectItem>
-                  </SelectContent>
-                </Select>
+    <ErrorBoundary>(<div className="space-y-6 p-6">
+        <header className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">ATS 集成</h1>
+            <p className="text-sm text-muted-foreground">
+              Greenhouse / Lever 双向同步,每 15 分钟自动拉取并解决冲突。
+            </p>
+          </div>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger>
+              <Button>新建集成</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>新建 ATS 集成</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3">
+                <div>
+                  <Label>Provider</Label>
+                  <Select value={form.provider} onValueChange={(v) => setForm({ ...form, provider: typeof v === 'string' ? v : form.provider })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="greenhouse">Greenhouse (Harvest)</SelectItem>
+                      <SelectItem value="lever">Lever</SelectItem>
+                      <SelectItem value="mock_ats">Mock (开发)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>名称</Label>
+                  <Input
+                    value={form.display_name}
+                    onChange={(e) => setForm({ ...form, display_name: e.target.value })}
+                    placeholder="生产 - Greenhouse"
+                  />
+                </div>
+                <div>
+                  <Label>API Key</Label>
+                  <Input
+                    type="password"
+                    value={form.api_key}
+                    onChange={(e) => setForm({ ...form, api_key: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Base URL (可选)</Label>
+                  <Input
+                    value={form.api_base_url}
+                    onChange={(e) => setForm({ ...form, api_base_url: e.target.value })}
+                    placeholder="https://harvest.greenhouse.io/v1"
+                  />
+                </div>
+                <Button onClick={create} disabled={!form.display_name || !form.api_key}>
+                  保存
+                </Button>
               </div>
-              <div>
-                <Label>名称</Label>
-                <Input
-                  value={form.display_name}
-                  onChange={(e) => setForm({ ...form, display_name: e.target.value })}
-                  placeholder="生产 - Greenhouse"
-                />
-              </div>
-              <div>
-                <Label>API Key</Label>
-                <Input
-                  type="password"
-                  value={form.api_key}
-                  onChange={(e) => setForm({ ...form, api_key: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>Base URL (可选)</Label>
-                <Input
-                  value={form.api_base_url}
-                  onChange={(e) => setForm({ ...form, api_base_url: e.target.value })}
-                  placeholder="https://harvest.greenhouse.io/v1"
-                />
-              </div>
-              <Button onClick={create} disabled={!form.display_name || !form.api_key}>
-                保存
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </header>
-
-      {loading ? (
-        <p>加载中...</p>
-      ) : items.length === 0 ? (
-        <Card>
-          <CardContent className="p-6 text-sm text-muted-foreground">
-            暂无 ATS 集成。点击"新建集成"开始绑定 Greenhouse 或 Lever。
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {items.map((it) => (
-            <Link key={it.id} href={`/mothership/admin/ats/${it.id}`} className="block">
-              <ATSIntegrationCard integration={it} />
-            </Link>
-          ))}
-        </div>
-      )}
-    </div>
+            </DialogContent>
+          </Dialog>
+        </header>
+        {loading ? (
+          <p>加载中...</p>
+        ) : items.length === 0 ? (
+          <Card>
+            <CardContent className="p-6 text-sm text-muted-foreground">
+              暂无 ATS 集成。点击"新建集成"开始绑定 Greenhouse 或 Lever。
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {items.map((it) => (
+              <Link key={it.id} href={`/mothership/admin/ats/${it.id}`} className="block">
+                <ATSIntegrationCard integration={it} />
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>)</ErrorBoundary>
   );
 }

@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * T1904 — /admin/analytics/cross-platform
@@ -137,112 +138,107 @@ export default function CrossPlatformDashboard() {
   }, [refDate, loadData]);
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6 px-4 py-8">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            跨端日活统计
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            DAU / WAU / MAU 按端拆分，跨端用户去重，多端用户画像
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">参考日期</span>
-          <input
-            type="date"
-            value={refDate}
-            onChange={(e) => setRefDate(e.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
-            max={new Date().toISOString().slice(0, 10)}
+    <ErrorBoundary>(<main className="mx-auto max-w-6xl space-y-6 px-4 py-8">
+        <header className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              跨端日活统计
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              DAU / WAU / MAU 按端拆分，跨端用户去重，多端用户画像
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">参考日期</span>
+            <input
+              type="date"
+              value={refDate}
+              onChange={(e) => setRefDate(e.target.value)}
+              className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+              max={new Date().toISOString().slice(0, 10)}
+            />
+          </div>
+        </header>
+        {error && (
+          <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+            {error}
+          </div>
+        )}
+        {/* KPI */}
+        <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <KpiCard
+            label="DAU (跨端去重)"
+            value={summary?.unified.dau}
+            loading={loading}
           />
-        </div>
-      </header>
-
-      {error && (
-        <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-          {error}
-        </div>
-      )}
-
-      {/* KPI */}
-      <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <KpiCard
-          label="DAU (跨端去重)"
-          value={summary?.unified.dau}
-          loading={loading}
-        />
-        <KpiCard
-          label="WAU (跨端去重)"
-          value={summary?.unified.wau}
-          loading={loading}
-        />
-        <KpiCard
-          label="MAU (跨端去重)"
-          value={summary?.unified.mau}
-          loading={loading}
-        />
-        <KpiCard
-          label="多端用户占比"
-          value={
-            summary
-              ? `${(summary.cross_platform.multi_platform_share * 100).toFixed(1)}%`
-              : undefined
-          }
-          loading={loading}
-          hint={
-            summary
-              ? `${summary.cross_platform.multi_platform_users.toLocaleString()} 用户跨 ≥2 端活跃`
-              : undefined
-          }
-        />
-      </section>
-
-      {/* 按端拆分 DAU/WAU/MAU */}
-      <Card>
-        <CardHeader>
-          <CardTitle>按端拆分 — DAU / WAU / MAU</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <Skeleton className="h-64 w-full" />
-          ) : summary ? (
-            <PlatformSplitChart data={summary.by_platform} />
-          ) : null}
-        </CardContent>
-      </Card>
-
-      {/* 端×端重合热图 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>跨端用户重合矩阵 (MAU 30 天)</CardTitle>
-          <p className="text-xs text-muted-foreground">
-            行/列均为端；单元格 = 同时活跃于两端的人数。颜色越深=重合越多。
-          </p>
-        </CardHeader>
-        <CardContent>
-          {loading || !summary ? (
-            <Skeleton className="h-48 w-full" />
-          ) : (
-            <OverlapHeatmap overlap={summary.overlap} />
-          )}
-        </CardContent>
-      </Card>
-
-      {/* 7 天 DAU 趋势 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>DAU 7 天趋势 (按端 + 统一)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading || !dau ? (
-            <Skeleton className="h-56 w-full" />
-          ) : (
-            <DauTrendChart dau={dau} />
-          )}
-        </CardContent>
-      </Card>
-    </main>
+          <KpiCard
+            label="WAU (跨端去重)"
+            value={summary?.unified.wau}
+            loading={loading}
+          />
+          <KpiCard
+            label="MAU (跨端去重)"
+            value={summary?.unified.mau}
+            loading={loading}
+          />
+          <KpiCard
+            label="多端用户占比"
+            value={
+              summary
+                ? `${(summary.cross_platform.multi_platform_share * 100).toFixed(1)}%`
+                : undefined
+            }
+            loading={loading}
+            hint={
+              summary
+                ? `${summary.cross_platform.multi_platform_users.toLocaleString()} 用户跨 ≥2 端活跃`
+                : undefined
+            }
+          />
+        </section>
+        {/* 按端拆分 DAU/WAU/MAU */}
+        <Card>
+          <CardHeader>
+            <CardTitle>按端拆分 — DAU / WAU / MAU</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <Skeleton className="h-64 w-full" />
+            ) : summary ? (
+              <PlatformSplitChart data={summary.by_platform} />
+            ) : null}
+          </CardContent>
+        </Card>
+        {/* 端×端重合热图 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>跨端用户重合矩阵 (MAU 30 天)</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              行/列均为端；单元格 = 同时活跃于两端的人数。颜色越深=重合越多。
+            </p>
+          </CardHeader>
+          <CardContent>
+            {loading || !summary ? (
+              <Skeleton className="h-48 w-full" />
+            ) : (
+              <OverlapHeatmap overlap={summary.overlap} />
+            )}
+          </CardContent>
+        </Card>
+        {/* 7 天 DAU 趋势 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>DAU 7 天趋势 (按端 + 统一)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading || !dau ? (
+              <Skeleton className="h-56 w-full" />
+            ) : (
+              <DauTrendChart dau={dau} />
+            )}
+          </CardContent>
+        </Card>
+      </main>)</ErrorBoundary>
   );
 }
 

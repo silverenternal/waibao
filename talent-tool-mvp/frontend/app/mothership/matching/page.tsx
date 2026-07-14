@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import { useState, useEffect, useCallback } from "react";
 import { apiClient } from "@/lib/api-client";
@@ -152,105 +153,103 @@ export default function MatchingPage() {
   }, [selectedIds]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Match Results</h1>
-          <p className="text-muted-foreground">AI-matched candidates ranked by fit</p>
+    <ErrorBoundary>(<div className="space-y-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Match Results</h1>
+            <p className="text-muted-foreground">AI-matched candidates ranked by fit</p>
+          </div>
+          {selectedIds.size > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="secondary">{selectedIds.size} selected</Badge>
+              <Button size="sm" variant="outline" onClick={handleBulkAddToCollection}>
+                <FolderOpen className="mr-2 h-4 w-4" /> <span className="hidden sm:inline">Add to</span> Collection
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleBulkSendHandoff}>
+                <Send className="mr-2 h-4 w-4" /> <span className="hidden sm:inline">Send as</span> Handoff
+              </Button>
+            </div>
+          )}
         </div>
-        {selectedIds.size > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary">{selectedIds.size} selected</Badge>
-            <Button size="sm" variant="outline" onClick={handleBulkAddToCollection}>
-              <FolderOpen className="mr-2 h-4 w-4" /> <span className="hidden sm:inline">Add to</span> Collection
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleBulkSendHandoff}>
-              <Send className="mr-2 h-4 w-4" /> <span className="hidden sm:inline">Send as</span> Handoff
-            </Button>
+        {/* Role selector + Filter bar */}
+        <div className="flex flex-col gap-3 md:flex-row md:gap-4 md:items-center md:flex-wrap">
+          <Select
+            value={selectedRoleId ?? undefined}
+            onValueChange={(val) => val && handleSelectRole(val)}
+          >
+            <SelectTrigger className="w-full md:w-[300px]">
+              {selectedRoleId
+                ? roles.find((r) => r.id === selectedRoleId)?.title ?? "Select a role..."
+                : "Select a role..."}
+            </SelectTrigger>
+            <SelectContent>
+              {roles.map((role) => (
+                <SelectItem key={role.id} value={role.id}>
+                  {role.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={filterConfidence}
+            onValueChange={(val) => val && setFilterConfidence(val)}
+          >
+            <SelectTrigger className="w-full md:w-[160px]">
+              <SelectValue placeholder="Confidence" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All matches</SelectItem>
+              <SelectItem value="strong">Strong only</SelectItem>
+              <SelectItem value="good">Good+</SelectItem>
+              <SelectItem value="possible">All levels</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={sortBy}
+            onValueChange={(val) => val && setSortBy(val)}
+          >
+            <SelectTrigger className="w-full md:w-[160px]">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="score">Highest score</SelectItem>
+              <SelectItem value="confidence">Confidence level</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {/* Match results */}
+        {loading ? (
+          <LoadingSkeleton variant="card" count={5} />
+        ) : !selectedRoleId ? (
+          <EmptyState
+            icon={Search}
+            title="Select a role"
+            description="Choose a role above to see matched candidates"
+          />
+        ) : filteredMatches.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title="No matches found"
+            description="No candidates match the requirements for this role yet"
+          />
+        ) : (
+          <div className="space-y-3">
+            {filteredMatches.map((match) => (
+              <MatchDetailCard
+                key={match.id}
+                match={match}
+                candidate={candidates[match.candidate_id] ?? null}
+                selected={selectedIds.has(match.id)}
+                onToggleSelect={() => toggleSelect(match.id)}
+                onShortlist={() => handleShortlist(match.id)}
+                onAddToCollection={() => handleAddToCollection(match.id)}
+                onRefer={() => handleRefer(match.id)}
+              />
+            ))}
           </div>
         )}
-      </div>
-
-      {/* Role selector + Filter bar */}
-      <div className="flex flex-col gap-3 md:flex-row md:gap-4 md:items-center md:flex-wrap">
-        <Select
-          value={selectedRoleId ?? undefined}
-          onValueChange={(val) => val && handleSelectRole(val)}
-        >
-          <SelectTrigger className="w-full md:w-[300px]">
-            {selectedRoleId
-              ? roles.find((r) => r.id === selectedRoleId)?.title ?? "Select a role..."
-              : "Select a role..."}
-          </SelectTrigger>
-          <SelectContent>
-            {roles.map((role) => (
-              <SelectItem key={role.id} value={role.id}>
-                {role.title}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={filterConfidence}
-          onValueChange={(val) => val && setFilterConfidence(val)}
-        >
-          <SelectTrigger className="w-full md:w-[160px]">
-            <SelectValue placeholder="Confidence" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All matches</SelectItem>
-            <SelectItem value="strong">Strong only</SelectItem>
-            <SelectItem value="good">Good+</SelectItem>
-            <SelectItem value="possible">All levels</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={sortBy}
-          onValueChange={(val) => val && setSortBy(val)}
-        >
-          <SelectTrigger className="w-full md:w-[160px]">
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="score">Highest score</SelectItem>
-            <SelectItem value="confidence">Confidence level</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Match results */}
-      {loading ? (
-        <LoadingSkeleton variant="card" count={5} />
-      ) : !selectedRoleId ? (
-        <EmptyState
-          icon={Search}
-          title="Select a role"
-          description="Choose a role above to see matched candidates"
-        />
-      ) : filteredMatches.length === 0 ? (
-        <EmptyState
-          icon={Users}
-          title="No matches found"
-          description="No candidates match the requirements for this role yet"
-        />
-      ) : (
-        <div className="space-y-3">
-          {filteredMatches.map((match) => (
-            <MatchDetailCard
-              key={match.id}
-              match={match}
-              candidate={candidates[match.candidate_id] ?? null}
-              selected={selectedIds.has(match.id)}
-              onToggleSelect={() => toggleSelect(match.id)}
-              onShortlist={() => handleShortlist(match.id)}
-              onAddToCollection={() => handleAddToCollection(match.id)}
-              onRefer={() => handleRefer(match.id)}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+      </div>)</ErrorBoundary>
   );
 }

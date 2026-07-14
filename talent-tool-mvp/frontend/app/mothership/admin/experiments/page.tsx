@@ -1,9 +1,10 @@
+"use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 /**
  * Experiments admin index (T805).
  *
  * 列出全部 A/B 实验并提供 create / start / stop 操作.
  */
-"use client";
 
 import * as React from "react";
 import Link from "next/link";
@@ -116,107 +117,105 @@ export default function ExperimentsListPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-semibold">A/B Experiments</h1>
-          <p className="text-sm text-muted-foreground">
-            Define and monitor experiments across matching, ranking, prompts and more.
-          </p>
-        </div>
+    <ErrorBoundary>(<div className="p-6 space-y-6">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-2xl font-semibold">A/B Experiments</h1>
+            <p className="text-sm text-muted-foreground">
+              Define and monitor experiments across matching, ranking, prompts and more.
+            </p>
+          </div>
 
-        <div className="flex items-center gap-2">
-          <Select value={filter} onValueChange={(v) => v && setFilter(v as ExperimentStatus | "all")}>
-            <SelectTrigger className="w-32"><SelectValue placeholder="Status" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="running">Running</SelectItem>
-              <SelectItem value="stopped">Stopped</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Select value={filter} onValueChange={(v) => v && setFilter(v as ExperimentStatus | "all")}>
+              <SelectTrigger className="w-32"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="running">Running</SelectItem>
+                <SelectItem value="stopped">Stopped</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+              </SelectContent>
+            </Select>
 
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger>
-              <Button>New experiment</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Create experiment</DialogTitle>
-                <DialogDescription>
-                  Experiments split traffic by hash bucket. Each variant receives a weighted
-                  share of incoming users.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-2">
-                <div className="space-y-1">
-                  <Label className="text-xs">Name</Label>
-                  <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="match_weights_v3" />
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger>
+                <Button>New experiment</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Create experiment</DialogTitle>
+                  <DialogDescription>
+                    Experiments split traffic by hash bucket. Each variant receives a weighted
+                    share of incoming users.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Name</Label>
+                    <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="match_weights_v3" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Description</Label>
+                    <Input value={formDescription} onChange={(e) => setFormDescription(e.target.value)} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Primary metric</Label>
+                    <Select value={formMetric} onValueChange={(v) => v && setFormMetric(v)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {(metrics.length ? metrics : ["match.score"]).map((m) => (
+                          <SelectItem key={m} value={m}>{m}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">Variants (weight)</Label>
+                    <VariantEditor variants={formVariants} onChange={setFormVariants} />
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Description</Label>
-                  <Input value={formDescription} onChange={(e) => setFormDescription(e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Primary metric</Label>
-                  <Select value={formMetric} onValueChange={(v) => v && setFormMetric(v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {(metrics.length ? metrics : ["match.score"]).map((m) => (
-                        <SelectItem key={m} value={m}>{m}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs">Variants (weight)</Label>
-                  <VariantEditor variants={formVariants} onChange={setFormVariants} />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setOpen(false)} disabled={busy}>Cancel</Button>
-                <Button onClick={handleCreate} disabled={busy || !formName.trim()}>
-                  Create
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setOpen(false)} disabled={busy}>Cancel</Button>
+                  <Button onClick={handleCreate} disabled={busy || !formName.trim()}>
+                    Create
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
-      </div>
-
-      {error && (
-        <Card>
-          <CardContent className="text-sm text-destructive py-3">{error}</CardContent>
-        </Card>
-      )}
-
-      {experiments === null ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-44" />
-          ))}
-        </div>
-      ) : experiments.length === 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">No experiments yet</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Create your first A/B experiment to start testing new variants. See the docs at{" "}
-            <Link href="/docs/experiments" className="underline">
-              /docs/experiments
-            </Link>
-            .
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {experiments.map((e) => (
-            <ExperimentCard key={e.id} experiment={e} onAction={handleAction} isLoading={busy} />
-          ))}
-        </div>
-      )}
-    </div>
+        {error && (
+          <Card>
+            <CardContent className="text-sm text-destructive py-3">{error}</CardContent>
+          </Card>
+        )}
+        {experiments === null ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-44" />
+            ))}
+          </div>
+        ) : experiments.length === 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">No experiments yet</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground">
+              Create your first A/B experiment to start testing new variants. See the docs at{" "}
+              <Link href="/docs/experiments" className="underline">
+                /docs/experiments
+              </Link>
+              .
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {experiments.map((e) => (
+              <ExperimentCard key={e.id} experiment={e} onAction={handleAction} isLoading={busy} />
+            ))}
+          </div>
+        )}
+      </div>)</ErrorBoundary>
   );
 }

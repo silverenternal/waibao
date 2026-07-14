@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import { useState, useEffect } from "react";
 import { apiClient } from "@/lib/api-client";
@@ -111,146 +112,144 @@ export default function AnalyticsPage() {
   }));
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
-          <BarChart3 className="h-6 w-6" />
-          Platform Analytics
-        </h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Signal-powered insights across the entire platform.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricTile
-          label="Total Candidates"
-          value={847}
-          icon={<Users className="h-4 w-4" />}
-          trend={{ value: 15, label: "+15% this month" }}
-          loading={loading}
-        />
-        <MetricTile
-          label="Active Roles"
-          value={34}
-          icon={<Briefcase className="h-4 w-4" />}
-          loading={loading}
-        />
-        <MetricTile
-          label="Matches Generated"
-          value="2.4k"
-          icon={<Zap className="h-4 w-4" />}
-          trend={{ value: 8, label: "+8% vs last month" }}
-          loading={loading}
-        />
-        <MetricTile
-          label="Revenue Pipeline"
-          value={"\u00a3842k"}
-          icon={<DollarSign className="h-4 w-4" />}
-          loading={loading}
-        />
-      </div>
-
-      <Tabs defaultValue="funnel" className="space-y-6">
-        <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
-          <TabsList className="w-max md:w-auto">
-            <TabsTrigger value="funnel">Pipeline Funnel</TabsTrigger>
-            <TabsTrigger value="skills">Trending Skills</TabsTrigger>
-            <TabsTrigger value="partners">Partner Performance</TabsTrigger>
-            <TabsTrigger value="engagement">Client Engagement</TabsTrigger>
-            <TabsTrigger value="activity">Activity</TabsTrigger>
-          </TabsList>
+    <ErrorBoundary>(<div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
+            <BarChart3 className="h-6 w-6" />
+            Platform Analytics
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Signal-powered insights across the entire platform.
+          </p>
         </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <MetricTile
+            label="Total Candidates"
+            value={847}
+            icon={<Users className="h-4 w-4" />}
+            trend={{ value: 15, label: "+15% this month" }}
+            loading={loading}
+          />
+          <MetricTile
+            label="Active Roles"
+            value={34}
+            icon={<Briefcase className="h-4 w-4" />}
+            loading={loading}
+          />
+          <MetricTile
+            label="Matches Generated"
+            value="2.4k"
+            icon={<Zap className="h-4 w-4" />}
+            trend={{ value: 8, label: "+8% vs last month" }}
+            loading={loading}
+          />
+          <MetricTile
+            label="Revenue Pipeline"
+            value={"\u00a3842k"}
+            icon={<DollarSign className="h-4 w-4" />}
+            loading={loading}
+          />
+        </div>
+        <Tabs defaultValue="funnel" className="space-y-6">
+          <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+            <TabsList className="w-max md:w-auto">
+              <TabsTrigger value="funnel">Pipeline Funnel</TabsTrigger>
+              <TabsTrigger value="skills">Trending Skills</TabsTrigger>
+              <TabsTrigger value="partners">Partner Performance</TabsTrigger>
+              <TabsTrigger value="engagement">Client Engagement</TabsTrigger>
+              <TabsTrigger value="activity">Activity</TabsTrigger>
+            </TabsList>
+          </div>
 
-        <TabsContent value="funnel">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Candidate Pipeline Funnel</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="space-y-4">
-                  {Array.from({ length: 7 }).map((_, i) => (
-                    <Skeleton key={i} className="h-10 rounded-md" />
-                  ))}
+          <TabsContent value="funnel">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Candidate Pipeline Funnel</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="space-y-4">
+                    {Array.from({ length: 7 }).map((_, i) => (
+                      <Skeleton key={i} className="h-10 rounded-md" />
+                    ))}
+                  </div>
+                ) : (
+                  <FunnelChart stages={funnelStages} />
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="skills">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  Most In-Demand Skills
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <Skeleton className="h-[300px] rounded-md" />
+                ) : (
+                  <TrendingSkillsChart data={trendingSkills} />
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="partners">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <UserCheck className="h-4 w-4" />
+                  Partner Performance
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <Skeleton className="h-64 rounded-md" />
+                ) : (
+                  <PartnerPerformanceTable data={[]} />
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="engagement">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Client Engagement</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  <MetricTile label="Browse Frequency" value="4.2/week" subtitle="Avg per client" loading={loading} />
+                  <MetricTile label="Shortlist Rate" value="38%" subtitle="Of viewed candidates" loading={loading} />
+                  <MetricTile label="Quote Acceptance" value="67%" subtitle="Of generated quotes" loading={loading} />
+                  <MetricTile label="Avg Time to Hire" value="18 days" subtitle="Match to placement" loading={loading} />
                 </div>
-              ) : (
-                <FunnelChart stages={funnelStages} />
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        <TabsContent value="skills">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Most In-Demand Skills
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <Skeleton className="h-[300px] rounded-md" />
-              ) : (
-                <TrendingSkillsChart data={trendingSkills} />
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="partners">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <UserCheck className="h-4 w-4" />
-                Partner Performance
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <Skeleton className="h-64 rounded-md" />
-              ) : (
-                <PartnerPerformanceTable data={[]} />
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="engagement">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Client Engagement</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                <MetricTile label="Browse Frequency" value="4.2/week" subtitle="Avg per client" loading={loading} />
-                <MetricTile label="Shortlist Rate" value="38%" subtitle="Of viewed candidates" loading={loading} />
-                <MetricTile label="Quote Acceptance" value="67%" subtitle="Of generated quotes" loading={loading} />
-                <MetricTile label="Avg Time to Hire" value="18 days" subtitle="Match to placement" loading={loading} />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="activity">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Activity className="h-4 w-4" />
-                Platform Activity (30 days)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <Skeleton className="h-[200px] rounded-md" />
-              ) : (
-                <TimeSeriesChart data={activityTimeSeries} />
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+          <TabsContent value="activity">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Activity className="h-4 w-4" />
+                  Platform Activity (30 days)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <Skeleton className="h-[200px] rounded-md" />
+                ) : (
+                  <TimeSeriesChart data={activityTimeSeries} />
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>)</ErrorBoundary>
   );
 }

@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * Strategy Map — v8.1 T3703.
@@ -73,69 +74,66 @@ const PRESENT_LEVELS = Object.keys(ITEMS_BY_LEVEL).filter(
 
 export default function StrategyMapPage() {
   return (
-    <div className="space-y-6 p-4 md:p-8">
-      <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <Layers className="h-5 w-5 text-primary" />
-            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-              战略地图 · Strategy Map
-            </h1>
-            <Badge variant="secondary">v8.1 T3703</Badge>
+    <ErrorBoundary>(<div className="space-y-6 p-4 md:p-8">
+        <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <Layers className="h-5 w-5 text-primary" />
+              <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+                战略地图 · Strategy Map
+              </h1>
+              <Badge variant="secondary">v8.1 T3703</Badge>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              四层（Vision · Planning · Strategy · Tactic）逐步缩进 — 招聘影响实时计算。
+            </p>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            四层（Vision · Planning · Strategy · Tactic）逐步缩进 — 招聘影响实时计算。
-          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" asChild>
+              <Link href="/strategy/feed">
+                <Sparkles className="mr-1 h-4 w-4" /> 战略 Feed
+              </Link>
+            </Button>
+            <Button>
+              <ChevronRight className="mr-1 h-4 w-4" /> 新发布
+            </Button>
+          </div>
+        </header>
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+          <div className="xl:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">分层视图</CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  点任一行查看招聘影响 / 关联人才。
+                </p>
+              </CardHeader>
+              <CardContent>
+                <StrategyMap items={ITEMS_BY_LEVEL as any} />
+              </CardContent>
+            </Card>
+          </div>
+          <div className="space-y-4">
+            <StrategyImpactCard />
+            <GapAlert missing={["vision"]} />
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" asChild>
-            <Link href="/strategy/feed">
-              <Sparkles className="mr-1 h-4 w-4" /> 战略 Feed
-            </Link>
-          </Button>
-          <Button>
-            <ChevronRight className="mr-1 h-4 w-4" /> 新发布
-          </Button>
-        </div>
-      </header>
-
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <div className="xl:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">分层视图</CardTitle>
-              <p className="text-xs text-muted-foreground">
-                点任一行查看招聘影响 / 关联人才。
-              </p>
-            </CardHeader>
-            <CardContent>
-              <StrategyMap items={ITEMS_BY_LEVEL as any} />
-            </CardContent>
-          </Card>
-        </div>
-        <div className="space-y-4">
-          <StrategyImpactCard />
-          <GapAlert missing={["vision"]} />
-        </div>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">战略变更时间线</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <StrategyTimeline items={ITEMS} />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">变更对照</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <StrategyDiffView before={[]} after={ITEMS} />
-        </CardContent>
-      </Card>
-    </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">战略变更时间线</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <StrategyTimeline items={ITEMS} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">变更对照</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <StrategyDiffView before={[]} after={ITEMS} />
+          </CardContent>
+        </Card>
+      </div>)</ErrorBoundary>
   );
 }

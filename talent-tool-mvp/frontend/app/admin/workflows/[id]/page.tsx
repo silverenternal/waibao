@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v6.0 T2105 — Workflow editor page (per-workflow route).
@@ -227,104 +228,101 @@ export default function WorkflowEditorPage(): React.JSX.Element {
   );
 
   return (
-    <div className="flex h-screen flex-col bg-slate-50">
-      <header className="flex items-center justify-between border-b bg-white px-4 py-2">
-        <div className="flex items-center gap-2">
-          <button onClick={() => router.push("/admin/workflows")}
-                  className="text-sm text-slate-500 hover:underline">
-            ← Workflows
-          </button>
-          <h1 className="text-base font-semibold text-slate-800">
-            {record?.name || `Workflow #${workflowId}`}
-          </h1>
-        </div>
-        <div className="flex items-center gap-2 text-sm">
-          <select
-            value=""
-            onChange={(e) => e.target.value &&
-                     void loadTemplate(e.target.value)}
-            className="rounded border border-slate-300 px-2 py-1 text-xs"
-          >
-            <option value="">Load template…</option>
-            {["onboarding", "interview_pipeline", "resume_scoring",
-              "bias_review", "ticket_sla"].map((n) => (
-              <option key={n} value={n}>{n}</option>
-            ))}
-          </select>
-          <button onClick={onValidate}
-                  className="rounded bg-slate-200 px-3 py-1 text-xs font-bold hover:bg-slate-300">
-            Validate
-          </button>
-          <button onClick={onRun}
-                  data-testid="run-workflow"
-                  className="rounded bg-emerald-600 px-3 py-1 text-xs font-bold text-white hover:bg-emerald-700">
-            ▶ Run
-          </button>
-          <button onClick={onSave} disabled={saving}
-                  className="rounded bg-indigo-600 px-3 py-1 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-50">
-            {saving ? "Saving…" : "Save"}
-          </button>
-        </div>
-      </header>
-
-      {error ? (
-        <div className="bg-rose-100 px-4 py-2 text-xs text-rose-700">
-          {error}
-        </div>
-      ) : null}
-      {validation ? (
-        <div className={
-          (validation.valid ? "bg-emerald-50 text-emerald-700"
-                             : "bg-rose-50 text-rose-700") +
-          " px-4 py-2 text-xs"
-        }>
-          {validation.valid
-            ? `Validation passed (${validation.warnings.length} warnings)`
-            : `Validation failed: ${validation.errors.join("; ")}`}
-        </div>
-      ) : null}
-
-      <div className="flex flex-1 overflow-hidden">
-        <NodePalette />
-        <main className="flex-1">
-          <WorkflowCanvas
-            nodes={nodes}
-            edges={edges}
-            selectedNodeId={selectedId}
-            onSelect={setSelectedId}
-            onAddNode={(n, position) => setNodes([
-              ...nodes,
-              { ...n, position } as CanvasNode,
-            ])}
-            onMoveNode={(id, position) => setNodes(
-              nodes.map((n) => n.id === id ? { ...n, position } : n))}
-            onConnect={(from, to, condition) => setEdges([
-              ...edges, { from_node: from, to_node: to, condition }])}
-            onDeleteNode={(id) => {
-              setNodes(nodes.filter((n) => n.id !== id));
-              setEdges(edges.filter((e) =>
-                e.from_node !== id && e.to_node !== id));
-              if (selectedId === id) setSelectedId(null);
-            }}
-            activeNodeIds={activeSet}
+    <ErrorBoundary>(<div className="flex h-screen flex-col bg-slate-50">
+        <header className="flex items-center justify-between border-b bg-white px-4 py-2">
+          <div className="flex items-center gap-2">
+            <button onClick={() => router.push("/admin/workflows")}
+                    className="text-sm text-slate-500 hover:underline">
+              ← Workflows
+            </button>
+            <h1 className="text-base font-semibold text-slate-800">
+              {record?.name || `Workflow #${workflowId}`}
+            </h1>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <select
+              value=""
+              onChange={(e) => e.target.value &&
+                       void loadTemplate(e.target.value)}
+              className="rounded border border-slate-300 px-2 py-1 text-xs"
+            >
+              <option value="">Load template…</option>
+              {["onboarding", "interview_pipeline", "resume_scoring",
+                "bias_review", "ticket_sla"].map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+            <button onClick={onValidate}
+                    className="rounded bg-slate-200 px-3 py-1 text-xs font-bold hover:bg-slate-300">
+              Validate
+            </button>
+            <button onClick={onRun}
+                    data-testid="run-workflow"
+                    className="rounded bg-emerald-600 px-3 py-1 text-xs font-bold text-white hover:bg-emerald-700">
+              ▶ Run
+            </button>
+            <button onClick={onSave} disabled={saving}
+                    className="rounded bg-indigo-600 px-3 py-1 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-50">
+              {saving ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </header>
+        {error ? (
+          <div className="bg-rose-100 px-4 py-2 text-xs text-rose-700">
+            {error}
+          </div>
+        ) : null}
+        {validation ? (
+          <div className={
+            (validation.valid ? "bg-emerald-50 text-emerald-700"
+                               : "bg-rose-50 text-rose-700") +
+            " px-4 py-2 text-xs"
+          }>
+            {validation.valid
+              ? `Validation passed (${validation.warnings.length} warnings)`
+              : `Validation failed: ${validation.errors.join("; ")}`}
+          </div>
+        ) : null}
+        <div className="flex flex-1 overflow-hidden">
+          <NodePalette />
+          <main className="flex-1">
+            <WorkflowCanvas
+              nodes={nodes}
+              edges={edges}
+              selectedNodeId={selectedId}
+              onSelect={setSelectedId}
+              onAddNode={(n, position) => setNodes([
+                ...nodes,
+                { ...n, position } as CanvasNode,
+              ])}
+              onMoveNode={(id, position) => setNodes(
+                nodes.map((n) => n.id === id ? { ...n, position } : n))}
+              onConnect={(from, to, condition) => setEdges([
+                ...edges, { from_node: from, to_node: to, condition }])}
+              onDeleteNode={(id) => {
+                setNodes(nodes.filter((n) => n.id !== id));
+                setEdges(edges.filter((e) =>
+                  e.from_node !== id && e.to_node !== id));
+                if (selectedId === id) setSelectedId(null);
+              }}
+              activeNodeIds={activeSet}
+            />
+          </main>
+          <NodeConfig
+            node={selectedNode}
+            onChange={(next) => setNodes(
+              nodes.map((n) => n.id === selectedId ? { ...n, ...next,
+                position: n.position } : n))}
+            onClose={() => setSelectedId(null)}
           />
-        </main>
-        <NodeConfig
-          node={selectedNode}
-          onChange={(next) => setNodes(
-            nodes.map((n) => n.id === selectedId ? { ...n, ...next,
-              position: n.position } : n))}
-          onClose={() => setSelectedId(null)}
-        />
-      </div>
-
-      <footer className="border-t bg-white p-3">
-        <WorkflowRunMonitor
-          run={run}
-          onResume={onResume}
-          onCancel={onCancel}
-        />
-      </footer>
-    </div>
+        </div>
+        <footer className="border-t bg-white p-3">
+          <WorkflowRunMonitor
+            run={run}
+            onResume={onResume}
+            onCancel={onCancel}
+          />
+        </footer>
+      </div>)</ErrorBoundary>
   );
 }

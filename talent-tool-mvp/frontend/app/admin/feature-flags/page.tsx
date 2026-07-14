@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v6.0 T2103 — Admin / Feature Flags page.
@@ -153,97 +154,93 @@ export default function FeatureFlagsAdminPage(): React.JSX.Element {
   };
 
   return (
-    <main className="mx-auto max-w-6xl p-6">
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Feature Flags</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          v6.0 T2103 — manage rollout, overrides and audit log.
-        </p>
-      </header>
-
-      <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="mb-2 text-sm font-semibold text-slate-700">新建 flag</h2>
-        <div className="flex flex-col gap-2 md:flex-row">
-          <input
-            type="text"
-            placeholder="flag name (snake_case)"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            className="flex-1 rounded-md border border-slate-200 px-3 py-1.5 text-sm"
-          />
-          <input
-            type="text"
-            placeholder="description"
-            value={newDesc}
-            onChange={(e) => setNewDesc(e.target.value)}
-            className="flex-1 rounded-md border border-slate-200 px-3 py-1.5 text-sm"
-          />
-          <button
-            type="button"
-            disabled={!newName.trim()}
-            onClick={handleCreate}
-            className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-          >
-            创建
-          </button>
-        </div>
-      </section>
-
-      {error && (
-        <div className="mb-4 rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700">
-          {error}
-        </div>
-      )}
-
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {flags.map((f) => (
-          <FlagCard
-            key={f.name}
-            flag={f}
-            overrides={overrides[f.name] || []}
-            saving={savingName === f.name}
-            onSave={(patch) => handleSave(f.name, patch)}
-            onAddOverride={(p) => handleAddOverride(f.name, p)}
-            onRemoveOverride={(ov) => handleRemoveOverride(f.name, ov)}
-            onDelete={() => handleDelete(f.name)}
-          />
-        ))}
-        {flags.length === 0 && (
-          <div className="col-span-full rounded-md bg-slate-50 p-6 text-center text-sm text-slate-500">
-            还没有 flag — 在上方新建一个。
+    <ErrorBoundary>(<main className="mx-auto max-w-6xl p-6">
+        <header className="mb-6">
+          <h1 className="text-2xl font-bold text-slate-900">Feature Flags</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            v6.0 T2103 — manage rollout, overrides and audit log.
+          </p>
+        </header>
+        <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 className="mb-2 text-sm font-semibold text-slate-700">新建 flag</h2>
+          <div className="flex flex-col gap-2 md:flex-row">
+            <input
+              type="text"
+              placeholder="flag name (snake_case)"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              className="flex-1 rounded-md border border-slate-200 px-3 py-1.5 text-sm"
+            />
+            <input
+              type="text"
+              placeholder="description"
+              value={newDesc}
+              onChange={(e) => setNewDesc(e.target.value)}
+              className="flex-1 rounded-md border border-slate-200 px-3 py-1.5 text-sm"
+            />
+            <button
+              type="button"
+              disabled={!newName.trim()}
+              onClick={handleCreate}
+              className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            >
+              创建
+            </button>
+          </div>
+        </section>
+        {error && (
+          <div className="mb-4 rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            {error}
           </div>
         )}
-      </section>
-
-      <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="mb-2 text-sm font-semibold text-slate-700">Audit log</h2>
-        {audit.length === 0 ? (
-          <p className="text-xs text-slate-500">暂无记录</p>
-        ) : (
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-left text-slate-500">
-                <th className="py-1">time</th>
-                <th className="py-1">flag</th>
-                <th className="py-1">action</th>
-                <th className="py-1">actor</th>
-              </tr>
-            </thead>
-            <tbody>
-              {audit.map((row) => (
-                <tr key={row.id} className="border-t border-slate-100">
-                  <td className="py-1 text-slate-500">
-                    {new Date(row.created_at).toLocaleString()}
-                  </td>
-                  <td className="py-1 font-mono text-slate-700">{row.flag_name}</td>
-                  <td className="py-1 text-slate-700">{row.action}</td>
-                  <td className="py-1 text-slate-500">{row.actor || "—"}</td>
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {flags.map((f) => (
+            <FlagCard
+              key={f.name}
+              flag={f}
+              overrides={overrides[f.name] || []}
+              saving={savingName === f.name}
+              onSave={(patch) => handleSave(f.name, patch)}
+              onAddOverride={(p) => handleAddOverride(f.name, p)}
+              onRemoveOverride={(ov) => handleRemoveOverride(f.name, ov)}
+              onDelete={() => handleDelete(f.name)}
+            />
+          ))}
+          {flags.length === 0 && (
+            <div className="col-span-full rounded-md bg-slate-50 p-6 text-center text-sm text-slate-500">
+              还没有 flag — 在上方新建一个。
+            </div>
+          )}
+        </section>
+        <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 className="mb-2 text-sm font-semibold text-slate-700">Audit log</h2>
+          {audit.length === 0 ? (
+            <p className="text-xs text-slate-500">暂无记录</p>
+          ) : (
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-left text-slate-500">
+                  <th className="py-1">time</th>
+                  <th className="py-1">flag</th>
+                  <th className="py-1">action</th>
+                  <th className="py-1">actor</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
-    </main>
+              </thead>
+              <tbody>
+                {audit.map((row) => (
+                  <tr key={row.id} className="border-t border-slate-100">
+                    <td className="py-1 text-slate-500">
+                      {new Date(row.created_at).toLocaleString()}
+                    </td>
+                    <td className="py-1 font-mono text-slate-700">{row.flag_name}</td>
+                    <td className="py-1 text-slate-700">{row.action}</td>
+                    <td className="py-1 text-slate-500">{row.actor || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+      </main>)</ErrorBoundary>
   );
 }

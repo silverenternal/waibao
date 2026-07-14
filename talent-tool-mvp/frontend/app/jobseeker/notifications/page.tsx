@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v9.1 — 求职者通知中心.
@@ -370,238 +371,233 @@ export default function NotificationsPage() {
   }, [selected]);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
-      {/* 顶部 */}
-      <header className="mb-6 sm:mb-8">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-              <Bell className="size-3.5" aria-hidden="true" />
-              通知中心
+    <ErrorBoundary>(<div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
+        {/* 顶部 */}
+        <header className="mb-6 sm:mb-8">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                <Bell className="size-3.5" aria-hidden="true" />
+                通知中心
+              </div>
+              <h1 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
+                你的消息
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                集中查看来自匹配、面试、Offer、订阅和系统的所有通知。
+              </p>
             </div>
-            <h1 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
-              你的消息
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              集中查看来自匹配、面试、Offer、订阅和系统的所有通知。
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline" size="sm">
-              <Link href="/jobseeker/account/notifications-prefs">
-                <Settings2 className="mr-1.5 size-4" aria-hidden="true" />
-                通知偏好
-              </Link>
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={markAllRead}
-              disabled={stats.unread === 0}
-            >
-              <CheckCheck className="mr-1.5 size-4" aria-hidden="true" />
-              全部已读
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* KPI 卡 */}
-      <section
-        aria-label="通知统计概览"
-        className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4"
-      >
-        <KpiTile
-          label="未读"
-          value={stats.unread}
-          tone="indigo"
-          icon={Inbox}
-        />
-        <KpiTile
-          label="紧急 / 重要"
-          value={stats.urgent}
-          tone="rose"
-          icon={ShieldAlert}
-        />
-        <KpiTile
-          label="今日新增"
-          value={stats.today}
-          tone="emerald"
-          icon={Bell}
-        />
-        <KpiTile
-          label="累计"
-          value={stats.total}
-          tone="slate"
-          icon={Sparkles}
-        />
-      </section>
-
-      {/* 筛选 + 搜索 */}
-      <Card className="mb-4">
-        <CardContent className="space-y-4 p-4 sm:p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="relative flex-1 sm:max-w-xs">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="搜索标题、内容或发送人"
-                className="pl-9"
-                aria-label="搜索通知"
-              />
-            </div>
-            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-              <Filter className="size-3.5" aria-hidden="true" />
-              <span>共 {visible.length} 条 · 已选 {selected.size} 条</span>
-              {selected.size > 0 && (
-                <>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={bulkMarkRead}
-                    className="h-7 px-2"
-                  >
-                    <Check className="mr-1 size-3.5" aria-hidden="true" />
-                    标为已读
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={bulkDelete}
-                    className="h-7 px-2 text-rose-600 hover:text-rose-700"
-                  >
-                    <Trash2 className="mr-1 size-3.5" aria-hidden="true" />
-                    删除
-                  </Button>
-                </>
-              )}
+            <div className="flex flex-wrap gap-2">
+              <Button asChild variant="outline" size="sm">
+                <Link href="/jobseeker/account/notifications-prefs">
+                  <Settings2 className="mr-1.5 size-4" aria-hidden="true" />
+                  通知偏好
+                </Link>
+              </Button>
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={clearRead}
-                className="h-7 px-2"
-                disabled={stats.total - stats.unread === 0}
+                onClick={markAllRead}
+                disabled={stats.unread === 0}
               >
-                清理已读
+                <CheckCheck className="mr-1.5 size-4" aria-hidden="true" />
+                全部已读
               </Button>
             </div>
           </div>
+        </header>
+        {/* KPI 卡 */}
+        <section
+          aria-label="通知统计概览"
+          className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4"
+        >
+          <KpiTile
+            label="未读"
+            value={stats.unread}
+            tone="indigo"
+            icon={Inbox}
+          />
+          <KpiTile
+            label="紧急 / 重要"
+            value={stats.urgent}
+            tone="rose"
+            icon={ShieldAlert}
+          />
+          <KpiTile
+            label="今日新增"
+            value={stats.today}
+            tone="emerald"
+            icon={Bell}
+          />
+          <KpiTile
+            label="累计"
+            value={stats.total}
+            tone="slate"
+            icon={Sparkles}
+          />
+        </section>
+        {/* 筛选 + 搜索 */}
+        <Card className="mb-4">
+          <CardContent className="space-y-4 p-4 sm:p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative flex-1 sm:max-w-xs">
+                <Search
+                  className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="搜索标题、内容或发送人"
+                  className="pl-9"
+                  aria-label="搜索通知"
+                />
+              </div>
+              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                <Filter className="size-3.5" aria-hidden="true" />
+                <span>共 {visible.length} 条 · 已选 {selected.size} 条</span>
+                {selected.size > 0 && (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={bulkMarkRead}
+                      className="h-7 px-2"
+                    >
+                      <Check className="mr-1 size-3.5" aria-hidden="true" />
+                      标为已读
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={bulkDelete}
+                      className="h-7 px-2 text-rose-600 hover:text-rose-700"
+                    >
+                      <Trash2 className="mr-1 size-3.5" aria-hidden="true" />
+                      删除
+                    </Button>
+                  </>
+                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={clearRead}
+                  className="h-7 px-2"
+                  disabled={stats.total - stats.unread === 0}
+                >
+                  清理已读
+                </Button>
+              </div>
+            </div>
 
-          <Tabs
-            value={filter}
-            onValueChange={(v) => setFilter(v as FilterTab)}
-            className="w-full"
-          >
-            <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 bg-transparent p-0">
-              <FilterChip value="all" label="全部" count={items.length} />
-              <FilterChip
-                value="unread"
-                label="未读"
-                count={stats.unread}
-                accent
+            <Tabs
+              value={filter}
+              onValueChange={(v) => setFilter(v as FilterTab)}
+              className="w-full"
+            >
+              <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 bg-transparent p-0">
+                <FilterChip value="all" label="全部" count={items.length} />
+                <FilterChip
+                  value="unread"
+                  label="未读"
+                  count={stats.unread}
+                  accent
+                />
+                <FilterChip
+                  value="matching"
+                  label={CATEGORY_META.matching.label}
+                  count={items.filter((i) => i.category === "matching").length}
+                  icon={CATEGORY_META.matching.icon}
+                />
+                <FilterChip
+                  value="interview"
+                  label={CATEGORY_META.interview.label}
+                  count={items.filter((i) => i.category === "interview").length}
+                  icon={CATEGORY_META.interview.icon}
+                />
+                <FilterChip
+                  value="offer"
+                  label={CATEGORY_META.offer.label}
+                  count={items.filter((i) => i.category === "offer").length}
+                  icon={CATEGORY_META.offer.icon}
+                />
+                <FilterChip
+                  value="subscription"
+                  label={CATEGORY_META.subscription.label}
+                  count={
+                    items.filter((i) => i.category === "subscription").length
+                  }
+                  icon={CATEGORY_META.subscription.icon}
+                />
+                <FilterChip
+                  value="system"
+                  label={CATEGORY_META.system.label}
+                  count={items.filter((i) => i.category === "system").length}
+                  icon={CATEGORY_META.system.icon}
+                />
+                <FilterChip
+                  value="marketing"
+                  label={CATEGORY_META.marketing.label}
+                  count={items.filter((i) => i.category === "marketing").length}
+                  icon={CATEGORY_META.marketing.icon}
+                />
+              </TabsList>
+            </Tabs>
+          </CardContent>
+        </Card>
+        {/* 列表 */}
+        {!hydrated ? (
+          <SkeletonList />
+        ) : visible.length === 0 ? (
+          <EmptyState
+            title="这里很安静"
+            description="没有匹配的通知。可以调整上方筛选,或去订阅页设置推送偏好。"
+            icon={<Bell className="size-6" />}
+            action={
+              <Button asChild>
+                <Link href="/jobseeker/account/notifications-prefs">
+                  <Settings2 className="mr-1.5 size-4" aria-hidden="true" />
+                  调整通知偏好
+                </Link>
+              </Button>
+            }
+          />
+        ) : (
+          <ul className="space-y-2.5" role="list" aria-label="通知列表">
+            {visible.map((n) => (
+              <NotificationItem
+                key={n.id}
+                item={n}
+                now={now}
+                checked={selected.has(n.id)}
+                onToggleSelect={() => toggleSelect(n.id)}
+                onMarkRead={(read) => markRead(n.id, read)}
+                onRemove={() => remove(n.id)}
               />
-              <FilterChip
-                value="matching"
-                label={CATEGORY_META.matching.label}
-                count={items.filter((i) => i.category === "matching").length}
-                icon={CATEGORY_META.matching.icon}
-              />
-              <FilterChip
-                value="interview"
-                label={CATEGORY_META.interview.label}
-                count={items.filter((i) => i.category === "interview").length}
-                icon={CATEGORY_META.interview.icon}
-              />
-              <FilterChip
-                value="offer"
-                label={CATEGORY_META.offer.label}
-                count={items.filter((i) => i.category === "offer").length}
-                icon={CATEGORY_META.offer.icon}
-              />
-              <FilterChip
-                value="subscription"
-                label={CATEGORY_META.subscription.label}
-                count={
-                  items.filter((i) => i.category === "subscription").length
-                }
-                icon={CATEGORY_META.subscription.icon}
-              />
-              <FilterChip
-                value="system"
-                label={CATEGORY_META.system.label}
-                count={items.filter((i) => i.category === "system").length}
-                icon={CATEGORY_META.system.icon}
-              />
-              <FilterChip
-                value="marketing"
-                label={CATEGORY_META.marketing.label}
-                count={items.filter((i) => i.category === "marketing").length}
-                icon={CATEGORY_META.marketing.icon}
-              />
-            </TabsList>
-          </Tabs>
-        </CardContent>
-      </Card>
-
-      {/* 列表 */}
-      {!hydrated ? (
-        <SkeletonList />
-      ) : visible.length === 0 ? (
-        <EmptyState
-          title="这里很安静"
-          description="没有匹配的通知。可以调整上方筛选,或去订阅页设置推送偏好。"
-          icon={<Bell className="size-6" />}
-          action={
-            <Button asChild>
+            ))}
+          </ul>
+        )}
+        <Separator className="my-8" />
+        {/* 页脚提示 */}
+        <Card className="border-dashed bg-muted/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">通知太频繁?</CardTitle>
+            <CardDescription>
+              前往「通知偏好」可按 类别 × 优先级 × 通道 精细控制,也能设置免打扰时间。
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
+            <Button asChild size="sm">
               <Link href="/jobseeker/account/notifications-prefs">
-                <Settings2 className="mr-1.5 size-4" aria-hidden="true" />
-                调整通知偏好
+                打开通知偏好
               </Link>
             </Button>
-          }
-        />
-      ) : (
-        <ul className="space-y-2.5" role="list" aria-label="通知列表">
-          {visible.map((n) => (
-            <NotificationItem
-              key={n.id}
-              item={n}
-              now={now}
-              checked={selected.has(n.id)}
-              onToggleSelect={() => toggleSelect(n.id)}
-              onMarkRead={(read) => markRead(n.id, read)}
-              onRemove={() => remove(n.id)}
-            />
-          ))}
-        </ul>
-      )}
-
-      <Separator className="my-8" />
-
-      {/* 页脚提示 */}
-      <Card className="border-dashed bg-muted/30">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">通知太频繁?</CardTitle>
-          <CardDescription>
-            前往「通知偏好」可按 类别 × 优先级 × 通道 精细控制,也能设置免打扰时间。
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          <Button asChild size="sm">
-            <Link href="/jobseeker/account/notifications-prefs">
-              打开通知偏好
-            </Link>
-          </Button>
-          <Button asChild size="sm" variant="outline">
-            <Link href="/jobseeker/subscriptions">管理订阅</Link>
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
+            <Button asChild size="sm" variant="outline">
+              <Link href="/jobseeker/subscriptions">管理订阅</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>)</ErrorBoundary>
   );
 }
 

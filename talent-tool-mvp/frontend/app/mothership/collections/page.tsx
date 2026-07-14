@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import { useState, useEffect } from "react";
 import type { Collection, CollectionCreate, Candidate } from "@/contracts/canonical";
@@ -125,110 +126,105 @@ export default function CollectionsPage() {
   }
 
   return (
-    <div className="p-0 max-w-6xl">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Collections</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Organize candidates into themed groups and share with your team.
-          </p>
+    <ErrorBoundary>(<div className="p-0 max-w-6xl">
+        {/* Header */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Collections</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Organize candidates into themed groups and share with your team.
+            </p>
+          </div>
+          <Button onClick={() => { setEditTarget(null); setFormOpen(true); }}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            New Collection
+          </Button>
         </div>
-        <Button onClick={() => { setEditTarget(null); setFormOpen(true); }}>
-          <Plus className="h-4 w-4 mr-1.5" />
-          New Collection
-        </Button>
-      </div>
-
-      {/* Search */}
-      <div className="relative mb-6 max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search collections or tags..."
-          className="pl-9"
+        {/* Search */}
+        <div className="relative mb-6 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search collections or tags..."
+            className="pl-9"
+          />
+        </div>
+        {/* My Collections */}
+        <section>
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+            <FolderOpen className="h-4 w-4" />
+            My Collections
+          </h2>
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-48 rounded-lg" />
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-12 border rounded-lg border-dashed">
+              <FolderOpen className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+              <p className="text-muted-foreground">No collections yet.</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={() => { setEditTarget(null); setFormOpen(true); }}
+              >
+                Create your first collection
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filtered.map((col) => (
+                <CollectionCard
+                  key={col.id}
+                  collection={col}
+                  onClick={() => setSelectedCollection(col)}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+        {/* Shared Collections */}
+        <Separator className="my-8" />
+        <section>
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Shared by Partners
+          </h2>
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-48 rounded-lg" />
+              ))}
+            </div>
+          ) : sharedCollections.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4">
+              No shared collections from other partners yet.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {sharedCollections.map((col) => (
+                <CollectionCard
+                  key={col.id}
+                  collection={col}
+                  onClick={() => setSelectedCollection(col)}
+                  isShared
+                />
+              ))}
+            </div>
+          )}
+        </section>
+        {/* Create/Edit Dialog */}
+        <CollectionForm
+          key={editTarget?.id ?? "new"}
+          open={formOpen}
+          onOpenChange={setFormOpen}
+          onSubmit={handleSubmit}
+          initial={editTarget}
         />
-      </div>
-
-      {/* My Collections */}
-      <section>
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
-          <FolderOpen className="h-4 w-4" />
-          My Collections
-        </h2>
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-48 rounded-lg" />
-            ))}
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-12 border rounded-lg border-dashed">
-            <FolderOpen className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
-            <p className="text-muted-foreground">No collections yet.</p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-3"
-              onClick={() => { setEditTarget(null); setFormOpen(true); }}
-            >
-              Create your first collection
-            </Button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map((col) => (
-              <CollectionCard
-                key={col.id}
-                collection={col}
-                onClick={() => setSelectedCollection(col)}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Shared Collections */}
-      <Separator className="my-8" />
-
-      <section>
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
-          <Users className="h-4 w-4" />
-          Shared by Partners
-        </h2>
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-48 rounded-lg" />
-            ))}
-          </div>
-        ) : sharedCollections.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-4">
-            No shared collections from other partners yet.
-          </p>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {sharedCollections.map((col) => (
-              <CollectionCard
-                key={col.id}
-                collection={col}
-                onClick={() => setSelectedCollection(col)}
-                isShared
-              />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Create/Edit Dialog */}
-      <CollectionForm
-        key={editTarget?.id ?? "new"}
-        open={formOpen}
-        onOpenChange={setFormOpen}
-        onSubmit={handleSubmit}
-        initial={editTarget}
-      />
-    </div>
+      </div>)</ErrorBoundary>
   );
 }

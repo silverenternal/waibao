@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v9.1 — /jobseeker/offers/compare — 多 Offer 横向比较
@@ -511,8 +512,8 @@ function Wallet2({ className }: { className?: string }) {
 // ---------- Suspense 包裹 ----------
 export default function ComparePage() {
   return (
-    <Suspense fallback={<div className="p-8 text-slate-400">加载中…</div>}>
-      <ComparePageInner />
-    </Suspense>
+    <ErrorBoundary>(<Suspense fallback={<div className="p-8 text-slate-400">加载中…</div>}>
+        <ComparePageInner />
+      </Suspense>)</ErrorBoundary>
   );
 }

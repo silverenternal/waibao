@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * 求职者 — 隐私偏好中心 v2 (T2603)
@@ -394,193 +395,188 @@ export default function PrivacyV2Page() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-4 py-8 sm:px-6">
-      <header className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Shield className="size-5 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight">{t.title}</h1>
-        </div>
-        <p className="text-sm text-muted-foreground">{t.subtitle}</p>
-        <div className="flex flex-wrap items-center gap-2 pt-1">
-          <Badge variant="outline" className="text-[10px]">
-            <Globe className="mr-1 size-3" />
-            {t.region}: {legalBasis?.template?.code ?? region}
-          </Badge>
-          {legalBasis && (
-            <Badge variant="secondary" className="text-[10px]">
-              {t.slaDays}: {legalBasis.template.sla_days} d
+    <ErrorBoundary>(<div className="mx-auto max-w-4xl space-y-6 px-4 py-8 sm:px-6">
+        <header className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Shield className="size-5 text-primary" />
+            <h1 className="text-2xl font-bold tracking-tight">{t.title}</h1>
+          </div>
+          <p className="text-sm text-muted-foreground">{t.subtitle}</p>
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <Badge variant="outline" className="text-[10px]">
+              <Globe className="mr-1 size-3" />
+              {t.region}: {legalBasis?.template?.code ?? region}
             </Badge>
-          )}
-          {legalBasis && (
-            <Badge variant="secondary" className="text-[10px]">
-              Breach notify: {legalBasis.template.breach_notification_hours} {t.hours}
-            </Badge>
-          )}
-        </div>
-      </header>
-
-      {error && (
-        <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-          {error}
-        </div>
-      )}
-
-      {/* Per-purpose consent */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <ShieldCheck className="size-4" />
-                {t.consent}
-              </CardTitle>
-              <CardDescription>{t.consentDesc}</CardDescription>
+            {legalBasis && (
+              <Badge variant="secondary" className="text-[10px]">
+                {t.slaDays}: {legalBasis.template.sla_days} d
+              </Badge>
+            )}
+            {legalBasis && (
+              <Badge variant="secondary" className="text-[10px]">
+                Breach notify: {legalBasis.template.breach_notification_hours} {t.hours}
+              </Badge>
+            )}
+          </div>
+        </header>
+        {error && (
+          <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+            {error}
+          </div>
+        )}
+        {/* Per-purpose consent */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <ShieldCheck className="size-4" />
+                  {t.consent}
+                </CardTitle>
+                <CardDescription>{t.consentDesc}</CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void withdrawAll()}
+                disabled={pending === "__all__"}
+              >
+                <ShieldOff className="mr-2 size-4" />
+                {t.withdrawAll}
+              </Button>
             </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {PURPOSE_CATALOG.map((p) => {
+              const purposeState = consent?.purposes?.[p.code];
+              const granted = p.required || Boolean(purposeState?.granted);
+              return (
+                <ConsentSwitch
+                  key={p.code}
+                  purpose={p}
+                  granted={granted}
+                  withdrawnAt={purposeState?.withdrawn_at ?? null}
+                  locale={lang}
+                  pending={pending === p.code}
+                  onChange={(next) => void togglePurpose(p.code, next)}
+                />
+              );
+            })}
+          </CardContent>
+        </Card>
+        {/* Processing register */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <ScrollText className="size-4" />
+              {t.processingRegister}
+            </CardTitle>
+            <CardDescription>{legalBasis?.template.name}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="divide-y" data-testid="processing-register-list">
+              {processingItems.map((item) => (
+                <li key={item.id} className="flex items-center justify-between py-3">
+                  <div>
+                    <p className="text-sm font-medium">{item.processing_purpose}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t.lawfulBasis}: <code className="font-mono">{item.lawful_basis}</code>
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="text-[10px]">
+                    {item.retention_period_days} d
+                  </Badge>
+                </li>
+              ))}
+              {processingItems.length === 0 && (
+                <li className="py-4 text-sm text-muted-foreground">
+                  {legalBasis?.template.code === "CN"
+                    ? "暂无记录 — 将在 30 天内补充"
+                    : legalBasis?.template.code === "CA"
+                      ? "No records yet — populated within 45 days"
+                      : "暂无记录 — 将在 30 天内补充"}
+                </li>
+              )}
+            </ul>
+          </CardContent>
+        </Card>
+        {/* Rights */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">{t.rights}</CardTitle>
+            <CardDescription>{t.rightsDesc}</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => void withdrawAll()}
-              disabled={pending === "__all__"}
+              onClick={() => void requestRight("portability")}
+              disabled={pending === "portability"}
+              data-testid="gdpr-action-export"
             >
-              <ShieldOff className="mr-2 size-4" />
-              {t.withdrawAll}
+              <Download className="mr-2 size-4" /> {t.requestExport}
             </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {PURPOSE_CATALOG.map((p) => {
-            const purposeState = consent?.purposes?.[p.code];
-            const granted = p.required || Boolean(purposeState?.granted);
-            return (
-              <ConsentSwitch
-                key={p.code}
-                purpose={p}
-                granted={granted}
-                withdrawnAt={purposeState?.withdrawn_at ?? null}
-                locale={lang}
-                pending={pending === p.code}
-                onChange={(next) => void togglePurpose(p.code, next)}
-              />
-            );
-          })}
-        </CardContent>
-      </Card>
-
-      {/* Processing register */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <ScrollText className="size-4" />
-            {t.processingRegister}
-          </CardTitle>
-          <CardDescription>{legalBasis?.template.name}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ul className="divide-y" data-testid="processing-register-list">
-            {processingItems.map((item) => (
-              <li key={item.id} className="flex items-center justify-between py-3">
-                <div>
-                  <p className="text-sm font-medium">{item.processing_purpose}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {t.lawfulBasis}: <code className="font-mono">{item.lawful_basis}</code>
-                  </p>
-                </div>
-                <Badge variant="outline" className="text-[10px]">
-                  {item.retention_period_days} d
-                </Badge>
-              </li>
-            ))}
-            {processingItems.length === 0 && (
-              <li className="py-4 text-sm text-muted-foreground">
-                {legalBasis?.template.code === "CN"
-                  ? "暂无记录 — 将在 30 天内补充"
-                  : legalBasis?.template.code === "CA"
-                    ? "No records yet — populated within 45 days"
-                    : "暂无记录 — 将在 30 天内补充"}
-              </li>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void requestRight("rectify")}
+              disabled={pending === "rectify"}
+            >
+              <FileText className="mr-2 size-4" /> {t.requestRectify}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void requestRight("restrict")}
+              disabled={pending === "restrict"}
+            >
+              {t.requestRestrict}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void requestRight("object")}
+              disabled={pending === "object"}
+            >
+              {t.requestObject}
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => void requestRight("forget")}
+              disabled={pending === "forget"}
+              data-testid="gdpr-action-forget"
+            >
+              <Eraser className="mr-2 size-4" /> {t.requestForget}
+            </Button>
+          </CardContent>
+        </Card>
+        {/* DSR history */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">{t.dsrHistory}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {dsrList.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t.dsrEmpty}</p>
+            ) : (
+              <ul className="divide-y" data-testid="dsr-list">
+                {dsrList.map((d) => (
+                  <li key={d.id} className="flex items-center justify-between py-2 text-sm">
+                    <span className="font-mono text-xs">{d.id.slice(0, 8)}</span>
+                    <span>{d.request_type}</span>
+                    <Badge variant="outline" className="text-[10px]">
+                      {d.status}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(d.created_at).toLocaleDateString()}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             )}
-          </ul>
-        </CardContent>
-      </Card>
-
-      {/* Rights */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">{t.rights}</CardTitle>
-          <CardDescription>{t.rightsDesc}</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void requestRight("portability")}
-            disabled={pending === "portability"}
-            data-testid="gdpr-action-export"
-          >
-            <Download className="mr-2 size-4" /> {t.requestExport}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void requestRight("rectify")}
-            disabled={pending === "rectify"}
-          >
-            <FileText className="mr-2 size-4" /> {t.requestRectify}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void requestRight("restrict")}
-            disabled={pending === "restrict"}
-          >
-            {t.requestRestrict}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void requestRight("object")}
-            disabled={pending === "object"}
-          >
-            {t.requestObject}
-          </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => void requestRight("forget")}
-            disabled={pending === "forget"}
-            data-testid="gdpr-action-forget"
-          >
-            <Eraser className="mr-2 size-4" /> {t.requestForget}
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* DSR history */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">{t.dsrHistory}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {dsrList.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t.dsrEmpty}</p>
-          ) : (
-            <ul className="divide-y" data-testid="dsr-list">
-              {dsrList.map((d) => (
-                <li key={d.id} className="flex items-center justify-between py-2 text-sm">
-                  <span className="font-mono text-xs">{d.id.slice(0, 8)}</span>
-                  <span>{d.request_type}</span>
-                  <Badge variant="outline" className="text-[10px]">
-                    {d.status}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(d.created_at).toLocaleDateString()}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+          </CardContent>
+        </Card>
+      </div>)</ErrorBoundary>
   );
 }

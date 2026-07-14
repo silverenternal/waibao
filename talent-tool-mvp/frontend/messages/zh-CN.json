@@ -41,10 +41,7 @@
     "send": "发送",
     "languageZh": "简体中文",
     "languageEn": "English",
-    "languageJa": "日本語",
-    "languageChanged": "语言已切换",
-    "loadingMore": "加载更多",
-    "backToTop": "回到顶部"
+    "languageJa": "日本語"
   },
   "nav": {
     "jobseekerHome": "我的空间",
@@ -120,10 +117,22 @@
     "greetingBody": "可以跟我说工作内容、心情、困惑,我会倾听并给出建议。",
     "inputPlaceholder": "跟智能体说点什么...",
     "suggestions": {
-      "writeJournal": { "label": "写日记", "text": "今天做了一个 AI 项目,挺有收获" },
-      "viewMatches": { "label": "查看匹配", "text": "看看有哪些工作适合我" },
-      "careerPlan": { "label": "职业规划", "text": "我想做 AI 产品经理,该怎么规划" },
-      "chatMood": { "label": "聊聊心情", "text": "今天有点焦虑" }
+      "writeJournal": {
+        "label": "写日记",
+        "text": "今天做了一个 AI 项目,挺有收获"
+      },
+      "viewMatches": {
+        "label": "查看匹配",
+        "text": "看看有哪些工作适合我"
+      },
+      "careerPlan": {
+        "label": "职业规划",
+        "text": "我想做 AI 产品经理,该怎么规划"
+      },
+      "chatMood": {
+        "label": "聊聊心情",
+        "text": "今天有点焦虑"
+      }
     }
   },
   "employer": {
@@ -305,5 +314,92 @@
     "button": "升级人工",
     "ticketCreated": "工单已创建",
     "selectDepartment": "请选择部门"
+  },
+  "seo": {
+    "home": {
+      "title": "AI 驱动的人才平台",
+      "description": "智能候选人匹配、Copilot 仪表盘与多角色工作流,助力现代招聘。",
+      "keywords": [
+        "招聘",
+        "人才平台",
+        "候选人匹配",
+        "AI 招聘",
+        "ATS",
+        "Copilot"
+      ]
+    },
+    "pricing": {
+      "title": "价格方案",
+      "description": "为各种规模团队设计的透明订阅方案,免费开始,按需扩展。",
+      "keywords": [
+        "价格",
+        "订阅",
+        "方案",
+        "招聘价格"
+      ]
+    },
+    "marketplace": {
+      "title": "服务市场",
+      "description": "浏览并订阅经过认证的招聘服务、集成与 AI 智能体。",
+      "keywords": [
+        "服务市场",
+        "招聘服务",
+        "集成",
+        "AI 智能体"
+      ]
+    },
+    "services": {
+      "title": "公共服务目录",
+      "description": "发现每一项可用服务、其等级与订阅方式。",
+      "keywords": [
+        "服务目录",
+        "招聘服务",
+        "订阅"
+      ]
+    },
+    "developers": {
+      "title": "开发者门户",
+      "description": "API 密钥、Webhooks、SDK 与在线沙箱,基于 RecruitTech 平台构建。",
+      "keywords": [
+        "开发者门户",
+        "API",
+        "Webhooks",
+        "SDK",
+        "沙箱"
+      ]
+    },
+    "legal": {
+      "title": "法律信息",
+      "description": "RecruitTech 平台的服务条款、隐私、DPA 与 Cookie 政策。",
+      "keywords": [
+        "法律",
+        "隐私",
+        "条款",
+        "DPA",
+        "Cookie"
+      ]
+    },
+    "status": {
+      "title": "系统状态",
+      "description": "RecruitTech 实时服务可用性与历史正常运行时间。",
+      "keywords": [
+        "状态",
+        "正常运行时间",
+        "可用性"
+      ]
+    }
+  },
+  "forms": {
+    "required": "此项为必填",
+    "invalidEmail": "请输入有效的邮箱地址",
+    "minLength": "至少需要 {min} 个字符",
+    "maxLength": "最多 {max} 个字符",
+    "invalidUrl": "请输入有效的 URL",
+    "invalidNumber": "请输入有效的数字",
+    "passwordMismatch": "两次输入的密码不一致",
+    "submitting": "提交中...",
+    "submit": "提交",
+    "cancel": "取消",
+    "genericError": "请修正下方错误"
   }
 }

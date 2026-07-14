@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * HR ticket Kanban — /tickets (T207).
@@ -51,60 +52,59 @@ export default function HrTicketsPage() {
   }, [load]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
-      {/* Header */}
-      <header className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => router.push("/employer")}
-              aria-label="返回"
-            >
-              <ArrowLeft className="size-4" />
-            </Button>
-            <div>
-              <h1 className="flex items-center gap-2 text-xl font-semibold text-foreground">
-                <TicketIcon className="size-5 text-blue-500" />
-                HR 工单看板
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                open · in_progress · awaiting · resolved 四列分流; SLA 倒计时实时刷新
-              </p>
+    <ErrorBoundary>(<div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
+        {/* Header */}
+        <header className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => router.push("/employer")}
+                aria-label="返回"
+              >
+                <ArrowLeft className="size-4" />
+              </Button>
+              <div>
+                <h1 className="flex items-center gap-2 text-xl font-semibold text-foreground">
+                  <TicketIcon className="size-5 text-blue-500" />
+                  HR 工单看板
+                </h1>
+                <p className="text-xs text-muted-foreground">
+                  open · in_progress · awaiting · resolved 四列分流; SLA 倒计时实时刷新
+                </p>
+              </div>
             </div>
+
+            <Button
+              variant="outline"
+              onClick={() => load(true)}
+              disabled={refreshing}
+              className="gap-2"
+            >
+              {refreshing ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <RefreshCcw className="size-4" />
+              )}
+              刷新
+            </Button>
           </div>
+        </header>
+        {/* Body */}
+        <main className="mx-auto max-w-7xl px-6 py-6">
+          {loading && <LoadingState />}
+          {error && !loading && <ErrorState message={error} onRetry={() => load(true)} />}
 
-          <Button
-            variant="outline"
-            onClick={() => load(true)}
-            disabled={refreshing}
-            className="gap-2"
-          >
-            {refreshing ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <RefreshCcw className="size-4" />
-            )}
-            刷新
-          </Button>
-        </div>
-      </header>
-
-      {/* Body */}
-      <main className="mx-auto max-w-7xl px-6 py-6">
-        {loading && <LoadingState />}
-        {error && !loading && <ErrorState message={error} onRetry={() => load(true)} />}
-
-        {!loading && !error && (
-          <TicketBoard
-            tickets={tickets}
-            hideAssignee={false}
-            onSelect={(t) => router.push(`/tickets/${t.id}`)}
-          />
-        )}
-      </main>
-    </div>
+          {!loading && !error && (
+            <TicketBoard
+              tickets={tickets}
+              hideAssignee={false}
+              onSelect={(t) => router.push(`/tickets/${t.id}`)}
+            />
+          )}
+        </main>
+      </div>)</ErrorBoundary>
   );
 }
 

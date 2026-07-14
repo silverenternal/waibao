@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v9.1 — /jobseeker/offers/negotiate — AI 谈判脚本生成
@@ -506,8 +507,8 @@ function NegotiatePageInner() {
 // ---------- Suspense 包裹 ----------
 export default function NegotiatePage() {
   return (
-    <Suspense fallback={<div className="p-8 text-slate-400">加载中…</div>}>
-      <NegotiatePageInner />
-    </Suspense>
+    <ErrorBoundary>(<Suspense fallback={<div className="p-8 text-slate-400">加载中…</div>}>
+        <NegotiatePageInner />
+      </Suspense>)</ErrorBoundary>
   );
 }

@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
@@ -27,21 +28,21 @@ export default function WebhookDetailPage() {
   if (!wh) return <div className="p-8 text-slate-500">加载中…</div>;
 
   return (
-    <div className="container mx-auto p-6 max-w-3xl">
-      <div className="mb-4 text-sm text-slate-500">
-        <Link href="/mothership/admin/webhooks" className="hover:underline">
-          ← 返回列表
-        </Link>
-      </div>
-      <h1 className="text-2xl font-semibold mb-4">{wh.name}</h1>
-      <WebhookForm
-        initial={{ ...wh }}
-        onSaved={(saved) => {
-          setWh(saved);
-          router.refresh();
-        }}
-        onCancel={() => router.push("/mothership/admin/webhooks")}
-      />
-    </div>
+    <ErrorBoundary>(<div className="container mx-auto p-6 max-w-3xl">
+        <div className="mb-4 text-sm text-slate-500">
+          <Link href="/mothership/admin/webhooks" className="hover:underline">
+            ← 返回列表
+          </Link>
+        </div>
+        <h1 className="text-2xl font-semibold mb-4">{wh.name}</h1>
+        <WebhookForm
+          initial={{ ...wh }}
+          onSaved={(saved) => {
+            setWh(saved);
+            router.refresh();
+          }}
+          onCancel={() => router.push("/mothership/admin/webhooks")}
+        />
+      </div>)</ErrorBoundary>
   );
 }

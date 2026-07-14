@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 /**
  * T1501 - ATS 集成详情页 (单个 integration)
  *
@@ -80,88 +81,85 @@ export default function ATSIntegrationDetailPage({ params }: { params: { id: str
   if (!item) return <p className="p-6">加载中...</p>;
 
   return (
-    <div className="space-y-6 p-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">{item.display_name}</h1>
-          <p className="text-sm text-muted-foreground">Provider: {item.provider}</p>
-        </div>
-        <div className="flex gap-2">
-          <Link href={`/mothership/admin/ats/${item.id}/history`}>
-            <Button variant="outline">同步历史</Button>
-          </Link>
-          <Button onClick={triggerSync} disabled={busy}>
-            {busy ? "同步中..." : "立即同步"}
-          </Button>
-          <Button variant="destructive" onClick={remove}>删除</Button>
-        </div>
-      </header>
+    <ErrorBoundary>(<div className="space-y-6 p-6">
+        <header className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">{item.display_name}</h1>
+            <p className="text-sm text-muted-foreground">Provider: {item.provider}</p>
+          </div>
+          <div className="flex gap-2">
+            <Link href={`/mothership/admin/ats/${item.id}/history`}>
+              <Button variant="outline">同步历史</Button>
+            </Link>
+            <Button onClick={triggerSync} disabled={busy}>
+              {busy ? "同步中..." : "立即同步"}
+            </Button>
+            <Button variant="destructive" onClick={remove}>删除</Button>
+          </div>
+        </header>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader><CardTitle>状态</CardTitle></CardHeader>
+            <CardContent>
+              <ATSSyncStatus
+                status={item.last_status || "never"}
+                lastSyncedAt={item.last_synced_at}
+                lastError={item.last_error}
+              />
+            </CardContent>
+          </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader><CardTitle>Base URL</CardTitle></CardHeader>
+            <CardContent>
+              <code className="text-xs">{item.api_base_url || "(默认)"}</code>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>激活</CardTitle></CardHeader>
+            <CardContent>
+              <Badge variant={item.active ? "default" : "secondary"}>
+                {item.active ? "active" : "disabled"}
+              </Badge>
+            </CardContent>
+          </Card>
+        </div>
+        {outcome && (
+          <Card>
+            <CardHeader><CardTitle>同步结果</CardTitle></CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <div className="font-medium">候选人</div>
+                  <div>status: {outcome.candidates.status}</div>
+                  <div>succeeded: {outcome.candidates.succeeded}</div>
+                  <div>failed: {outcome.candidates.failed}</div>
+                  <div>conflicts: {outcome.candidates.conflicts}</div>
+                </div>
+                <div>
+                  <div className="font-medium">职位</div>
+                  <div>status: {outcome.jobs.status}</div>
+                  <div>succeeded: {outcome.jobs.succeeded}</div>
+                  <div>failed: {outcome.jobs.failed}</div>
+                  <div>conflicts: {outcome.jobs.conflicts}</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         <Card>
-          <CardHeader><CardTitle>状态</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>未解决冲突</CardTitle>
+          </CardHeader>
           <CardContent>
-            <ATSSyncStatus
-              status={item.last_status || "never"}
-              lastSyncedAt={item.last_synced_at}
-              lastError={item.last_error}
+            <ATSConflictResolver
+              integrationId={item.id}
+              conflicts={conflicts}
+              onResolved={load}
             />
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader><CardTitle>Base URL</CardTitle></CardHeader>
-          <CardContent>
-            <code className="text-xs">{item.api_base_url || "(默认)"}</code>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader><CardTitle>激活</CardTitle></CardHeader>
-          <CardContent>
-            <Badge variant={item.active ? "default" : "secondary"}>
-              {item.active ? "active" : "disabled"}
-            </Badge>
-          </CardContent>
-        </Card>
-      </div>
-
-      {outcome && (
-        <Card>
-          <CardHeader><CardTitle>同步结果</CardTitle></CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <div className="font-medium">候选人</div>
-                <div>status: {outcome.candidates.status}</div>
-                <div>succeeded: {outcome.candidates.succeeded}</div>
-                <div>failed: {outcome.candidates.failed}</div>
-                <div>conflicts: {outcome.candidates.conflicts}</div>
-              </div>
-              <div>
-                <div className="font-medium">职位</div>
-                <div>status: {outcome.jobs.status}</div>
-                <div>succeeded: {outcome.jobs.succeeded}</div>
-                <div>failed: {outcome.jobs.failed}</div>
-                <div>conflicts: {outcome.jobs.conflicts}</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>未解决冲突</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ATSConflictResolver
-            integrationId={item.id}
-            conflicts={conflicts}
-            onResolved={load}
-          />
-        </CardContent>
-      </Card>
-    </div>
+      </div>)</ErrorBoundary>
   );
 }

@@ -1,3 +1,4 @@
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/legal/LegalPage";
 import { generatePageMetadata } from "@/lib/metadata";
@@ -10,5 +11,5 @@ export const metadata: Metadata = generatePageMetadata({
 });
 
 export default function DpaPage() {
-  return <LegalPage docType="dpa" title="Data Processing Agreement / 数据处理协议 / データ処理契約" />;
+  return <ErrorBoundary><LegalPage docType="dpa" title="Data Processing Agreement / 数据处理协议 / データ処理契約" /></ErrorBoundary>;
 }

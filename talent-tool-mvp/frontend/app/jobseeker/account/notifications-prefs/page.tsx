@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v9.1 — 求职者通知偏好 (细粒度).
@@ -361,237 +362,231 @@ export default function NotificationsPrefsPage() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
-      {/* 顶部 */}
-      <header className="mb-6 sm:mb-8">
-        <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
-          <Link
-            href="/jobseeker/account"
-            className="inline-flex items-center gap-1 hover:text-foreground"
-          >
-            <ArrowLeft className="size-3" aria-hidden="true" />
-            返回账户
-          </Link>
-          <span aria-hidden="true">/</span>
-          <span aria-current="page">通知偏好</span>
-        </div>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-              <Bell className="size-3.5" aria-hidden="true" />
-              通知偏好
-            </div>
-            <h1 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
-              决定你会被怎样打扰
-            </h1>
-            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-              按「类别 × 优先级 × 通道」精细控制;支持免打扰时段与 LLM 一键优化。
-            </p>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            {saving ? (
-              <span className="inline-flex items-center gap-1">
-                <Loader2 className="size-3 animate-spin" aria-hidden="true" />
-                保存中
-              </span>
-            ) : savedAt ? (
-              <span className="inline-flex items-center gap-1 text-emerald-600">
-                <CheckCheck className="size-3" aria-hidden="true" />
-                已保存 · {savedAt}
-              </span>
-            ) : (
-              <span>尚未修改</span>
-            )}
-            <Button
-              size="sm"
-              onClick={() => doSave(true)}
-              disabled={!dirty || saving}
+    <ErrorBoundary>(<div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
+        {/* 顶部 */}
+        <header className="mb-6 sm:mb-8">
+          <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
+            <Link
+              href="/jobseeker/account"
+              className="inline-flex items-center gap-1 hover:text-foreground"
             >
-              <Save className="mr-1.5 size-4" aria-hidden="true" />
-              立即保存
-            </Button>
+              <ArrowLeft className="size-3" aria-hidden="true" />
+              返回账户
+            </Link>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page">通知偏好</span>
           </div>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                <Bell className="size-3.5" aria-hidden="true" />
+                通知偏好
+              </div>
+              <h1 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
+                决定你会被怎样打扰
+              </h1>
+              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                按「类别 × 优先级 × 通道」精细控制;支持免打扰时段与 LLM 一键优化。
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              {saving ? (
+                <span className="inline-flex items-center gap-1">
+                  <Loader2 className="size-3 animate-spin" aria-hidden="true" />
+                  保存中
+                </span>
+              ) : savedAt ? (
+                <span className="inline-flex items-center gap-1 text-emerald-600">
+                  <CheckCheck className="size-3" aria-hidden="true" />
+                  已保存 · {savedAt}
+                </span>
+              ) : (
+                <span>尚未修改</span>
+              )}
+              <Button
+                size="sm"
+                onClick={() => doSave(true)}
+                disabled={!dirty || saving}
+              >
+                <Save className="mr-1.5 size-4" aria-hidden="true" />
+                立即保存
+              </Button>
+            </div>
+          </div>
+        </header>
+        {/* 摘要卡 */}
+        <section
+          aria-label="今日推送预估"
+          className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4"
+        >
+          <SummaryTile
+            icon={Zap}
+            label="频率"
+            value={
+              FREQUENCY_OPTIONS.find((o) => o.key === state.frequency)?.label ??
+              "实时"
+            }
+            tone="indigo"
+          />
+          <SummaryTile
+            icon={Clock}
+            label="免打扰"
+            value={
+              state.quietStart && state.quietEnd
+                ? `${state.quietStart} - ${state.quietEnd}`
+                : "未设置"
+            }
+            tone="emerald"
+          />
+          <SummaryTile
+            icon={Bell}
+            label="今日预估"
+            value={`${todayEstimate} 条`}
+            tone="amber"
+          />
+          <SummaryTile
+            icon={CheckCheck}
+            label="已开启通道"
+            value={countEnabled(state.matrix).toString()}
+            tone="rose"
+          />
+        </section>
+        {/* 频率 + 免打扰 */}
+        <div className="mb-6 grid gap-4 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">全局推送频率</CardTitle>
+              <CardDescription>
+                适用于所有类别;高级类别仍可单独覆盖。
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-2 sm:grid-cols-2">
+              {FREQUENCY_OPTIONS.map((opt) => {
+                const Icon = opt.icon;
+                const active = state.frequency === opt.key;
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => onFrequencyChange(opt.key)}
+                    aria-pressed={active}
+                    className={cn(
+                      "group flex items-start gap-3 rounded-lg border p-3 text-left transition-colors",
+                      active
+                        ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                        : "border-border hover:bg-muted/40",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "mt-0.5 grid size-9 place-items-center rounded-md",
+                        active
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground",
+                      )}
+                      aria-hidden="true"
+                    >
+                      <Icon className="size-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-medium leading-tight">
+                        {opt.label}
+                      </span>
+                      <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                        {opt.desc}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </CardContent>
+          </Card>
+
+          <QuietHoursPicker
+            start={state.quietStart}
+            end={state.quietEnd}
+            onChange={onQuietChange}
+          />
         </div>
-      </header>
-
-      {/* 摘要卡 */}
-      <section
-        aria-label="今日推送预估"
-        className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4"
-      >
-        <SummaryTile
-          icon={Zap}
-          label="频率"
-          value={
-            FREQUENCY_OPTIONS.find((o) => o.key === state.frequency)?.label ??
-            "实时"
-          }
-          tone="indigo"
-        />
-        <SummaryTile
-          icon={Clock}
-          label="免打扰"
-          value={
-            state.quietStart && state.quietEnd
-              ? `${state.quietStart} - ${state.quietEnd}`
-              : "未设置"
-          }
-          tone="emerald"
-        />
-        <SummaryTile
-          icon={Bell}
-          label="今日预估"
-          value={`${todayEstimate} 条`}
-          tone="amber"
-        />
-        <SummaryTile
-          icon={CheckCheck}
-          label="已开启通道"
-          value={countEnabled(state.matrix).toString()}
-          tone="rose"
-        />
-      </section>
-
-      {/* 频率 + 免打扰 */}
-      <div className="mb-6 grid gap-4 lg:grid-cols-2">
-        <Card>
+        {/* 类别矩阵 */}
+        <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="text-base">全局推送频率</CardTitle>
+            <CardTitle className="text-base">分类 × 优先级 × 通道</CardTitle>
             <CardDescription>
-              适用于所有类别;高级类别仍可单独覆盖。
+              单元格 = 开启/关闭该类下、该优先级、通过该通道的推送。
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-2 sm:grid-cols-2">
-            {FREQUENCY_OPTIONS.map((opt) => {
-              const Icon = opt.icon;
-              const active = state.frequency === opt.key;
-              return (
-                <button
-                  key={opt.key}
-                  type="button"
-                  onClick={() => onFrequencyChange(opt.key)}
-                  aria-pressed={active}
-                  className={cn(
-                    "group flex items-start gap-3 rounded-lg border p-3 text-left transition-colors",
-                    active
-                      ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                      : "border-border hover:bg-muted/40",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "mt-0.5 grid size-9 place-items-center rounded-md",
-                      active
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground",
-                    )}
-                    aria-hidden="true"
-                  >
-                    <Icon className="size-4" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-medium leading-tight">
-                      {opt.label}
-                    </span>
-                    <span className="mt-0.5 block text-[11px] text-muted-foreground">
-                      {opt.desc}
-                    </span>
-                  </span>
-                </button>
-              );
-            })}
+          <CardContent className="space-y-3">
+            {!hydrated ? (
+              <div className="space-y-3">
+                {CATEGORIES.map((c) => (
+                  <Skeleton key={c.key} className="h-28 w-full" />
+                ))}
+              </div>
+            ) : (
+              CATEGORIES.map((c) => (
+                <CategorySwitch
+                  key={c.key}
+                  category={c.key}
+                  label={c.label}
+                  description={c.desc}
+                  priorities={PRIORITIES}
+                  channels={CHANNELS}
+                  matrix={state.matrix[c.key]}
+                  onToggle={(p, ch, e) => onToggle(c.key, p, ch, e)}
+                  badge={categoryBadge(c.key, state.matrix)}
+                />
+              ))
+            )}
           </CardContent>
         </Card>
-
-        <QuietHoursPicker
-          start={state.quietStart}
-          end={state.quietEnd}
-          onChange={onQuietChange}
-        />
-      </div>
-
-      {/* 类别矩阵 */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-base">分类 × 优先级 × 通道</CardTitle>
-          <CardDescription>
-            单元格 = 开启/关闭该类下、该优先级、通过该通道的推送。
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {!hydrated ? (
-            <div className="space-y-3">
-              {CATEGORIES.map((c) => (
-                <Skeleton key={c.key} className="h-28 w-full" />
-              ))}
-            </div>
-          ) : (
-            CATEGORIES.map((c) => (
-              <CategorySwitch
-                key={c.key}
-                category={c.key}
-                label={c.label}
-                description={c.desc}
-                priorities={PRIORITIES}
-                channels={CHANNELS}
-                matrix={state.matrix[c.key]}
-                onToggle={(p, ch, e) => onToggle(c.key, p, ch, e)}
-                badge={categoryBadge(c.key, state.matrix)}
+        {/* 智能建议 */}
+        <Card className="mb-6 border-amber-200/60 bg-amber-50/40 dark:border-amber-900/40 dark:bg-amber-950/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Sparkles
+                className="size-4 text-amber-600 dark:text-amber-400"
+                aria-hidden="true"
               />
-            ))
-          )}
-        </CardContent>
-      </Card>
-
-      {/* 智能建议 */}
-      <Card className="mb-6 border-amber-200/60 bg-amber-50/40 dark:border-amber-900/40 dark:bg-amber-950/20">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Sparkles
-              className="size-4 text-amber-600 dark:text-amber-400"
-              aria-hidden="true"
-            />
-            AI 优化建议
-          </CardTitle>
-          <CardDescription>
-            根据近 30 天你的点击/已读行为,LLM 给出 1 键应用方案。
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {suggestions.filter((s) => s.status !== "dismissed").length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              目前没有可应用的建议 ✨
-            </p>
-          ) : (
-            <ul className="grid gap-3 sm:grid-cols-2">
-              {suggestions
-                .filter((s) => s.status !== "dismissed")
-                .map((s) => (
-                  <li key={s.id}>
-                    <SmartSuggestion
-                      item={s}
-                      onApply={applySuggestion}
-                      onDismiss={dismissSuggestion}
-                    />
-                  </li>
-                ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-
-      <Separator className="my-6" />
-
-      <p className="text-center text-xs text-muted-foreground">
-        想了解每个通道的含义?
-        <Link
-          href="/jobseeker/account/privacy"
-          className="ml-1 underline-offset-2 hover:underline"
-        >
-          查看隐私与数据使用
-        </Link>
-      </p>
-    </div>
+              AI 优化建议
+            </CardTitle>
+            <CardDescription>
+              根据近 30 天你的点击/已读行为,LLM 给出 1 键应用方案。
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {suggestions.filter((s) => s.status !== "dismissed").length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                目前没有可应用的建议 ✨
+              </p>
+            ) : (
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {suggestions
+                  .filter((s) => s.status !== "dismissed")
+                  .map((s) => (
+                    <li key={s.id}>
+                      <SmartSuggestion
+                        item={s}
+                        onApply={applySuggestion}
+                        onDismiss={dismissSuggestion}
+                      />
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+        <Separator className="my-6" />
+        <p className="text-center text-xs text-muted-foreground">
+          想了解每个通道的含义?
+          <Link
+            href="/jobseeker/account/privacy"
+            className="ml-1 underline-offset-2 hover:underline"
+          >
+            查看隐私与数据使用
+          </Link>
+        </p>
+      </div>)</ErrorBoundary>
   );
 }
 

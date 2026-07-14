@@ -1,3 +1,4 @@
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/legal/LegalPage";
 import { generatePageMetadata } from "@/lib/metadata";
@@ -10,5 +11,5 @@ export const metadata: Metadata = generatePageMetadata({
 });
 
 export default function PrivacyPage() {
-  return <LegalPage docType="privacy" title="Privacy Policy / 隐私政策 / プライバシーポリシー" />;
+  return <ErrorBoundary><LegalPage docType="privacy" title="Privacy Policy / 隐私政策 / プライバシーポリシー" /></ErrorBoundary>;
 }

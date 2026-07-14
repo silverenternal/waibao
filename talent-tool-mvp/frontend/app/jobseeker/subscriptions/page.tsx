@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v9.1 — 求职者订阅规则 CRUD.
@@ -234,302 +235,296 @@ export default function SubscriptionsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
-      {/* 顶部 */}
-      <header className="mb-6 sm:mb-8">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">
-              <Bell className="size-3.5" aria-hidden="true" />
-              订阅规则
+    <ErrorBoundary>(<div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
+        {/* 顶部 */}
+        <header className="mb-6 sm:mb-8">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">
+                <Bell className="size-3.5" aria-hidden="true" />
+                订阅规则
+              </div>
+              <h1 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
+                想看什么工作,让 AI 主动推给你
+              </h1>
+              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                创建多个订阅,按角色、地点、薪资、远程偏好匹配;命中时通过你设置的通道推送。
+              </p>
             </div>
-            <h1 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
-              想看什么工作,让 AI 主动推给你
-            </h1>
-            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-              创建多个订阅,按角色、地点、薪资、远程偏好匹配;命中时通过你设置的通道推送。
-            </p>
+            <Button
+              onClick={() => setCreateOpen(true)}
+              className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-700 hover:to-violet-700"
+            >
+              <Plus className="mr-1.5 size-4" aria-hidden="true" />
+              新建订阅
+            </Button>
           </div>
-          <Button
-            onClick={() => setCreateOpen(true)}
-            className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-700 hover:to-violet-700"
-          >
-            <Plus className="mr-1.5 size-4" aria-hidden="true" />
-            新建订阅
-          </Button>
-        </div>
-      </header>
-
-      {/* KPI */}
-      <section
-        aria-label="订阅统计"
-        className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4"
-      >
-        <Kpi
-          label="订阅总数"
-          value={subs.length}
-          icon={Bell}
-          tone="indigo"
-        />
-        <Kpi label="启用中" value={activeCount} icon={CheckCheck} tone="emerald" />
-        <Kpi label="已暂停" value={pausedCount} icon={BellOff} tone="slate" />
-        <Kpi
-          label="近 7 天命中"
-          value={totalMatches}
-          icon={Sparkles}
-          tone="amber"
-        />
-      </section>
-
-      {/* 工具栏 */}
-      <Card className="mb-4">
-        <CardContent className="space-y-3 p-3 sm:p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="relative flex-1 sm:max-w-xs">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="搜索名称、角色、城市、技能…"
-                className="pl-9"
-                aria-label="搜索订阅"
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5 text-xs">
-              <Filter
-                className="size-3.5 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <FilterChip
-                active={status === "all"}
-                onClick={() => setStatus("all")}
-                label="全部"
-                count={subs.length}
-              />
-              <FilterChip
-                active={status === "active"}
-                onClick={() => setStatus("active")}
-                label="启用中"
-                count={activeCount}
-                tone="emerald"
-              />
-              <FilterChip
-                active={status === "paused"}
-                onClick={() => setStatus("paused")}
-                label="已暂停"
-                count={pausedCount}
-                tone="slate"
-              />
-              <div className="ml-auto flex items-center gap-1 rounded-md border bg-background p-0.5">
-                <button
-                  type="button"
-                  onClick={() => setView("grid")}
-                  className={cn(
-                    "inline-flex size-7 items-center justify-center rounded-sm transition-colors",
-                    view === "grid"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted",
-                  )}
-                  aria-label="网格视图"
-                  aria-pressed={view === "grid"}
-                >
-                  <LayoutGrid className="size-3.5" aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setView("list")}
-                  className={cn(
-                    "inline-flex size-7 items-center justify-center rounded-sm transition-colors",
-                    view === "list"
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted",
-                  )}
-                  aria-label="列表视图"
-                  aria-pressed={view === "list"}
-                >
-                  <ListIcon className="size-3.5" aria-hidden="true" />
-                </button>
+        </header>
+        {/* KPI */}
+        <section
+          aria-label="订阅统计"
+          className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4"
+        >
+          <Kpi
+            label="订阅总数"
+            value={subs.length}
+            icon={Bell}
+            tone="indigo"
+          />
+          <Kpi label="启用中" value={activeCount} icon={CheckCheck} tone="emerald" />
+          <Kpi label="已暂停" value={pausedCount} icon={BellOff} tone="slate" />
+          <Kpi
+            label="近 7 天命中"
+            value={totalMatches}
+            icon={Sparkles}
+            tone="amber"
+          />
+        </section>
+        {/* 工具栏 */}
+        <Card className="mb-4">
+          <CardContent className="space-y-3 p-3 sm:p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative flex-1 sm:max-w-xs">
+                <Search
+                  className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="搜索名称、角色、城市、技能…"
+                  className="pl-9"
+                  aria-label="搜索订阅"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                <Filter
+                  className="size-3.5 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <FilterChip
+                  active={status === "all"}
+                  onClick={() => setStatus("all")}
+                  label="全部"
+                  count={subs.length}
+                />
+                <FilterChip
+                  active={status === "active"}
+                  onClick={() => setStatus("active")}
+                  label="启用中"
+                  count={activeCount}
+                  tone="emerald"
+                />
+                <FilterChip
+                  active={status === "paused"}
+                  onClick={() => setStatus("paused")}
+                  label="已暂停"
+                  count={pausedCount}
+                  tone="slate"
+                />
+                <div className="ml-auto flex items-center gap-1 rounded-md border bg-background p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setView("grid")}
+                    className={cn(
+                      "inline-flex size-7 items-center justify-center rounded-sm transition-colors",
+                      view === "grid"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted",
+                    )}
+                    aria-label="网格视图"
+                    aria-pressed={view === "grid"}
+                  >
+                    <LayoutGrid className="size-3.5" aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setView("list")}
+                    className={cn(
+                      "inline-flex size-7 items-center justify-center rounded-sm transition-colors",
+                      view === "list"
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted",
+                    )}
+                    aria-label="列表视图"
+                    aria-pressed={view === "list"}
+                  >
+                    <ListIcon className="size-3.5" aria-hidden="true" />
+                  </button>
+                </div>
               </div>
             </div>
+          </CardContent>
+        </Card>
+        {/* 列表 */}
+        {loading ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-56 w-full" />
+            ))}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* 列表 */}
-      {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-56 w-full" />
-          ))}
-        </div>
-      ) : filtered.length === 0 ? (
-        subs.length === 0 ? (
-          <EmptyState
-            title="还没有订阅"
-            description="创建一个订阅,匹配引擎会按你的偏好主动推送合适的工作。"
-            icon={<Bell className="size-6" />}
-            action={
-              <Button onClick={() => setCreateOpen(true)}>
-                <Plus className="mr-1.5 size-4" aria-hidden="true" />
-                新建第一个订阅
-              </Button>
-            }
-          />
-        ) : (
-          <EmptyState
-            title="没有匹配的订阅"
-            description="试试清除搜索或切换状态筛选。"
-            icon={<Filter className="size-6" />}
-            action={
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSearch("");
-                  setStatus("all");
-                }}
-              >
-                清除筛选
-              </Button>
-            }
-          />
-        )
-      ) : view === "grid" ? (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {filtered.map((s) => (
-            <SubscriptionCard
-              key={s.id}
-              sub={s}
-              matches={matches[s.id] ?? []}
-              onToggle={() => onToggle(s)}
-              onEdit={() => setEditTarget(s)}
-              onDelete={() => setDeleteTarget(s)}
-              onDuplicate={() => onDuplicate(s)}
-            />
-          ))}
-        </div>
-      ) : (
-        <SubscriptionList
-          items={filtered}
-          matches={matches}
-          onToggle={onToggle}
-          onEdit={(s) => setEditTarget(s)}
-          onDelete={(s) => setDeleteTarget(s)}
-          onDuplicate={onDuplicate}
-        />
-      )}
-
-      {/* 创建/编辑 Dialog */}
-      <Dialog
-        open={createOpen || editTarget !== null}
-        onOpenChange={(o) => {
-          if (!o) {
-            setCreateOpen(false);
-            setEditTarget(null);
-          }
-        }}
-      >
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editTarget ? "编辑订阅" : "新建订阅"}
-            </DialogTitle>
-            <DialogDescription>
-              {editTarget
-                ? "调整规则后,匹配引擎会重新计算。"
-                : "设定后立即开始匹配,命中会通过你勾选的通道推送。"}
-            </DialogDescription>
-          </DialogHeader>
-          {editTarget ? (
-            <SubscriptionForm
-              key={editTarget.id}
-              initial={{
-                name: editTarget.name,
-                criteria: editTarget.criteria,
-                channels: editTarget.channels,
-              }}
-              onSubmit={onEditSave}
-              submitting={submitting}
-              onCancel={() => setEditTarget(null)}
-            />
-          ) : (
-            <SubscriptionForm
-              key="new"
-              onSubmit={onCreate}
-              submitting={submitting}
-              onCancel={() => setCreateOpen(false)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* 删除确认 Dialog */}
-      <Dialog
-        open={deleteTarget !== null}
-        onOpenChange={(o) => !o && setDeleteTarget(null)}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-rose-700 dark:text-rose-300">
-              <Trash2 className="size-4" aria-hidden="true" />
-              删除订阅?
-            </DialogTitle>
-            <DialogDescription>
-              将永久删除订阅「
-              <span className="font-semibold text-foreground">
-                {deleteTarget?.name}
-              </span>
-              」及其历史匹配;此操作不可撤销。
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-2 pt-2">
-            <DialogClose
-              render={
-                <Button variant="ghost" size="sm">
-                  取消
+        ) : filtered.length === 0 ? (
+          subs.length === 0 ? (
+            <EmptyState
+              title="还没有订阅"
+              description="创建一个订阅,匹配引擎会按你的偏好主动推送合适的工作。"
+              icon={<Bell className="size-6" />}
+              action={
+                <Button onClick={() => setCreateOpen(true)}>
+                  <Plus className="mr-1.5 size-4" aria-hidden="true" />
+                  新建第一个订阅
                 </Button>
               }
             />
-            <Button
-              size="sm"
-              className="bg-rose-600 text-white hover:bg-rose-700"
-              onClick={onDelete}
-              disabled={submitting}
-            >
-              {submitting ? (
-                <span className="flex items-center gap-1">
-                  <Loader2 className="size-3 animate-spin" aria-hidden="true" />
-                  删除中
-                </span>
-              ) : (
-                "确认删除"
-              )}
-            </Button>
+          ) : (
+            <EmptyState
+              title="没有匹配的订阅"
+              description="试试清除搜索或切换状态筛选。"
+              icon={<Filter className="size-6" />}
+              action={
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSearch("");
+                    setStatus("all");
+                  }}
+                >
+                  清除筛选
+                </Button>
+              }
+            />
+          )
+        ) : view === "grid" ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {filtered.map((s) => (
+              <SubscriptionCard
+                key={s.id}
+                sub={s}
+                matches={matches[s.id] ?? []}
+                onToggle={() => onToggle(s)}
+                onEdit={() => setEditTarget(s)}
+                onDelete={() => setDeleteTarget(s)}
+                onDuplicate={() => onDuplicate(s)}
+              />
+            ))}
           </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Toast */}
-      {toast && (
-        <div
-          role="status"
-          aria-live="polite"
-          className={cn(
-            "fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-full px-4 py-2 text-sm shadow-lg ring-1 backdrop-blur",
-            toast.kind === "success" &&
-              "bg-emerald-50/95 text-emerald-800 ring-emerald-200/60 dark:bg-emerald-950/80 dark:text-emerald-200 dark:ring-emerald-900",
-            toast.kind === "error" &&
-              "bg-rose-50/95 text-rose-800 ring-rose-200/60 dark:bg-rose-950/80 dark:text-rose-200 dark:ring-rose-900",
-            toast.kind === "info" &&
-              "bg-indigo-50/95 text-indigo-800 ring-indigo-200/60 dark:bg-indigo-950/80 dark:text-indigo-200 dark:ring-indigo-900",
-          )}
+        ) : (
+          <SubscriptionList
+            items={filtered}
+            matches={matches}
+            onToggle={onToggle}
+            onEdit={(s) => setEditTarget(s)}
+            onDelete={(s) => setDeleteTarget(s)}
+            onDuplicate={onDuplicate}
+          />
+        )}
+        {/* 创建/编辑 Dialog */}
+        <Dialog
+          open={createOpen || editTarget !== null}
+          onOpenChange={(o) => {
+            if (!o) {
+              setCreateOpen(false);
+              setEditTarget(null);
+            }
+          }}
         >
-          {toast.message}
-        </div>
-      )}
-    </div>
+          <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {editTarget ? "编辑订阅" : "新建订阅"}
+              </DialogTitle>
+              <DialogDescription>
+                {editTarget
+                  ? "调整规则后,匹配引擎会重新计算。"
+                  : "设定后立即开始匹配,命中会通过你勾选的通道推送。"}
+              </DialogDescription>
+            </DialogHeader>
+            {editTarget ? (
+              <SubscriptionForm
+                key={editTarget.id}
+                initial={{
+                  name: editTarget.name,
+                  criteria: editTarget.criteria,
+                  channels: editTarget.channels,
+                }}
+                onSubmit={onEditSave}
+                submitting={submitting}
+                onCancel={() => setEditTarget(null)}
+              />
+            ) : (
+              <SubscriptionForm
+                key="new"
+                onSubmit={onCreate}
+                submitting={submitting}
+                onCancel={() => setCreateOpen(false)}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+        {/* 删除确认 Dialog */}
+        <Dialog
+          open={deleteTarget !== null}
+          onOpenChange={(o) => !o && setDeleteTarget(null)}
+        >
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-rose-700 dark:text-rose-300">
+                <Trash2 className="size-4" aria-hidden="true" />
+                删除订阅?
+              </DialogTitle>
+              <DialogDescription>
+                将永久删除订阅「
+                <span className="font-semibold text-foreground">
+                  {deleteTarget?.name}
+                </span>
+                」及其历史匹配;此操作不可撤销。
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-2 pt-2">
+              <DialogClose
+                render={
+                  <Button variant="ghost" size="sm">
+                    取消
+                  </Button>
+                }
+              />
+              <Button
+                size="sm"
+                className="bg-rose-600 text-white hover:bg-rose-700"
+                onClick={onDelete}
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <span className="flex items-center gap-1">
+                    <Loader2 className="size-3 animate-spin" aria-hidden="true" />
+                    删除中
+                  </span>
+                ) : (
+                  "确认删除"
+                )}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+        {/* Toast */}
+        {toast && (
+          <div
+            role="status"
+            aria-live="polite"
+            className={cn(
+              "fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-full px-4 py-2 text-sm shadow-lg ring-1 backdrop-blur",
+              toast.kind === "success" &&
+                "bg-emerald-50/95 text-emerald-800 ring-emerald-200/60 dark:bg-emerald-950/80 dark:text-emerald-200 dark:ring-emerald-900",
+              toast.kind === "error" &&
+                "bg-rose-50/95 text-rose-800 ring-rose-200/60 dark:bg-rose-950/80 dark:text-rose-200 dark:ring-rose-900",
+              toast.kind === "info" &&
+                "bg-indigo-50/95 text-indigo-800 ring-indigo-200/60 dark:bg-indigo-950/80 dark:text-indigo-200 dark:ring-indigo-900",
+            )}
+          >
+            {toast.message}
+          </div>
+        )}
+      </div>)</ErrorBoundary>
   );
 }
 

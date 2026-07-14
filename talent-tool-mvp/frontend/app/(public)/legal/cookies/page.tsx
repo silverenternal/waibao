@@ -1,3 +1,4 @@
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/legal/LegalPage";
 import { generatePageMetadata } from "@/lib/metadata";
@@ -10,5 +11,5 @@ export const metadata: Metadata = generatePageMetadata({
 });
 
 export default function CookiesPage() {
-  return <LegalPage docType="cookies" title="Cookie Policy / Cookie 政策 / Cookie ポリシー" />;
+  return <ErrorBoundary><LegalPage docType="cookies" title="Cookie Policy / Cookie 政策 / Cookie ポリシー" /></ErrorBoundary>;
 }

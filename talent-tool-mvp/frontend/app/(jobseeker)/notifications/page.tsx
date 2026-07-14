@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v8.1 T3603 — 通知列表页面
@@ -39,10 +40,10 @@ export default function NotificationsPage() {
   }, []);
 
   return (
-    <div className="container mx-auto p-6 space-y-4">
-      <h1 className="text-2xl font-bold">通知</h1>
-      <p className="text-sm text-slate-600">智能体主动推送的消息历史</p>
-      <ProactiveToast logs={logs} />
-    </div>
+    <ErrorBoundary>(<div className="container mx-auto p-6 space-y-4">
+        <h1 className="text-2xl font-bold">通知</h1>
+        <p className="text-sm text-slate-600">智能体主动推送的消息历史</p>
+        <ProactiveToast logs={logs} />
+      </div>)</ErrorBoundary>
   );
 }

@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * Collab Rooms — Cal.com/Linear-style collaborative spaces.
@@ -47,57 +48,56 @@ export default function RoomsPage() {
   const others = filtered.filter((r) => !r.pinned);
 
   return (
-    <div className="grid h-[calc(100vh-7rem)] grid-cols-1 gap-3 p-3 md:p-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-      <Card className="flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between border-b p-3">
-          <h1 className="text-sm font-semibold">协同空间</h1>
-          <Button size="icon" variant="ghost" aria-label="新空间">
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-        <div className="relative border-b p-3">
-          <Search className="absolute left-5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="搜索房间..."
-            className="pl-8 text-xs"
-            aria-label="搜索房间"
-          />
-        </div>
-        <div className="flex-1 overflow-y-auto p-2 text-sm">
-          {pinned.length > 0 && (
-            <div className="mb-3">
-              <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                <Pin className="mr-1 inline h-3 w-3" /> 置顶
-              </div>
-              {pinned.map((r) => <RoomRowItem key={r.id} room={r} />)}
-            </div>
-          )}
-          <div className="mb-1 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            最近
+    <ErrorBoundary>(<div className="grid h-[calc(100vh-7rem)] grid-cols-1 gap-3 p-3 md:p-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <Card className="flex flex-col overflow-hidden">
+          <div className="flex items-center justify-between border-b p-3">
+            <h1 className="text-sm font-semibold">协同空间</h1>
+            <Button size="icon" variant="ghost" aria-label="新空间">
+              <Plus className="h-4 w-4" />
+            </Button>
           </div>
-          {others.map((r) => <RoomRowItem key={r.id} room={r} />)}
+          <div className="relative border-b p-3">
+            <Search className="absolute left-5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="搜索房间..."
+              className="pl-8 text-xs"
+              aria-label="搜索房间"
+            />
+          </div>
+          <div className="flex-1 overflow-y-auto p-2 text-sm">
+            {pinned.length > 0 && (
+              <div className="mb-3">
+                <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <Pin className="mr-1 inline h-3 w-3" /> 置顶
+                </div>
+                {pinned.map((r) => <RoomRowItem key={r.id} room={r} />)}
+              </div>
+            )}
+            <div className="mb-1 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              最近
+            </div>
+            {others.map((r) => <RoomRowItem key={r.id} room={r} />)}
+          </div>
+          <div className="border-t p-2 text-xs text-muted-foreground">共 {ROOMS.length} 个空间</div>
+        </Card>
+        <div className="flex flex-col items-center justify-center rounded-xl border bg-card p-8 text-center">
+          <Users2 className="h-10 w-10 text-muted-foreground" />
+          <h2 className="mt-3 text-lg font-semibold">选择一个空间开始协同</h2>
+          <p className="mt-1 max-w-md text-sm text-muted-foreground">
+            左侧列表点击进入,或打开候选人后从详情页直接打开 / 进入专属空间。
+          </p>
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            <Button asChild>
+              <Link href="/employer/candidates">
+                候选人列表
+              </Link>
+            </Button>
+            <Button variant="outline">+ 新建空间</Button>
+          </div>
         </div>
-        <div className="border-t p-2 text-xs text-muted-foreground">共 {ROOMS.length} 个空间</div>
-      </Card>
-
-      <div className="flex flex-col items-center justify-center rounded-xl border bg-card p-8 text-center">
-        <Users2 className="h-10 w-10 text-muted-foreground" />
-        <h2 className="mt-3 text-lg font-semibold">选择一个空间开始协同</h2>
-        <p className="mt-1 max-w-md text-sm text-muted-foreground">
-          左侧列表点击进入,或打开候选人后从详情页直接打开 / 进入专属空间。
-        </p>
-        <div className="mt-4 flex flex-wrap justify-center gap-2">
-          <Button asChild>
-            <Link href="/employer/candidates">
-              候选人列表
-            </Link>
-          </Button>
-          <Button variant="outline">+ 新建空间</Button>
-        </div>
-      </div>
-    </div>
+      </div>)</ErrorBoundary>
   );
 }
 

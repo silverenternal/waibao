@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import * as React from "react";
 import Link from "next/link";
@@ -39,27 +40,27 @@ export default function WebhookDeliveriesPage() {
   if (!id) return null;
 
   return (
-    <div className="container mx-auto p-6 max-w-5xl">
-      <div className="mb-4 text-sm text-slate-500">
-        <Link
-          href="/mothership/admin/webhooks"
-          className="hover:underline"
-        >
-          ← 返回列表
-        </Link>
-      </div>
-      <h1 className="text-2xl font-semibold mb-4">投递历史</h1>
-      {err && (
-        <div className="mb-4 rounded-md bg-red-50 border border-red-200 p-2 text-sm text-red-700">
-          {err}
+    <ErrorBoundary>(<div className="container mx-auto p-6 max-w-5xl">
+        <div className="mb-4 text-sm text-slate-500">
+          <Link
+            href="/mothership/admin/webhooks"
+            className="hover:underline"
+          >
+            ← 返回列表
+          </Link>
         </div>
-      )}
-      {list && (
-        <WebhookDeliveryList
-          deliveries={list}
-          onReplayDeadLetters={replay}
-        />
-      )}
-    </div>
+        <h1 className="text-2xl font-semibold mb-4">投递历史</h1>
+        {err && (
+          <div className="mb-4 rounded-md bg-red-50 border border-red-200 p-2 text-sm text-red-700">
+            {err}
+          </div>
+        )}
+        {list && (
+          <WebhookDeliveryList
+            deliveries={list}
+            onReplayDeadLetters={replay}
+          />
+        )}
+      </div>)</ErrorBoundary>
   );
 }

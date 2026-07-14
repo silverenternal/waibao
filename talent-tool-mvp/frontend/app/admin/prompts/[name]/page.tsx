@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * T2704: Prompt v2 detail — version list, A/B traffic, eval.
@@ -113,225 +114,218 @@ export default function PromptDetailPage(): React.JSX.Element {
   };
 
   return (
-    <main className="mx-auto max-w-7xl p-6 space-y-6">
-      <header className="flex justify-between items-end">
-        <div>
+    <ErrorBoundary>(<main className="mx-auto max-w-7xl p-6 space-y-6">
+        <header className="flex justify-between items-end">
+          <div>
+            <button
+              type="button"
+              onClick={() => router.push("/admin/prompts")}
+              className="text-xs text-muted-foreground hover:underline"
+            >
+              ← back to prompts
+            </button>
+            <h1 className="text-3xl font-semibold mt-1">{name}</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {versions.length} versions — active traffic split: {totalTraffic}%
+            </p>
+          </div>
           <button
             type="button"
-            onClick={() => router.push("/admin/prompts")}
-            className="text-xs text-muted-foreground hover:underline"
+            onClick={() => setShowDraft((v) => !v)}
+            className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium"
           >
-            ← back to prompts
+            {showDraft ? "Cancel" : "New draft"}
           </button>
-          <h1 className="text-3xl font-semibold mt-1">{name}</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {versions.length} versions — active traffic split: {totalTraffic}%
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowDraft((v) => !v)}
-          className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium"
-        >
-          {showDraft ? "Cancel" : "New draft"}
-        </button>
-      </header>
-
-      {error && (
-        <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm">
-          {error}
-        </div>
-      )}
-
-      {showDraft && (
-        <section className="rounded-md border p-4">
-          <h2 className="text-lg font-semibold mb-3">New draft version</h2>
-          <PromptEditor
-            initial={{ name, status: "draft", traffic_pct: 0 }}
-            submitLabel="Create draft"
-            onSubmit={async (values) => {
-              await api(`/api/prompts`, {
-                method: "POST",
-                body: JSON.stringify({ ...values, name, agent: "default" }),
-              });
-              setShowDraft(false);
-              await reload();
-            }}
-          />
-        </section>
-      )}
-
-      <section className="rounded-md border p-4 space-y-3">
-        <h2 className="text-lg font-semibold">Versions</h2>
-        <table className="w-full text-sm">
-          <thead className="text-left">
-            <tr>
-              <th className="py-1 pr-2">Version</th>
-              <th className="py-1 pr-2">Status</th>
-              <th className="py-1 pr-2">Traffic %</th>
-              <th className="py-1 pr-2">Variables</th>
-              <th className="py-1 pr-2">Tags</th>
-              <th className="py-1 pr-2"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {versions.map((v) => (
-              <tr key={v.id} className="border-t">
-                <td className="py-1 pr-2 font-mono">v{v.version}</td>
-                <td className="py-1 pr-2">
-                  <span className={statusClass(v.status)}>{v.status}</span>
-                </td>
-                <td className="py-1 pr-2">{v.traffic_pct}</td>
-                <td className="py-1 pr-2 text-xs">
-                  {v.variables.join(", ") || "—"}
-                </td>
-                <td className="py-1 pr-2 text-xs">
-                  {v.tags.join(", ") || "—"}
-                </td>
-                <td className="py-1 pr-2 text-right space-x-1">
-                  <button
-                    type="button"
-                    onClick={() => runEval(v.id)}
-                    disabled={busy}
-                    className="px-2 py-1 rounded border text-xs disabled:opacity-50"
-                  >
-                    Eval
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLeftId(v.id)}
-                    className="px-2 py-1 rounded border text-xs"
-                  >
-                    Left
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRightId(v.id)}
-                    className="px-2 py-1 rounded border text-xs"
-                  >
-                    Right
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
-
-      <section className="rounded-md border p-4 space-y-3">
-        <h2 className="text-lg font-semibold">A/B traffic shift</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end text-sm">
-          <label>
-            <span className="block font-medium mb-1">From version</span>
-            <input
-              value={trafficFrom}
-              onChange={(e) => setTrafficFrom(e.target.value)}
-              className="w-full border rounded px-2 py-1 bg-background"
+        </header>
+        {error && (
+          <div className="rounded-md border border-destructive bg-destructive/10 p-3 text-sm">
+            {error}
+          </div>
+        )}
+        {showDraft && (
+          <section className="rounded-md border p-4">
+            <h2 className="text-lg font-semibold mb-3">New draft version</h2>
+            <PromptEditor
+              initial={{ name, status: "draft", traffic_pct: 0 }}
+              submitLabel="Create draft"
+              onSubmit={async (values) => {
+                await api(`/api/prompts`, {
+                  method: "POST",
+                  body: JSON.stringify({ ...values, name, agent: "default" }),
+                });
+                setShowDraft(false);
+                await reload();
+              }}
             />
-          </label>
-          <label>
-            <span className="block font-medium mb-1">To version</span>
-            <input
-              value={trafficTo}
-              onChange={(e) => setTrafficTo(e.target.value)}
-              className="w-full border rounded px-2 py-1 bg-background"
-            />
-          </label>
-          <label>
-            <span className="block font-medium mb-1">Shift %</span>
-            <input
-              type="number"
-              min={1}
-              max={100}
-              value={trafficPct}
-              onChange={(e) => setTrafficPct(Number(e.target.value) || 0)}
-              className="w-full border rounded px-2 py-1 bg-background"
-            />
-          </label>
-          <button
-            type="button"
-            onClick={shift}
-            disabled={busy}
-            className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
-          >
-            Shift traffic
-          </button>
-        </div>
-      </section>
-
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <h3 className="text-md font-semibold mb-2">Left</h3>
-          <select
-            value={leftId ?? ""}
-            onChange={(e) => setLeftId(e.target.value)}
-            className="w-full border rounded px-2 py-1 text-sm bg-background mb-2"
-          >
-            {versions.map((v) => (
-              <option key={v.id} value={v.id}>
-                v{v.version} ({v.status})
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <h3 className="text-md font-semibold mb-2">Right</h3>
-          <select
-            value={rightId ?? ""}
-            onChange={(e) => setRightId(e.target.value)}
-            className="w-full border rounded px-2 py-1 text-sm bg-background mb-2"
-          >
-            {versions.map((v) => (
-              <option key={v.id} value={v.id}>
-                v{v.version} ({v.status})
-              </option>
-            ))}
-          </select>
-        </div>
-      </section>
-
-      {diff && <PromptVersionDiff diff={diff} />}
-
-      <section className="rounded-md border p-4 space-y-3">
-        <h2 className="text-lg font-semibold">Evaluation history</h2>
-        {runs.length === 0 ? (
-          <p className="text-xs text-muted-foreground">
-            No runs yet — click Eval on a version above.
-          </p>
-        ) : (
-          <table className="w-full text-xs">
+          </section>
+        )}
+        <section className="rounded-md border p-4 space-y-3">
+          <h2 className="text-lg font-semibold">Versions</h2>
+          <table className="w-full text-sm">
             <thead className="text-left">
               <tr>
-                <th className="py-1 pr-2">Run</th>
                 <th className="py-1 pr-2">Version</th>
-                <th className="py-1 pr-2">Cases</th>
-                <th className="py-1 pr-2">Accuracy</th>
-                <th className="py-1 pr-2">Fluency</th>
-                <th className="py-1 pr-2">Safety</th>
-                <th className="py-1 pr-2">Bias</th>
-                <th className="py-1 pr-2">Overall</th>
+                <th className="py-1 pr-2">Status</th>
+                <th className="py-1 pr-2">Traffic %</th>
+                <th className="py-1 pr-2">Variables</th>
+                <th className="py-1 pr-2">Tags</th>
+                <th className="py-1 pr-2"></th>
               </tr>
             </thead>
             <tbody>
-              {runs.map((r) => (
-                <tr key={r.id} className="border-t">
-                  <td className="py-1 pr-2 font-mono">{r.id.slice(0, 8)}</td>
-                  <td className="py-1 pr-2">v{r.version}</td>
-                  <td className="py-1 pr-2">{r.case_count}</td>
-                  <td className="py-1 pr-2">{r.summary.accuracy.toFixed(3)}</td>
-                  <td className="py-1 pr-2">{r.summary.fluency.toFixed(3)}</td>
-                  <td className="py-1 pr-2">{r.summary.safety.toFixed(3)}</td>
-                  <td className="py-1 pr-2">{r.summary.bias.toFixed(3)}</td>
-                  <td className="py-1 pr-2 font-medium">
-                    {r.summary.overall.toFixed(3)}
+              {versions.map((v) => (
+                <tr key={v.id} className="border-t">
+                  <td className="py-1 pr-2 font-mono">v{v.version}</td>
+                  <td className="py-1 pr-2">
+                    <span className={statusClass(v.status)}>{v.status}</span>
+                  </td>
+                  <td className="py-1 pr-2">{v.traffic_pct}</td>
+                  <td className="py-1 pr-2 text-xs">
+                    {v.variables.join(", ") || "—"}
+                  </td>
+                  <td className="py-1 pr-2 text-xs">
+                    {v.tags.join(", ") || "—"}
+                  </td>
+                  <td className="py-1 pr-2 text-right space-x-1">
+                    <button
+                      type="button"
+                      onClick={() => runEval(v.id)}
+                      disabled={busy}
+                      className="px-2 py-1 rounded border text-xs disabled:opacity-50"
+                    >
+                      Eval
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLeftId(v.id)}
+                      className="px-2 py-1 rounded border text-xs"
+                    >
+                      Left
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRightId(v.id)}
+                      className="px-2 py-1 rounded border text-xs"
+                    >
+                      Right
+                    </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )}
-      </section>
-    </main>
+        </section>
+        <section className="rounded-md border p-4 space-y-3">
+          <h2 className="text-lg font-semibold">A/B traffic shift</h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end text-sm">
+            <label>
+              <span className="block font-medium mb-1">From version</span>
+              <input
+                value={trafficFrom}
+                onChange={(e) => setTrafficFrom(e.target.value)}
+                className="w-full border rounded px-2 py-1 bg-background"
+              />
+            </label>
+            <label>
+              <span className="block font-medium mb-1">To version</span>
+              <input
+                value={trafficTo}
+                onChange={(e) => setTrafficTo(e.target.value)}
+                className="w-full border rounded px-2 py-1 bg-background"
+              />
+            </label>
+            <label>
+              <span className="block font-medium mb-1">Shift %</span>
+              <input
+                type="number"
+                min={1}
+                max={100}
+                value={trafficPct}
+                onChange={(e) => setTrafficPct(Number(e.target.value) || 0)}
+                className="w-full border rounded px-2 py-1 bg-background"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={shift}
+              disabled={busy}
+              className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
+            >
+              Shift traffic
+            </button>
+          </div>
+        </section>
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <h3 className="text-md font-semibold mb-2">Left</h3>
+            <select
+              value={leftId ?? ""}
+              onChange={(e) => setLeftId(e.target.value)}
+              className="w-full border rounded px-2 py-1 text-sm bg-background mb-2"
+            >
+              {versions.map((v) => (
+                <option key={v.id} value={v.id}>
+                  v{v.version} ({v.status})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <h3 className="text-md font-semibold mb-2">Right</h3>
+            <select
+              value={rightId ?? ""}
+              onChange={(e) => setRightId(e.target.value)}
+              className="w-full border rounded px-2 py-1 text-sm bg-background mb-2"
+            >
+              {versions.map((v) => (
+                <option key={v.id} value={v.id}>
+                  v{v.version} ({v.status})
+                </option>
+              ))}
+            </select>
+          </div>
+        </section>
+        {diff && <PromptVersionDiff diff={diff} />}
+        <section className="rounded-md border p-4 space-y-3">
+          <h2 className="text-lg font-semibold">Evaluation history</h2>
+          {runs.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              No runs yet — click Eval on a version above.
+            </p>
+          ) : (
+            <table className="w-full text-xs">
+              <thead className="text-left">
+                <tr>
+                  <th className="py-1 pr-2">Run</th>
+                  <th className="py-1 pr-2">Version</th>
+                  <th className="py-1 pr-2">Cases</th>
+                  <th className="py-1 pr-2">Accuracy</th>
+                  <th className="py-1 pr-2">Fluency</th>
+                  <th className="py-1 pr-2">Safety</th>
+                  <th className="py-1 pr-2">Bias</th>
+                  <th className="py-1 pr-2">Overall</th>
+                </tr>
+              </thead>
+              <tbody>
+                {runs.map((r) => (
+                  <tr key={r.id} className="border-t">
+                    <td className="py-1 pr-2 font-mono">{r.id.slice(0, 8)}</td>
+                    <td className="py-1 pr-2">v{r.version}</td>
+                    <td className="py-1 pr-2">{r.case_count}</td>
+                    <td className="py-1 pr-2">{r.summary.accuracy.toFixed(3)}</td>
+                    <td className="py-1 pr-2">{r.summary.fluency.toFixed(3)}</td>
+                    <td className="py-1 pr-2">{r.summary.safety.toFixed(3)}</td>
+                    <td className="py-1 pr-2">{r.summary.bias.toFixed(3)}</td>
+                    <td className="py-1 pr-2 font-medium">
+                      {r.summary.overall.toFixed(3)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+      </main>)</ErrorBoundary>
   );
 }
 

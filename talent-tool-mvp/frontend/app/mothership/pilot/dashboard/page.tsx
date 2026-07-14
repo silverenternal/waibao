@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * T1106 — Pilot admin dashboard.
@@ -186,255 +187,254 @@ export default function PilotDashboardPage() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:py-10">
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Pilot 试用仪表盘</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            监控所有试用合作方:邀请数 / NPS / 反馈分类 / Top 痛点
-          </p>
-        </div>
-        <Button size="sm" onClick={() => { void loadPrograms(); if (selectedId) void loadStats(selectedId); }}>
-          <RefreshCw className="mr-1 size-3.5" />
-          刷新
-        </Button>
-      </header>
-
-      <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-        {/* Programs 列表 */}
-        <aside className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium">试用合作</h2>
-            <Badge variant="secondary">{programs?.length ?? 0}</Badge>
-          </div>
-          {programs === null && (
-            <div className="space-y-2">
-              {[1, 2].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
-            </div>
-          )}
-          {programs && programs.length === 0 && (
-            <p className="rounded-md bg-muted/40 p-4 text-center text-xs text-muted-foreground">
-              暂无 pilot program
+    <ErrorBoundary>(<div className="mx-auto max-w-7xl px-4 py-8 sm:py-10">
+        <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Pilot 试用仪表盘</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              监控所有试用合作方:邀请数 / NPS / 反馈分类 / Top 痛点
             </p>
-          )}
-          <ul className="space-y-1.5">
-            {programs?.map((p) => (
-              <li key={p.id}>
-                <button
-                  type="button"
-                  onClick={() => setSelectedId(p.id)}
-                  className={cn(
-                    "w-full rounded-md border p-3 text-left transition-colors",
-                    selectedId === p.id
-                      ? "border-primary bg-primary/5"
-                      : "hover:bg-muted/40",
-                  )}
-                >
-                  <p className="text-sm font-medium">{p.name}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {p.organisations?.name || p.organisation_id}
-                  </p>
-                  <div className="mt-1 flex items-center gap-1.5">
-                    <StatusBadge status={p.status} />
-                    <Badge variant="outline" className="text-[10px]">
-                      目标 NPS {p.target_nps}
-                    </Badge>
-                  </div>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </aside>
-
-        {/* 详情 */}
-        <main className="space-y-6">
-          {!selected && programs && (
-            <Card>
-              <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                请选择左侧的 pilot program 查看详情
-              </CardContent>
-            </Card>
-          )}
-
-          {selected && (
-            <>
-              <div className="grid gap-4 sm:grid-cols-4">
-                <StatCard
-                  label="NPS"
-                  value={stats?.nps.nps ?? null}
-                  unit=""
-                  color={npsColor(stats?.nps.nps ?? null)}
-                  sub={`目标 ${selected.target_nps}`}
-                />
-                <StatCard
-                  label="已邀请"
-                  value={stats?.invitations.total ?? 0}
-                  unit=" 人"
-                  icon={<Mail className="size-4" />}
-                  sub={`接受 ${stats?.invitations.accepted ?? 0}`}
-                />
-                <StatCard
-                  label="反馈条数"
-                  value={stats?.feedback_count ?? 0}
-                  unit=""
-                  icon={<TrendingUp className="size-4" />}
-                  sub={`NPS ${stats?.nps.responses ?? 0} 答`}
-                />
-                <StatCard
-                  label="接受率"
-                  value={
-                    stats && stats.invitations.total > 0
-                      ? Math.round(
-                          (stats.invitations.accepted / stats.invitations.total) * 100,
-                        )
-                      : 0
-                  }
-                  unit="%"
-                  icon={<Users className="size-4" />}
-                  sub={`上限 ${selected.max_users}`}
-                />
+          </div>
+          <Button size="sm" onClick={() => { void loadPrograms(); if (selectedId) void loadStats(selectedId); }}>
+            <RefreshCw className="mr-1 size-3.5" />
+            刷新
+          </Button>
+        </header>
+        <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+          {/* Programs 列表 */}
+          <aside className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-medium">试用合作</h2>
+              <Badge variant="secondary">{programs?.length ?? 0}</Badge>
+            </div>
+            {programs === null && (
+              <div className="space-y-2">
+                {[1, 2].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
               </div>
+            )}
+            {programs && programs.length === 0 && (
+              <p className="rounded-md bg-muted/40 p-4 text-center text-xs text-muted-foreground">
+                暂无 pilot program
+              </p>
+            )}
+            <ul className="space-y-1.5">
+              {programs?.map((p) => (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedId(p.id)}
+                    className={cn(
+                      "w-full rounded-md border p-3 text-left transition-colors",
+                      selectedId === p.id
+                        ? "border-primary bg-primary/5"
+                        : "hover:bg-muted/40",
+                    )}
+                  >
+                    <p className="text-sm font-medium">{p.name}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {p.organisations?.name || p.organisation_id}
+                    </p>
+                    <div className="mt-1 flex items-center gap-1.5">
+                      <StatusBadge status={p.status} />
+                      <Badge variant="outline" className="text-[10px]">
+                        目标 NPS {p.target_nps}
+                      </Badge>
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </aside>
 
-              <div className="grid gap-6 lg:grid-cols-2">
-                {/* NPS breakdown */}
+          {/* 详情 */}
+          <main className="space-y-6">
+            {!selected && programs && (
+              <Card>
+                <CardContent className="py-10 text-center text-sm text-muted-foreground">
+                  请选择左侧的 pilot program 查看详情
+                </CardContent>
+              </Card>
+            )}
+
+            {selected && (
+              <>
+                <div className="grid gap-4 sm:grid-cols-4">
+                  <StatCard
+                    label="NPS"
+                    value={stats?.nps.nps ?? null}
+                    unit=""
+                    color={npsColor(stats?.nps.nps ?? null)}
+                    sub={`目标 ${selected.target_nps}`}
+                  />
+                  <StatCard
+                    label="已邀请"
+                    value={stats?.invitations.total ?? 0}
+                    unit=" 人"
+                    icon={<Mail className="size-4" />}
+                    sub={`接受 ${stats?.invitations.accepted ?? 0}`}
+                  />
+                  <StatCard
+                    label="反馈条数"
+                    value={stats?.feedback_count ?? 0}
+                    unit=""
+                    icon={<TrendingUp className="size-4" />}
+                    sub={`NPS ${stats?.nps.responses ?? 0} 答`}
+                  />
+                  <StatCard
+                    label="接受率"
+                    value={
+                      stats && stats.invitations.total > 0
+                        ? Math.round(
+                            (stats.invitations.accepted / stats.invitations.total) * 100,
+                          )
+                        : 0
+                    }
+                    unit="%"
+                    icon={<Users className="size-4" />}
+                    sub={`上限 ${selected.max_users}`}
+                  />
+                </div>
+
+                <div className="grid gap-6 lg:grid-cols-2">
+                  {/* NPS breakdown */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>NPS 分布</CardTitle>
+                      <CardDescription>
+                        Promoter 9-10 / Passive 7-8 / Detractor 0-6
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {loading && !stats ? (
+                        <Skeleton className="h-24 w-full" />
+                      ) : stats ? (
+                        <NpsBar stats={stats.nps} />
+                      ) : null}
+                    </CardContent>
+                  </Card>
+
+                  {/* 反馈分类 */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>反馈分类</CardTitle>
+                      <CardDescription>按 category 计数</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {loading && !stats ? (
+                        <Skeleton className="h-24 w-full" />
+                      ) : stats ? (
+                        <CategoryBars counts={stats.feedback_by_category} />
+                      ) : null}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* 邀请新用户 */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>NPS 分布</CardTitle>
+                    <CardTitle>邀请新用户</CardTitle>
                     <CardDescription>
-                      Promoter 9-10 / Passive 7-8 / Detractor 0-6
+                      通过邮件发送邀请链接 (链接 14 天内有效)
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {loading && !stats ? (
-                      <Skeleton className="h-24 w-full" />
-                    ) : stats ? (
-                      <NpsBar stats={stats.nps} />
-                    ) : null}
+                    <form onSubmit={handleInvite} className="grid gap-3 sm:grid-cols-[1fr_180px_auto]">
+                      <div className="space-y-1">
+                        <Label htmlFor="email">邮箱</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={inviteEmail}
+                          onChange={(e) => setInviteEmail(e.target.value)}
+                          placeholder="alice@example.com"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="role">角色</Label>
+                        <select
+                          id="role"
+                          value={inviteRole}
+                          onChange={(e) => setInviteRole(e.target.value)}
+                          className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                        >
+                          <option value="jobseeker">求职者</option>
+                          <option value="employer">雇主</option>
+                          <option value="observer">观察员</option>
+                        </select>
+                      </div>
+                      <div className="flex items-end">
+                        <Button type="submit" disabled={inviting} className="w-full">
+                          <Plus className="mr-1 size-4" />
+                          {inviting ? "发送中..." : "发送邀请"}
+                        </Button>
+                      </div>
+                    </form>
+                    {inviteResult && (
+                      <p className="mt-3 break-all rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
+                        {inviteResult}
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
 
-                {/* 反馈分类 */}
+                {/* 最近反馈 */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>反馈分类</CardTitle>
-                    <CardDescription>按 category 计数</CardDescription>
+                    <CardTitle>最近反馈</CardTitle>
+                    <CardDescription>最新 20 条</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {loading && !stats ? (
-                      <Skeleton className="h-24 w-full" />
-                    ) : stats ? (
-                      <CategoryBars counts={stats.feedback_by_category} />
-                    ) : null}
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>类别</TableHead>
+                          <TableHead>评分</TableHead>
+                          <TableHead>用户</TableHead>
+                          <TableHead>内容</TableHead>
+                          <TableHead>时间</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {feedback.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-6">
+                              暂无反馈
+                            </TableCell>
+                          </TableRow>
+                        )}
+                        {feedback.map((f) => (
+                          <TableRow key={f.id}>
+                            <TableCell>
+                              <Badge variant="outline">{f.category}</Badge>
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">
+                              {f.score ?? "-"}
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              {f.users?.email || "-"}
+                            </TableCell>
+                            <TableCell className="max-w-md truncate text-xs">
+                              {f.comment || (
+                                <span className="text-muted-foreground">
+                                  {f.feature_used || "-"}
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {new Date(f.created_at).toLocaleDateString("zh-CN")}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </CardContent>
                 </Card>
-              </div>
-
-              {/* 邀请新用户 */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>邀请新用户</CardTitle>
-                  <CardDescription>
-                    通过邮件发送邀请链接 (链接 14 天内有效)
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleInvite} className="grid gap-3 sm:grid-cols-[1fr_180px_auto]">
-                    <div className="space-y-1">
-                      <Label htmlFor="email">邮箱</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={inviteEmail}
-                        onChange={(e) => setInviteEmail(e.target.value)}
-                        placeholder="alice@example.com"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="role">角色</Label>
-                      <select
-                        id="role"
-                        value={inviteRole}
-                        onChange={(e) => setInviteRole(e.target.value)}
-                        className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                      >
-                        <option value="jobseeker">求职者</option>
-                        <option value="employer">雇主</option>
-                        <option value="observer">观察员</option>
-                      </select>
-                    </div>
-                    <div className="flex items-end">
-                      <Button type="submit" disabled={inviting} className="w-full">
-                        <Plus className="mr-1 size-4" />
-                        {inviting ? "发送中..." : "发送邀请"}
-                      </Button>
-                    </div>
-                  </form>
-                  {inviteResult && (
-                    <p className="mt-3 break-all rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
-                      {inviteResult}
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* 最近反馈 */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>最近反馈</CardTitle>
-                  <CardDescription>最新 20 条</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>类别</TableHead>
-                        <TableHead>评分</TableHead>
-                        <TableHead>用户</TableHead>
-                        <TableHead>内容</TableHead>
-                        <TableHead>时间</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {feedback.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-6">
-                            暂无反馈
-                          </TableCell>
-                        </TableRow>
-                      )}
-                      {feedback.map((f) => (
-                        <TableRow key={f.id}>
-                          <TableCell>
-                            <Badge variant="outline">{f.category}</Badge>
-                          </TableCell>
-                          <TableCell className="font-mono text-xs">
-                            {f.score ?? "-"}
-                          </TableCell>
-                          <TableCell className="text-xs">
-                            {f.users?.email || "-"}
-                          </TableCell>
-                          <TableCell className="max-w-md truncate text-xs">
-                            {f.comment || (
-                              <span className="text-muted-foreground">
-                                {f.feature_used || "-"}
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {new Date(f.created_at).toLocaleDateString("zh-CN")}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </>
-          )}
-        </main>
-      </div>
-    </div>
+              </>
+            )}
+          </main>
+        </div>
+      </div>)</ErrorBoundary>
   );
 }
 

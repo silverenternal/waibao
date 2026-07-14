@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 /**
  * Employer HR Dashboard — shadcn-admin + Refine inspired.
  *
@@ -85,124 +86,120 @@ export default function EmployerDashboardPage() {
   });
 
   return (
-    <div className="space-y-8 p-4 md:p-8">
-      {/* Greeting */}
-      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-            早上好，Alex 👋
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {today} · 今天有 <strong>{stats.todaysInterviews}</strong> 场面试，
-            即将到期的 Offer <strong>{stats.offersOut}</strong> 个。
-          </p>
-        </div>
-        <Button asChild className="gap-2 self-start md:self-auto">
-          <Link href="/employer/candidates">
-            <PlusCircle className="h-4 w-4" />
-            新增候选人
-          </Link>
-        </Button>
-      </header>
-
-      {/* Metric row */}
-      <HRMetrics loading={loading} />
-
-      {/* Quick action tiles — shadcn-admin style 4-up */}
-      <section aria-labelledby="quick-actions">
-        <h2 id="quick-actions" className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          快捷入口
-        </h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {QUICK_ACTIONS.map(({ label, href, icon: Icon, description }) => (
-            <Link
-              key={href}
-              href={href}
-              className="group rounded-xl border bg-card p-4 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
-            >
-              <div className="flex items-center justify-between">
-                <Icon className="h-5 w-5 text-primary transition-transform group-hover:scale-110" />
-                <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-              </div>
-              <div className="mt-3 font-medium">{label}</div>
-              <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+    <ErrorBoundary>(<div className="space-y-8 p-4 md:p-8">
+        {/* Greeting */}
+        <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+              早上好，Alex 👋
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {today} · 今天有 <strong>{stats.todaysInterviews}</strong> 场面试，
+              即将到期的 Offer <strong>{stats.offersOut}</strong> 个。
+            </p>
+          </div>
+          <Button asChild className="gap-2 self-start md:self-auto">
+            <Link href="/employer/candidates">
+              <PlusCircle className="h-4 w-4" />
+              新增候选人
             </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* Two-column funnel + suggestions */}
-      <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <Card className="h-full">
+          </Button>
+        </header>
+        {/* Metric row */}
+        <HRMetrics loading={loading} />
+        {/* Quick action tiles — shadcn-admin style 4-up */}
+        <section aria-labelledby="quick-actions">
+          <h2 id="quick-actions" className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            快捷入口
+          </h2>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {QUICK_ACTIONS.map(({ label, href, icon: Icon, description }) => (
+              <Link
+                key={href}
+                href={href}
+                className="group rounded-xl border bg-card p-4 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+              >
+                <div className="flex items-center justify-between">
+                  <Icon className="h-5 w-5 text-primary transition-transform group-hover:scale-110" />
+                  <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                </div>
+                <div className="mt-3 font-medium">{label}</div>
+                <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+        {/* Two-column funnel + suggestions */}
+        <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <Card className="h-full">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>招聘漏斗 · Recruitment Funnel</CardTitle>
+                <Badge variant="secondary" className="gap-1">
+                  <CircleDot className="h-3 w-3" /> Live
+                </Badge>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                ) : (
+                  <FunnelFilter
+                    value={{ days: 30, source: "", department: "" }}
+                    onChange={() => {}}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </div>
+          <div>
+            <Card className="h-full">
+              <CardHeader>
+                <CardTitle>HR 主动建议</CardTitle>
+                <p className="text-xs text-muted-foreground">v8.1 T3709 · 每日早 9:00</p>
+              </CardHeader>
+              <CardContent>
+                <DailySuggestions />
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+        {/* Activity + Reviews */}
+        <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>招聘漏斗 · Recruitment Funnel</CardTitle>
-              <Badge variant="secondary" className="gap-1">
-                <CircleDot className="h-3 w-3" /> Live
-              </Badge>
+              <CardTitle>近期信号流</CardTitle>
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/employer/rooms">
+                  全部 <ChevronRight className="ml-1 h-3 w-3" />
+                </Link>
+              </Button>
             </CardHeader>
             <CardContent>
+              <SignalFeed signals={[]} />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>等待你的人</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
               {loading ? (
                 <div className="space-y-2">
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-10 w-full" />
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
                 </div>
               ) : (
-                <FunnelFilter
-                  value={{ days: 30, source: "", department: "" }}
-                  onChange={() => {}}
-                />
+                <PendingReviewList />
               )}
             </CardContent>
           </Card>
-        </div>
-        <div>
-          <Card className="h-full">
-            <CardHeader>
-              <CardTitle>HR 主动建议</CardTitle>
-              <p className="text-xs text-muted-foreground">v8.1 T3709 · 每日早 9:00</p>
-            </CardHeader>
-            <CardContent>
-              <DailySuggestions />
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      {/* Activity + Reviews */}
-      <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>近期信号流</CardTitle>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/employer/rooms">
-                全部 <ChevronRight className="ml-1 h-3 w-3" />
-              </Link>
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <SignalFeed signals={[]} />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>等待你的人</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {loading ? (
-              <div className="space-y-2">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
-                ))}
-              </div>
-            ) : (
-              <PendingReviewList />
-            )}
-          </CardContent>
-        </Card>
-      </section>
-    </div>
+        </section>
+      </div>)</ErrorBoundary>
   );
 }
 

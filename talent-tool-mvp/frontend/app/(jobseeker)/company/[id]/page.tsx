@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import * as React from "react";
 import { useParams } from "next/navigation";
@@ -41,44 +42,42 @@ export default function CompanyDetailPage() {
     );
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">{companyId}</h1>
-        <p className="text-sm text-slate-500">3 源聚合 · 看准 + Glassdoor + 脉脉</p>
-      </div>
-
-      <CompanyRating
-        ratings={data?.ratings ?? []}
-        aggregatedScore={data?.aggregated_score ?? null}
-        loading={loading}
-      />
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Tabs defaultValue="reviews">
-            <TabsList>
-              <TabsTrigger value="reviews">
-                评价 ({data?.reviews.length ?? 0})
-              </TabsTrigger>
-              <TabsTrigger value="interviews">
-                面试经验 ({data?.interviews.length ?? 0})
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="reviews" className="mt-4">
-              <ReviewList reviews={data?.reviews ?? []} loading={loading} />
-            </TabsContent>
-            <TabsContent value="interviews" className="mt-4">
-              <InterviewExperienceList
-                interviews={data?.interviews ?? []}
-                loading={loading}
-              />
-            </TabsContent>
-          </Tabs>
-        </div>
+    <ErrorBoundary>(<div className="container mx-auto p-6 space-y-6">
         <div>
-          <SalaryInsights salary={data?.salary ?? null} loading={loading} />
+          <h1 className="text-2xl font-bold">{companyId}</h1>
+          <p className="text-sm text-slate-500">3 源聚合 · 看准 + Glassdoor + 脉脉</p>
         </div>
-      </div>
-    </div>
+        <CompanyRating
+          ratings={data?.ratings ?? []}
+          aggregatedScore={data?.aggregated_score ?? null}
+          loading={loading}
+        />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <Tabs defaultValue="reviews">
+              <TabsList>
+                <TabsTrigger value="reviews">
+                  评价 ({data?.reviews.length ?? 0})
+                </TabsTrigger>
+                <TabsTrigger value="interviews">
+                  面试经验 ({data?.interviews.length ?? 0})
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="reviews" className="mt-4">
+                <ReviewList reviews={data?.reviews ?? []} loading={loading} />
+              </TabsContent>
+              <TabsContent value="interviews" className="mt-4">
+                <InterviewExperienceList
+                  interviews={data?.interviews ?? []}
+                  loading={loading}
+                />
+              </TabsContent>
+            </Tabs>
+          </div>
+          <div>
+            <SalaryInsights salary={data?.salary ?? null} loading={loading} />
+          </div>
+        </div>
+      </div>)</ErrorBoundary>
   );
 }

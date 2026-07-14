@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * HR ticket detail — /tickets/[id] (T207).
@@ -136,156 +137,155 @@ export default function HrTicketDetailPage() {
   const sla = slaState(ticket);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
-      {/* Header */}
-      <header className="sticky top-0 z-20 border-b bg-white/85 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => router.push("/tickets")}
-              aria-label="返回工单看板"
-            >
-              <ArrowLeft className="size-4" />
-            </Button>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <TicketIcon className="size-4 shrink-0 text-blue-500" />
-                <h1 className="truncate text-base font-semibold text-foreground">
-                  {ticket.title}
-                </h1>
-                <Badge variant="outline" className={cn("border", STATUS_COLOR[ticket.status])}>
-                  {STATUS_LABEL[ticket.status]}
-                </Badge>
-                <Badge variant="outline" className={cn("border", PRIORITY_COLOR[ticket.priority])}>
-                  优先级 {PRIORITY_LABEL[ticket.priority]}
-                </Badge>
+    <ErrorBoundary>(<div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
+        {/* Header */}
+        <header className="sticky top-0 z-20 border-b bg-white/85 backdrop-blur">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => router.push("/tickets")}
+                aria-label="返回工单看板"
+              >
+                <ArrowLeft className="size-4" />
+              </Button>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <TicketIcon className="size-4 shrink-0 text-blue-500" />
+                  <h1 className="truncate text-base font-semibold text-foreground">
+                    {ticket.title}
+                  </h1>
+                  <Badge variant="outline" className={cn("border", STATUS_COLOR[ticket.status])}>
+                    {STATUS_LABEL[ticket.status]}
+                  </Badge>
+                  <Badge variant="outline" className={cn("border", PRIORITY_COLOR[ticket.priority])}>
+                    优先级 {PRIORITY_LABEL[ticket.priority]}
+                  </Badge>
+                </div>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  工单 #{ticket.id.slice(0, 8)} · 创建于 {formatDate(ticket.created_at)}
+                </p>
               </div>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                工单 #{ticket.id.slice(0, 8)} · 创建于 {formatDate(ticket.created_at)}
-              </p>
             </div>
+
+            <SlaInlineBadge state={sla} slaDueAt={ticket.sla_due_at} />
           </div>
-
-          <SlaInlineBadge state={sla} slaDueAt={ticket.sla_due_at} />
-        </div>
-      </header>
-
-      {/* Body */}
-      <main className="mx-auto grid max-w-7xl gap-6 px-6 py-6 lg:grid-cols-3">
-        {/* Left: meta + status */}
-        <aside className="space-y-6 lg:col-span-1">
-          <Card>
-            <CardContent className="space-y-3 p-4">
-              <h2 className="text-sm font-semibold text-slate-800">工单元数据</h2>
-              <MetaRow icon={<UserIcon className="size-4" />} label="提交人">
-                <span className="font-mono text-xs">{ticket.user_id.slice(0, 8)}</span>
-              </MetaRow>
-              <MetaRow icon={<Hash className="size-4" />} label="类别">
-                {CATEGORY_LABEL[categoryKey] ?? categoryKey}
-              </MetaRow>
-              <MetaRow icon={<Calendar className="size-4" />} label="SLA 截止">
-                {ticket.sla_due_at
-                  ? `${formatDate(ticket.sla_due_at)} (${formatRelativeTime(ticket.sla_due_at)})`
-                  : "未设置"}
-              </MetaRow>
-              {ticket.assignee_id && (
-                <MetaRow icon={<UserIcon className="size-4" />} label="分配给">
-                  <span className="font-mono text-xs">{ticket.assignee_id.slice(0, 8)}</span>
-                </MetaRow>
-              )}
-              {ticket.tags?.length > 0 && (
-                <MetaRow icon={<TagIcon className="size-4" />} label="标签">
-                  <div className="flex flex-wrap gap-1">
-                    {ticket.tags.map((t) => (
-                      <Badge key={t} variant="outline" className="border-slate-200 bg-slate-50 text-[10px]">
-                        {t}
-                      </Badge>
-                    ))}
-                  </div>
-                </MetaRow>
-              )}
-              <MetaRow icon={<Clock className="size-4" />} label="最近更新">
-                {formatRelativeTime(ticket.updated_at)}
-              </MetaRow>
-            </CardContent>
-          </Card>
-
-          {/* Status widget — HR can move across the state machine. */}
-          <Card>
-            <CardContent className="space-y-3 p-4">
-              <h2 className="text-sm font-semibold text-slate-800">推进状态</h2>
-
-              {allowedNext.length === 0 ? (
-                <p className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500">
-                  当前状态 ({STATUS_LABEL[ticket.status]}) 为终态,无法继续流转。
-                </p>
-              ) : (
-                <>
-                  <p className="text-xs text-slate-500">
-                    可流转到:{allowedNext.map((s) => STATUS_LABEL[s]).join(" / ")}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {allowedNext.map((next) => (
-                      <Button
-                        key={next}
-                        variant="outline"
-                        size="sm"
-                        disabled={transitioning !== null}
-                        onClick={() => handleTransition(next)}
-                        className={cn("border", STATUS_COLOR[next])}
-                      >
-                        {transitioning === next && (
-                          <Loader2 className="mr-1 size-3 animate-spin" />
-                        )}
-                        → {STATUS_LABEL[next]}
-                      </Button>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {transitionError && (
-                <p className="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-rose-700">
-                  {transitionError}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </aside>
-
-        {/* Right: description + timeline */}
-        <section className="space-y-6 lg:col-span-2">
-          {ticket.description && (
+        </header>
+        {/* Body */}
+        <main className="mx-auto grid max-w-7xl gap-6 px-6 py-6 lg:grid-cols-3">
+          {/* Left: meta + status */}
+          <aside className="space-y-6 lg:col-span-1">
             <Card>
-              <CardContent className="p-4">
-                <h2 className="mb-2 text-sm font-semibold text-slate-800">描述</h2>
-                <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
-                  {ticket.description}
-                </p>
+              <CardContent className="space-y-3 p-4">
+                <h2 className="text-sm font-semibold text-slate-800">工单元数据</h2>
+                <MetaRow icon={<UserIcon className="size-4" />} label="提交人">
+                  <span className="font-mono text-xs">{ticket.user_id.slice(0, 8)}</span>
+                </MetaRow>
+                <MetaRow icon={<Hash className="size-4" />} label="类别">
+                  {CATEGORY_LABEL[categoryKey] ?? categoryKey}
+                </MetaRow>
+                <MetaRow icon={<Calendar className="size-4" />} label="SLA 截止">
+                  {ticket.sla_due_at
+                    ? `${formatDate(ticket.sla_due_at)} (${formatRelativeTime(ticket.sla_due_at)})`
+                    : "未设置"}
+                </MetaRow>
+                {ticket.assignee_id && (
+                  <MetaRow icon={<UserIcon className="size-4" />} label="分配给">
+                    <span className="font-mono text-xs">{ticket.assignee_id.slice(0, 8)}</span>
+                  </MetaRow>
+                )}
+                {ticket.tags?.length > 0 && (
+                  <MetaRow icon={<TagIcon className="size-4" />} label="标签">
+                    <div className="flex flex-wrap gap-1">
+                      {ticket.tags.map((t) => (
+                        <Badge key={t} variant="outline" className="border-slate-200 bg-slate-50 text-[10px]">
+                          {t}
+                        </Badge>
+                      ))}
+                    </div>
+                  </MetaRow>
+                )}
+                <MetaRow icon={<Clock className="size-4" />} label="最近更新">
+                  {formatRelativeTime(ticket.updated_at)}
+                </MetaRow>
               </CardContent>
             </Card>
-          )}
 
-          <TicketTimeline
-            ticket={ticket}
-            events={events}
-            onSubmitComment={handleAddComment}
-            allowInternal
-          />
+            {/* Status widget — HR can move across the state machine. */}
+            <Card>
+              <CardContent className="space-y-3 p-4">
+                <h2 className="text-sm font-semibold text-slate-800">推进状态</h2>
 
-          {/* T1307: Background check panel (candidate-level) */}
-          {(ticket as any).candidate_id ? (
-            <BackgroundCheckStatus
-              candidateId={(ticket as any).candidate_id}
-              offerId={(ticket as any).related_offer_id}
-              refreshMs={15000}
+                {allowedNext.length === 0 ? (
+                  <p className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500">
+                    当前状态 ({STATUS_LABEL[ticket.status]}) 为终态,无法继续流转。
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-xs text-slate-500">
+                      可流转到:{allowedNext.map((s) => STATUS_LABEL[s]).join(" / ")}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {allowedNext.map((next) => (
+                        <Button
+                          key={next}
+                          variant="outline"
+                          size="sm"
+                          disabled={transitioning !== null}
+                          onClick={() => handleTransition(next)}
+                          className={cn("border", STATUS_COLOR[next])}
+                        >
+                          {transitioning === next && (
+                            <Loader2 className="mr-1 size-3 animate-spin" />
+                          )}
+                          → {STATUS_LABEL[next]}
+                        </Button>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {transitionError && (
+                  <p className="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-rose-700">
+                    {transitionError}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </aside>
+
+          {/* Right: description + timeline */}
+          <section className="space-y-6 lg:col-span-2">
+            {ticket.description && (
+              <Card>
+                <CardContent className="p-4">
+                  <h2 className="mb-2 text-sm font-semibold text-slate-800">描述</h2>
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
+                    {ticket.description}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            <TicketTimeline
+              ticket={ticket}
+              events={events}
+              onSubmitComment={handleAddComment}
+              allowInternal
             />
-          ) : null}
-        </section>
-      </main>
-    </div>
+
+            {/* T1307: Background check panel (candidate-level) */}
+            {(ticket as any).candidate_id ? (
+              <BackgroundCheckStatus
+                candidateId={(ticket as any).candidate_id}
+                offerId={(ticket as any).related_offer_id}
+                refreshMs={15000}
+              />
+            ) : null}
+          </section>
+        </main>
+      </div>)</ErrorBoundary>
   );
 }
 

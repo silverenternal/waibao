@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * Rooms list page (T608).
@@ -66,38 +67,35 @@ export default function RoomsListPage() {
   }, [fetch]);
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] w-full flex-col md:flex-row">
-      <div className="md:hidden">
-        <RoomSidebar rooms={rooms} loading={loading} onCreate={() => setCreateOpen(true)} />
-      </div>
-
-      <div className="hidden md:block">
-        <RoomSidebar rooms={rooms} loading={loading} onCreate={() => setCreateOpen(true)} />
-      </div>
-
-      <main className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-        {loading ? (
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            载入中...
-          </div>
-        ) : rooms.length === 0 ? (
-          <EmptyState onCreate={() => setCreateOpen(true)} />
-        ) : (
-          <InlineSummary totalUnread={totalUnread} />
-        )}
-      </main>
-
-      <NewRoomDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        onCreated={(room) => {
-          setCreateOpen(false);
-          void fetch();
-          router.push(`/rooms/${room.id}`);
-        }}
-      />
-    </div>
+    <ErrorBoundary>(<div className="flex h-[calc(100vh-3.5rem)] w-full flex-col md:flex-row">
+        <div className="md:hidden">
+          <RoomSidebar rooms={rooms} loading={loading} onCreate={() => setCreateOpen(true)} />
+        </div>
+        <div className="hidden md:block">
+          <RoomSidebar rooms={rooms} loading={loading} onCreate={() => setCreateOpen(true)} />
+        </div>
+        <main className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+          {loading ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              载入中...
+            </div>
+          ) : rooms.length === 0 ? (
+            <EmptyState onCreate={() => setCreateOpen(true)} />
+          ) : (
+            <InlineSummary totalUnread={totalUnread} />
+          )}
+        </main>
+        <NewRoomDialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          onCreated={(room) => {
+            setCreateOpen(false);
+            void fetch();
+            router.push(`/rooms/${room.id}`);
+          }}
+        />
+      </div>)</ErrorBoundary>
   );
 }
 

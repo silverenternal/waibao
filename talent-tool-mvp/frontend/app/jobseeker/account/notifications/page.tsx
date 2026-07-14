@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * T2304 — 智能通知偏好 (求职者).
@@ -304,156 +305,152 @@ export default function NotificationsPage() {
   const channels = meta.channels as ChannelKey[];
 
   return (
-    <div className="container mx-auto max-w-5xl space-y-6 px-4 py-8">
-      {/* Header */}
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold">
-            <Bell className="h-6 w-6 text-indigo-500" aria-hidden="true" />
-            通知偏好
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            细粒度控制每种类别 / 优先级 / 通道的通知接收; 支持智能降噪 + 静默时间.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {savedAt && (
-            <Badge variant="secondary" className="text-xs">
-              已保存 · {savedAt.toLocaleTimeString()}
-            </Badge>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onSave}
-            disabled={saving}
-            data-testid="save-prefs"
-          >
-            {saving ? (
-              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-            ) : (
-              <Save className="mr-1 h-3 w-3" aria-hidden="true" />
-            )}
-            保存
-          </Button>
-        </div>
-      </header>
-
-      {error && (
-        <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-          {error}
-        </div>
-      )}
-
-      {/* 智能建议 */}
-      <Card data-testid="smart-suggestions-card">
-        <CardHeader className="flex flex-row items-start justify-between">
+    <ErrorBoundary>(<div className="container mx-auto max-w-5xl space-y-6 px-4 py-8">
+        {/* Header */}
+        <header className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <CardTitle className="text-base">智能优化建议</CardTitle>
-            <CardDescription>
-              基于你最近 7 天的通知使用行为, AI 推荐更合适的配置.
-            </CardDescription>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={regenerate}
-            disabled={regenerating}
-            data-testid="regenerate-suggestions"
-          >
-            {regenerating ? (
-              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-1 h-3 w-3" aria-hidden="true" />
-            )}
-            重新生成
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {suggestions.length === 0 && (
-            <p className="text-sm text-slate-500">
-              暂无建议 — 点击「重新生成」让 AI 基于你的使用数据给出优化建议.
+            <h1 className="flex items-center gap-2 text-2xl font-bold">
+              <Bell className="h-6 w-6 text-indigo-500" aria-hidden="true" />
+              通知偏好
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              细粒度控制每种类别 / 优先级 / 通道的通知接收; 支持智能降噪 + 静默时间.
             </p>
-          )}
-          {suggestions.map((s) => (
-            <SmartSuggestion
-              key={s.id}
-              item={s}
-              onApply={
-                s.status === "pending" ? applySuggestion : undefined
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {savedAt && (
+              <Badge variant="secondary" className="text-xs">
+                已保存 · {savedAt.toLocaleTimeString()}
+              </Badge>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onSave}
+              disabled={saving}
+              data-testid="save-prefs"
+            >
+              {saving ? (
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              ) : (
+                <Save className="mr-1 h-3 w-3" aria-hidden="true" />
+              )}
+              保存
+            </Button>
+          </div>
+        </header>
+        {error && (
+          <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            {error}
+          </div>
+        )}
+        {/* 智能建议 */}
+        <Card data-testid="smart-suggestions-card">
+          <CardHeader className="flex flex-row items-start justify-between">
+            <div>
+              <CardTitle className="text-base">智能优化建议</CardTitle>
+              <CardDescription>
+                基于你最近 7 天的通知使用行为, AI 推荐更合适的配置.
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={regenerate}
+              disabled={regenerating}
+              data-testid="regenerate-suggestions"
+            >
+              {regenerating ? (
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-1 h-3 w-3" aria-hidden="true" />
+              )}
+              重新生成
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {suggestions.length === 0 && (
+              <p className="text-sm text-slate-500">
+                暂无建议 — 点击「重新生成」让 AI 基于你的使用数据给出优化建议.
+              </p>
+            )}
+            {suggestions.map((s) => (
+              <SmartSuggestion
+                key={s.id}
+                item={s}
+                onApply={
+                  s.status === "pending" ? applySuggestion : undefined
+                }
+                onDismiss={
+                  s.status === "pending" ? dismissSuggestion : undefined
+                }
+              />
+            ))}
+          </CardContent>
+        </Card>
+        {/* 静默时间 + 频率 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">静默时间 + 频率</CardTitle>
+            <CardDescription>
+              静默时间内不发送; 非实时频率会聚合成摘要定期发送.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            <QuietHoursPicker
+              start={quietHours.start}
+              end={quietHours.end}
+              onChange={(s, e) => setQuietHours({ start: s, end: e })}
+            />
+            <div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
+              <h3 className="mb-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                默认发送频率
+              </h3>
+              <p className="mb-3 text-xs text-slate-500">
+                非实时频率会在累积到下一个周期后批量摘要发送.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {FREQUENCY_OPTIONS.map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => setFrequency(f)}
+                    className={cn(
+                      "rounded-md border px-3 py-2 text-sm transition-colors",
+                      frequency === f
+                        ? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200"
+                        : "border-slate-200 hover:border-slate-300 dark:border-slate-700",
+                    )}
+                    data-frequency={f}
+                  >
+                    {meta.frequency_labels[f] ?? f}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        {/* 类别矩阵 */}
+        <div className="space-y-4">
+          {meta.categories.map((cat) => (
+            <CategorySwitch
+              key={cat}
+              category={cat}
+              label={meta.category_labels[cat] ?? cat}
+              description={CATEGORY_DESCRIPTIONS[cat]}
+              priorities={priorities}
+              channels={channels}
+              matrix={
+                (matrix[cat] as Record<PriorityKey, Record<ChannelKey, boolean>>) ||
+                buildDefaultMatrix([cat], priorities, channels)[cat]
               }
-              onDismiss={
-                s.status === "pending" ? dismissSuggestion : undefined
+              onToggle={(pri, ch, enabled) => onToggle(cat, pri, ch, enabled)}
+              badge={
+                meta.categories.indexOf(cat) === 0 ? `${prefs.length} 条已配置` : undefined
               }
             />
           ))}
-        </CardContent>
-      </Card>
-
-      {/* 静默时间 + 频率 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">静默时间 + 频率</CardTitle>
-          <CardDescription>
-            静默时间内不发送; 非实时频率会聚合成摘要定期发送.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
-          <QuietHoursPicker
-            start={quietHours.start}
-            end={quietHours.end}
-            onChange={(s, e) => setQuietHours({ start: s, end: e })}
-          />
-          <div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
-            <h3 className="mb-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
-              默认发送频率
-            </h3>
-            <p className="mb-3 text-xs text-slate-500">
-              非实时频率会在累积到下一个周期后批量摘要发送.
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {FREQUENCY_OPTIONS.map((f) => (
-                <button
-                  key={f}
-                  type="button"
-                  onClick={() => setFrequency(f)}
-                  className={cn(
-                    "rounded-md border px-3 py-2 text-sm transition-colors",
-                    frequency === f
-                      ? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-200"
-                      : "border-slate-200 hover:border-slate-300 dark:border-slate-700",
-                  )}
-                  data-frequency={f}
-                >
-                  {meta.frequency_labels[f] ?? f}
-                </button>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 类别矩阵 */}
-      <div className="space-y-4">
-        {meta.categories.map((cat) => (
-          <CategorySwitch
-            key={cat}
-            category={cat}
-            label={meta.category_labels[cat] ?? cat}
-            description={CATEGORY_DESCRIPTIONS[cat]}
-            priorities={priorities}
-            channels={channels}
-            matrix={
-              (matrix[cat] as Record<PriorityKey, Record<ChannelKey, boolean>>) ||
-              buildDefaultMatrix([cat], priorities, channels)[cat]
-            }
-            onToggle={(pri, ch, enabled) => onToggle(cat, pri, ch, enabled)}
-            badge={
-              meta.categories.indexOf(cat) === 0 ? `${prefs.length} 条已配置` : undefined
-            }
-          />
-        ))}
-      </div>
-    </div>
+        </div>
+      </div>)</ErrorBoundary>
   );
 }

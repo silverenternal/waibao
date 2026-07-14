@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * /jobseeker/interview — v9.1 面试中心
@@ -270,240 +271,239 @@ export default function InterviewHubPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b">
-        <div className="max-w-6xl mx-auto px-6 py-5 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-              <span aria-hidden>🎯</span> 面试中心
-            </h1>
-            <p className="text-sm text-slate-500 mt-1">
-              集中查看 AI 模拟面试安排、回顾历史报告、进入岗位准备练习。
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/jobseeker/dashboard"
-              className="text-sm text-slate-500 hover:text-slate-700"
-              aria-label="返回个人中心"
-            >
-              ← 个人中心
-            </Link>
-            <button
-              onClick={() => setShowNew((v) => !v)}
-              className="px-4 py-2 text-sm rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-medium shadow-sm hover:shadow"
-              data-testid="toggle-new-interview"
-              aria-expanded={showNew}
-              aria-controls="new-interview-panel"
-            >
-              {showNew ? "收起新建" : "+ 开始新面试"}
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-6xl mx-auto px-6 py-6 space-y-6">
-        {/* 新建面试面板 */}
-        {showNew && (
-          <section
-            id="new-interview-panel"
-            className="bg-white rounded-2xl shadow-sm p-6 space-y-5"
-            aria-label="新建 AI 模拟面试"
-          >
-            <h2 className="text-base font-semibold text-slate-800">新建一场 AI 模拟面试</h2>
-
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium text-slate-700">第 1 步 · 选择面试官人格</h3>
-              <InterviewPersonaPicker selected={personaId} onSelect={setPersonaId} />
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-5">
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-slate-700">第 2 步 · 选择岗位</h3>
-                <div className="grid grid-cols-2 gap-2" data-testid="role-grid">
-                  {ROLE_OPTIONS.map((r) => (
-                    <button
-                      key={r.value}
-                      type="button"
-                      onClick={() => setRole(r.value)}
-                      aria-pressed={role === r.value}
-                      className={`px-3 py-2 text-sm rounded-lg border text-left transition ${
-                        role === r.value
-                          ? "border-sky-500 bg-sky-50 text-sky-700"
-                          : "border-slate-200 hover:border-slate-400"
-                      }`}
-                    >
-                      <span className="mr-1" aria-hidden>
-                        {r.icon}
-                      </span>
-                      {r.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-slate-700">第 3 步 · 难度 + 模式</h3>
-                <div className="flex gap-2 flex-wrap" data-testid="difficulty-row">
-                  {DIFFICULTY.map((d) => (
-                    <button
-                      key={d.value}
-                      type="button"
-                      onClick={() => setDifficulty(d.value)}
-                      aria-pressed={difficulty === d.value}
-                      className={`px-3 py-1.5 text-xs rounded-full border ${
-                        difficulty === d.value
-                          ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                          : "border-slate-200 hover:border-slate-400"
-                      }`}
-                    >
-                      {d.label}
-                    </button>
-                  ))}
-                </div>
-                <label className="mt-2 flex items-center gap-2 text-sm text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={realtime}
-                    onChange={(e) => setRealtime(e.target.checked)}
-                    className="rounded"
-                    data-testid="realtime-toggle"
-                  />
-                  启用 GPT-4o Realtime 语音对话
-                </label>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  启用后,候选人可以通过麦克风与 AI 面试官实时对话。文本回答仍可作为兜底。
-                </p>
-              </div>
-            </div>
-
-            {error && (
-              <div
-                className="bg-rose-50 text-rose-700 text-sm rounded p-3"
-                role="alert"
-                data-testid="start-error"
-              >
-                {error}
-              </div>
-            )}
-
-            <button
-              onClick={startInterview}
-              disabled={loading}
-              data-testid="start-interview"
-              className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-medium disabled:opacity-50"
-            >
-              {loading ? "准备面试中…" : "开始面试"}
-            </button>
-          </section>
-        )}
-
-        {/* Tabs */}
-        <nav
-          className="bg-white rounded-2xl shadow-sm p-1 inline-flex"
-          role="tablist"
-          aria-label="面试视图切换"
-        >
-          {([
-            { id: "scheduled", label: `待面试 (${scheduledItems.length})` },
-            { id: "history", label: `历史回顾 (${historyItems.length})` },
-            { id: "practice", label: "角色练习" },
-          ] as { id: Tab; label: string }[]).map((t) => (
-            <button
-              key={t.id}
-              role="tab"
-              aria-selected={tab === t.id}
-              aria-controls={`panel-${t.id}`}
-              onClick={() => setTab(t.id)}
-              className={`px-4 py-2 text-sm rounded-xl transition ${
-                tab === t.id ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </nav>
-
-        <div
-          id={`panel-${tab}`}
-          role="tabpanel"
-          aria-labelledby={`tab-${tab}`}
-          className="space-y-4"
-        >
-          {tab === "scheduled" && (
-            <>
-              {!hydrated && <ListSkeleton count={2} />}
-              {hydrated && scheduledItems.length === 0 && (
-                <EmptyHint
-                  title="还没有待面试"
-                  description="点击右上角“开始新面试”,5 分钟内即可开启第一场。"
-                />
-              )}
-              {hydrated &&
-                scheduledItems.map((it) => (
-                  <ScheduledCard
-                    key={it.id}
-                    item={it}
-                    onEnter={() => router.push(`/jobseeker/interview/ai/${it.id}`)}
-                    onAbandon={() => abandonInterview(it.id)}
-                  />
-                ))}
-            </>
-          )}
-
-          {tab === "history" && (
-            <>
-              {!hydrated && <ListSkeleton count={2} />}
-              {hydrated && historyItems.length === 0 && (
-                <EmptyHint
-                  title="还没有历史面试"
-                  description="完成第一场 AI 模拟面试后,这里会自动生成报告卡片。"
-                />
-              )}
-              {hydrated &&
-                historyItems.map((it) => (
-                  <HistoryCard
-                    key={it.id}
-                    item={it}
-                    onEnter={() => router.push(`/jobseeker/interview/ai/${it.id}`)}
-                    onRemove={() => removeInterview(it.id)}
-                  />
-                ))}
-            </>
-          )}
-
-          {tab === "practice" && (
-            <section className="space-y-3">
-              <p className="text-sm text-slate-600 leading-relaxed">
-                按岗位选择 10 道高频准备题,逐题用文字或语音回答,完成后生成个人反馈报告。
+    <ErrorBoundary>(<div className="min-h-screen bg-slate-50">
+        <header className="bg-white border-b">
+          <div className="max-w-6xl mx-auto px-6 py-5 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                <span aria-hidden>🎯</span> 面试中心
+              </h1>
+              <p className="text-sm text-slate-500 mt-1">
+                集中查看 AI 模拟面试安排、回顾历史报告、进入岗位准备练习。
               </p>
-              <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {ROLE_OPTIONS.map((r) => (
-                  <li key={r.value}>
-                    <Link
-                      href={`/jobseeker/interview-prep/${r.value}`}
-                      className="block bg-white border border-slate-200 rounded-2xl p-4 hover:border-sky-400 hover:shadow-sm transition"
-                      data-testid={`prep-${r.value}`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl" aria-hidden>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/jobseeker/dashboard"
+                className="text-sm text-slate-500 hover:text-slate-700"
+                aria-label="返回个人中心"
+              >
+                ← 个人中心
+              </Link>
+              <button
+                onClick={() => setShowNew((v) => !v)}
+                className="px-4 py-2 text-sm rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-medium shadow-sm hover:shadow"
+                data-testid="toggle-new-interview"
+                aria-expanded={showNew}
+                aria-controls="new-interview-panel"
+              >
+                {showNew ? "收起新建" : "+ 开始新面试"}
+              </button>
+            </div>
+          </div>
+        </header>
+        <div className="max-w-6xl mx-auto px-6 py-6 space-y-6">
+          {/* 新建面试面板 */}
+          {showNew && (
+            <section
+              id="new-interview-panel"
+              className="bg-white rounded-2xl shadow-sm p-6 space-y-5"
+              aria-label="新建 AI 模拟面试"
+            >
+              <h2 className="text-base font-semibold text-slate-800">新建一场 AI 模拟面试</h2>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-slate-700">第 1 步 · 选择面试官人格</h3>
+                <InterviewPersonaPicker selected={personaId} onSelect={setPersonaId} />
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium text-slate-700">第 2 步 · 选择岗位</h3>
+                  <div className="grid grid-cols-2 gap-2" data-testid="role-grid">
+                    {ROLE_OPTIONS.map((r) => (
+                      <button
+                        key={r.value}
+                        type="button"
+                        onClick={() => setRole(r.value)}
+                        aria-pressed={role === r.value}
+                        className={`px-3 py-2 text-sm rounded-lg border text-left transition ${
+                          role === r.value
+                            ? "border-sky-500 bg-sky-50 text-sky-700"
+                            : "border-slate-200 hover:border-slate-400"
+                        }`}
+                      >
+                        <span className="mr-1" aria-hidden>
                           {r.icon}
                         </span>
-                        <span className="font-medium text-slate-800">{r.label}</span>
-                        <span className="ml-auto text-xs text-sky-600">进入 →</span>
-                      </div>
-                      <p className="mt-2 text-xs text-slate-500 leading-relaxed">
-                        10 题 · 文字 / 语音 / 反馈报告
-                      </p>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+                        {r.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium text-slate-700">第 3 步 · 难度 + 模式</h3>
+                  <div className="flex gap-2 flex-wrap" data-testid="difficulty-row">
+                    {DIFFICULTY.map((d) => (
+                      <button
+                        key={d.value}
+                        type="button"
+                        onClick={() => setDifficulty(d.value)}
+                        aria-pressed={difficulty === d.value}
+                        className={`px-3 py-1.5 text-xs rounded-full border ${
+                          difficulty === d.value
+                            ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                            : "border-slate-200 hover:border-slate-400"
+                        }`}
+                      >
+                        {d.label}
+                      </button>
+                    ))}
+                  </div>
+                  <label className="mt-2 flex items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={realtime}
+                      onChange={(e) => setRealtime(e.target.checked)}
+                      className="rounded"
+                      data-testid="realtime-toggle"
+                    />
+                    启用 GPT-4o Realtime 语音对话
+                  </label>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    启用后,候选人可以通过麦克风与 AI 面试官实时对话。文本回答仍可作为兜底。
+                  </p>
+                </div>
+              </div>
+
+              {error && (
+                <div
+                  className="bg-rose-50 text-rose-700 text-sm rounded p-3"
+                  role="alert"
+                  data-testid="start-error"
+                >
+                  {error}
+                </div>
+              )}
+
+              <button
+                onClick={startInterview}
+                disabled={loading}
+                data-testid="start-interview"
+                className="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-medium disabled:opacity-50"
+              >
+                {loading ? "准备面试中…" : "开始面试"}
+              </button>
             </section>
           )}
+
+          {/* Tabs */}
+          <nav
+            className="bg-white rounded-2xl shadow-sm p-1 inline-flex"
+            role="tablist"
+            aria-label="面试视图切换"
+          >
+            {([
+              { id: "scheduled", label: `待面试 (${scheduledItems.length})` },
+              { id: "history", label: `历史回顾 (${historyItems.length})` },
+              { id: "practice", label: "角色练习" },
+            ] as { id: Tab; label: string }[]).map((t) => (
+              <button
+                key={t.id}
+                role="tab"
+                aria-selected={tab === t.id}
+                aria-controls={`panel-${t.id}`}
+                onClick={() => setTab(t.id)}
+                className={`px-4 py-2 text-sm rounded-xl transition ${
+                  tab === t.id ? "bg-slate-900 text-white" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </nav>
+
+          <div
+            id={`panel-${tab}`}
+            role="tabpanel"
+            aria-labelledby={`tab-${tab}`}
+            className="space-y-4"
+          >
+            {tab === "scheduled" && (
+              <>
+                {!hydrated && <ListSkeleton count={2} />}
+                {hydrated && scheduledItems.length === 0 && (
+                  <EmptyHint
+                    title="还没有待面试"
+                    description="点击右上角“开始新面试”,5 分钟内即可开启第一场。"
+                  />
+                )}
+                {hydrated &&
+                  scheduledItems.map((it) => (
+                    <ScheduledCard
+                      key={it.id}
+                      item={it}
+                      onEnter={() => router.push(`/jobseeker/interview/ai/${it.id}`)}
+                      onAbandon={() => abandonInterview(it.id)}
+                    />
+                  ))}
+              </>
+            )}
+
+            {tab === "history" && (
+              <>
+                {!hydrated && <ListSkeleton count={2} />}
+                {hydrated && historyItems.length === 0 && (
+                  <EmptyHint
+                    title="还没有历史面试"
+                    description="完成第一场 AI 模拟面试后,这里会自动生成报告卡片。"
+                  />
+                )}
+                {hydrated &&
+                  historyItems.map((it) => (
+                    <HistoryCard
+                      key={it.id}
+                      item={it}
+                      onEnter={() => router.push(`/jobseeker/interview/ai/${it.id}`)}
+                      onRemove={() => removeInterview(it.id)}
+                    />
+                  ))}
+              </>
+            )}
+
+            {tab === "practice" && (
+              <section className="space-y-3">
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  按岗位选择 10 道高频准备题,逐题用文字或语音回答,完成后生成个人反馈报告。
+                </p>
+                <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {ROLE_OPTIONS.map((r) => (
+                    <li key={r.value}>
+                      <Link
+                        href={`/jobseeker/interview-prep/${r.value}`}
+                        className="block bg-white border border-slate-200 rounded-2xl p-4 hover:border-sky-400 hover:shadow-sm transition"
+                        data-testid={`prep-${r.value}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl" aria-hidden>
+                            {r.icon}
+                          </span>
+                          <span className="font-medium text-slate-800">{r.label}</span>
+                          <span className="ml-auto text-xs text-sky-600">进入 →</span>
+                        </div>
+                        <p className="mt-2 text-xs text-slate-500 leading-relaxed">
+                          10 题 · 文字 / 语音 / 反馈报告
+                        </p>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+          </div>
         </div>
-      </div>
-    </div>
+      </div>)</ErrorBoundary>
   );
 }
 

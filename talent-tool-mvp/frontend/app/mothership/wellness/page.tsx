@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v8.1 T3604 — HR Mothership wellness dashboard
@@ -58,51 +59,49 @@ export default function WellnessDashboardPage() {
   }, []);
 
   return (
-    <div className="container mx-auto p-6 space-y-4">
-      <h1 className="text-2xl font-bold">Wellness Dashboard</h1>
-      <p className="text-sm text-slate-600">
-        求职者情绪关怀全景 — HR Mothership 视图
-      </p>
-
-      {summary ? (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <Stat label="总 ticket" value={summary.total_tickets} />
-          <Stat label="未关闭" value={summary.open_tickets} />
-          <Stat label="轻度" value={summary.by_level.light ?? 0} />
-          <Stat label="中度" value={summary.by_level.medium ?? 0} />
-          <Stat label="重度" value={summary.by_level.heavy ?? 0} />
+    <ErrorBoundary>(<div className="container mx-auto p-6 space-y-4">
+        <h1 className="text-2xl font-bold">Wellness Dashboard</h1>
+        <p className="text-sm text-slate-600">
+          求职者情绪关怀全景 — HR Mothership 视图
+        </p>
+        {summary ? (
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <Stat label="总 ticket" value={summary.total_tickets} />
+            <Stat label="未关闭" value={summary.open_tickets} />
+            <Stat label="轻度" value={summary.by_level.light ?? 0} />
+            <Stat label="中度" value={summary.by_level.medium ?? 0} />
+            <Stat label="重度" value={summary.by_level.heavy ?? 0} />
+          </div>
+        ) : null}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {tickets.slice(0, 20).map((t) => (
+            <Card
+              key={t.id}
+              className={
+                "p-4 " +
+                (t.level === "heavy"
+                  ? "bg-rose-50 border-rose-200"
+                  : t.level === "medium"
+                  ? "bg-orange-50 border-orange-200"
+                  : "bg-yellow-50 border-yellow-200")
+              }
+            >
+              <div className="text-xs text-slate-500">
+                {new Date(t.created_at ?? "").toLocaleString()}
+              </div>
+              <div className="font-medium text-sm mt-1">
+                {t.primary_emotion} ({t.risk_level})
+              </div>
+              <p className="text-xs italic mt-1">"{t.trigger_text}"</p>
+              {t.hr_notified ? (
+                <span className="text-xs text-rose-700 mt-2 inline-block">
+                  ⚠️ HR 已通知
+                </span>
+              ) : null}
+            </Card>
+          ))}
         </div>
-      ) : null}
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {tickets.slice(0, 20).map((t) => (
-          <Card
-            key={t.id}
-            className={
-              "p-4 " +
-              (t.level === "heavy"
-                ? "bg-rose-50 border-rose-200"
-                : t.level === "medium"
-                ? "bg-orange-50 border-orange-200"
-                : "bg-yellow-50 border-yellow-200")
-            }
-          >
-            <div className="text-xs text-slate-500">
-              {new Date(t.created_at ?? "").toLocaleString()}
-            </div>
-            <div className="font-medium text-sm mt-1">
-              {t.primary_emotion} ({t.risk_level})
-            </div>
-            <p className="text-xs italic mt-1">"{t.trigger_text}"</p>
-            {t.hr_notified ? (
-              <span className="text-xs text-rose-700 mt-2 inline-block">
-                ⚠️ HR 已通知
-              </span>
-            ) : null}
-          </Card>
-        ))}
-      </div>
-    </div>
+      </div>)</ErrorBoundary>
   );
 }
 

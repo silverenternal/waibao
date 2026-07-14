@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * Roles list — v8.1 T3705 + OpenResume-style polish.
@@ -248,92 +249,90 @@ export default function RolesPage() {
   const allDepts = Array.from(new Set(SAMPLE_ROLES.map((r) => r.department)));
 
   return (
-    <div className="space-y-6 p-4 md:p-8">
-      <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-            岗位 · Roles
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            v8.1 T3705 — OpenResume 风格清单,JD 评分实时计算。
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/employer/roles/new">
-            <PlusCircle className="mr-1 h-4 w-4" />
-            新建岗位
-          </Link>
-        </Button>
-      </header>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">筛选</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-3 md:grid-cols-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="按名称搜索"
-              className="pl-9"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
+    <ErrorBoundary>(<div className="space-y-6 p-4 md:p-8">
+        <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
+              岗位 · Roles
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              v8.1 T3705 — OpenResume 风格清单,JD 评分实时计算。
+            </p>
+          </div>
+          <Button asChild>
+            <Link href="/employer/roles/new">
+              <PlusCircle className="mr-1 h-4 w-4" />
+              新建岗位
+            </Link>
+          </Button>
+        </header>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">筛选</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 gap-3 md:grid-cols-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="按名称搜索"
+                className="pl-9"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+              />
+            </div>
+            <Select
+              value={status}
+              onValueChange={(v) => setStatus(v as typeof status)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部状态</SelectItem>
+                <SelectItem value="open">招聘中</SelectItem>
+                <SelectItem value="draft">草稿</SelectItem>
+                <SelectItem value="paused">暂停</SelectItem>
+                <SelectItem value="closed">已关闭</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="flex flex-wrap gap-1">
+              {allDepts.map((d) => {
+                const sel = departments.includes(d);
+                return (
+                  <button
+                    key={d}
+                    onClick={() =>
+                      setDepartments((prev) =>
+                        sel ? prev.filter((x) => x !== d) : [...prev, d],
+                      )
+                    }
+                    className={`rounded-full px-2 py-0.5 text-xs ${
+                      sel
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground hover:bg-muted/70"
+                    }`}
+                  >
+                    {d}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {rows.length} / {SAMPLE_ROLES.length} 个岗位
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3">
+            <DataTable<Role>
+              data={rows}
+              columns={columns}
+              searchPlaceholder="搜索岗位..."
+              pageSize={10}
             />
-          </div>
-          <Select
-            value={status}
-            onValueChange={(v) => setStatus(v as typeof status)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全部状态</SelectItem>
-              <SelectItem value="open">招聘中</SelectItem>
-              <SelectItem value="draft">草稿</SelectItem>
-              <SelectItem value="paused">暂停</SelectItem>
-              <SelectItem value="closed">已关闭</SelectItem>
-            </SelectContent>
-          </Select>
-          <div className="flex flex-wrap gap-1">
-            {allDepts.map((d) => {
-              const sel = departments.includes(d);
-              return (
-                <button
-                  key={d}
-                  onClick={() =>
-                    setDepartments((prev) =>
-                      sel ? prev.filter((x) => x !== d) : [...prev, d],
-                    )
-                  }
-                  className={`rounded-full px-2 py-0.5 text-xs ${
-                    sel
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-muted/70"
-                  }`}
-                >
-                  {d}
-                </button>
-              );
-            })}
-          </div>
-          <div className="text-sm text-muted-foreground">
-            {rows.length} / {SAMPLE_ROLES.length} 个岗位
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="p-3">
-          <DataTable<Role>
-            data={rows}
-            columns={columns}
-            searchPlaceholder="搜索岗位..."
-            pageSize={10}
-          />
-        </CardContent>
-      </Card>
-    </div>
+          </CardContent>
+        </Card>
+      </div>)</ErrorBoundary>
   );
 }
 

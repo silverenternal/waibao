@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import {
   listReviews,
   submitReview,
@@ -16,6 +19,15 @@ interface ReviewSectionProps {
   authorId?: string;
 }
 
+// Loose schema (title/body optional) to preserve original "optional" behaviour.
+const reviewFormSchema = z.object({
+  rating: z.number().min(1).max(5),
+  title: z.string().trim().max(200).optional().or(z.literal("")),
+  body: z.string().trim().max(5000).optional().or(z.literal("")),
+});
+type ReviewFormValues = z.infer<typeof reviewFormSchema>;
+
+
 export function ReviewSection({
   slug,
   authorName = "Anonymous",
@@ -25,12 +37,19 @@ export function ReviewSection({
   const [summary, setSummary] = useState<ReviewSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const [rating, setRating] = useState(5);
-  const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<ReviewFormValues>({
+    resolver: zodResolver(reviewFormSchema),
+    defaultValues: { rating: 5, title: "", body: "" },
+  });
 
   async function reload() {
     setLoading(true);
@@ -53,8 +72,7 @@ export function ReviewSection({
     reload();
   }, [slug]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function onSubmit(values: ReviewFormValues) {
     if (submitting) return;
     setSubmitting(true);
     setError(null);
@@ -62,14 +80,12 @@ export function ReviewSection({
       await submitReview(slug, {
         author_id: authorId,
         author_name: authorName,
-        rating,
-        title: title.trim(),
-        body: body.trim(),
+        rating: values.rating,
+        title: (values.title ?? "").trim(),
+        body: (values.body ?? "").trim(),
       });
       setSubmitted(true);
-      setTitle("");
-      setBody("");
-      setRating(5);
+      reset({ rating: 5, title: "", body: "" });
       await reload();
     } catch (err) {
       setError((err as Error).message || "Failed to submit review");
@@ -109,42 +125,51 @@ export function ReviewSection({
       )}
 
       <form
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit(onSubmit)}
         className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4"
         data-testid="review-form"
       >
         <div className="flex items-center gap-2">
           <span className="text-sm text-slate-700">Your rating:</span>
-          {[1, 2, 3, 4, 5].map((n) => (
-            <button
-              key={n}
-              type="button"
-              onClick={() => setRating(n)}
-              className={
-                "text-xl " + (n <= rating ? "text-amber-500" : "text-slate-300")
-              }
-              aria-label={`Rate ${n} star${n > 1 ? "s" : ""}`}
-            >
-              ★
-            </button>
-          ))}
+          <Controller
+            control={control}
+            name="rating"
+            render={({ field }) => (
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => field.onChange(n)}
+                    className={
+                      "text-xl " + (n <= field.value ? "text-amber-500" : "text-slate-300")
+                    }
+                    aria-label={`Rate ${n} star${n > 1 ? "s" : ""}`}
+                    aria-pressed={field.value === n}
+                  >
+                    ★
+                  </button>
+                ))}
+              </div>
+            )}
+          />
         </div>
         <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          {...register("title")}
           placeholder="Review title (optional)"
           maxLength={200}
           className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
           data-testid="review-title"
+          aria-invalid={!!errors.title}
         />
         <textarea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
+          {...register("body")}
           placeholder="What did you like or dislike? (optional)"
           maxLength={5000}
           rows={4}
           className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
           data-testid="review-body"
+          aria-invalid={!!errors.body}
         />
         <div className="flex items-center justify-between">
           <div className="text-xs text-slate-500">

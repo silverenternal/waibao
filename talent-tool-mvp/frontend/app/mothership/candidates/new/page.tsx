@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -38,90 +39,85 @@ export default function CandidateIngestionPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Add Candidate</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Upload a CV, paste profile text, or sync from an adapter
-        </p>
-      </div>
-
-      {state === "idle" && (
-        <Tabs defaultValue="upload" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
-            <TabsTrigger value="upload" className="gap-2">
-              <Upload className="h-4 w-4" /> Upload CV
-            </TabsTrigger>
-            <TabsTrigger value="paste" className="gap-2">
-              <Type className="h-4 w-4" /> Paste Text
-            </TabsTrigger>
-            <TabsTrigger value="sync" className="gap-2">
-              <RefreshCw className="h-4 w-4" /> Adapter Sync
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="upload" className="mt-6">
-            <CVUploadZone
-              onUploadStart={() => setState("uploading")}
-              onExtractionStart={() => setState("extracting")}
-              onExtractionComplete={handleExtractionComplete}
-            />
-          </TabsContent>
-
-          <TabsContent value="paste" className="mt-6">
-            <TextPasteInput
-              onExtractionStart={() => setState("extracting")}
-              onExtractionComplete={handleExtractionComplete}
-            />
-          </TabsContent>
-
-          <TabsContent value="sync" className="mt-6">
-            <AdapterSyncButtons
-              onSyncStart={() => setState("uploading")}
-              onExtractionComplete={() => {}}
-            />
-          </TabsContent>
-        </Tabs>
-      )}
-
-      {(state === "uploading" || state === "extracting") && (
-        <ExtractionViewer
-          state={state}
-          onComplete={handleExtractionComplete}
-        />
-      )}
-
-      {state === "review" && extractedCandidate && (
-        <ExtractionViewer
-          state="review"
-          candidate={extractedCandidate}
-          onSave={handleSave}
-          onReset={handleReset}
-        />
-      )}
-
-      {state === "dedup" && extractedCandidate && dedupMatch && (
-        <DedupComparison
-          newCandidate={extractedCandidate}
-          existingCandidate={dedupMatch}
-          onMerge={() => setState("review")}
-          onKeepBoth={() => setState("review")}
-          onCancel={handleReset}
-        />
-      )}
-
-      {state === "saved" && (
-        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-8 text-center">
-          <h2 className="text-lg font-semibold text-emerald-400">Candidate saved successfully</h2>
-          <p className="text-sm text-emerald-400 mt-1">The profile has been added to the system.</p>
-          <button
-            onClick={handleReset}
-            className="mt-4 text-sm font-medium text-emerald-400 underline hover:no-underline"
-          >
-            Add another candidate
-          </button>
+    <ErrorBoundary>(<div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Add Candidate</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Upload a CV, paste profile text, or sync from an adapter
+          </p>
         </div>
-      )}
-    </div>
+        {state === "idle" && (
+          <Tabs defaultValue="upload" className="w-full">
+            <TabsList className="grid w-full max-w-md grid-cols-3">
+              <TabsTrigger value="upload" className="gap-2">
+                <Upload className="h-4 w-4" /> Upload CV
+              </TabsTrigger>
+              <TabsTrigger value="paste" className="gap-2">
+                <Type className="h-4 w-4" /> Paste Text
+              </TabsTrigger>
+              <TabsTrigger value="sync" className="gap-2">
+                <RefreshCw className="h-4 w-4" /> Adapter Sync
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="upload" className="mt-6">
+              <CVUploadZone
+                onUploadStart={() => setState("uploading")}
+                onExtractionStart={() => setState("extracting")}
+                onExtractionComplete={handleExtractionComplete}
+              />
+            </TabsContent>
+
+            <TabsContent value="paste" className="mt-6">
+              <TextPasteInput
+                onExtractionStart={() => setState("extracting")}
+                onExtractionComplete={handleExtractionComplete}
+              />
+            </TabsContent>
+
+            <TabsContent value="sync" className="mt-6">
+              <AdapterSyncButtons
+                onSyncStart={() => setState("uploading")}
+                onExtractionComplete={() => {}}
+              />
+            </TabsContent>
+          </Tabs>
+        )}
+        {(state === "uploading" || state === "extracting") && (
+          <ExtractionViewer
+            state={state}
+            onComplete={handleExtractionComplete}
+          />
+        )}
+        {state === "review" && extractedCandidate && (
+          <ExtractionViewer
+            state="review"
+            candidate={extractedCandidate}
+            onSave={handleSave}
+            onReset={handleReset}
+          />
+        )}
+        {state === "dedup" && extractedCandidate && dedupMatch && (
+          <DedupComparison
+            newCandidate={extractedCandidate}
+            existingCandidate={dedupMatch}
+            onMerge={() => setState("review")}
+            onKeepBoth={() => setState("review")}
+            onCancel={handleReset}
+          />
+        )}
+        {state === "saved" && (
+          <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-8 text-center">
+            <h2 className="text-lg font-semibold text-emerald-400">Candidate saved successfully</h2>
+            <p className="text-sm text-emerald-400 mt-1">The profile has been added to the system.</p>
+            <button
+              onClick={handleReset}
+              className="mt-4 text-sm font-medium text-emerald-400 underline hover:no-underline"
+            >
+              Add another candidate
+            </button>
+          </div>
+        )}
+      </div>)</ErrorBoundary>
   );
 }

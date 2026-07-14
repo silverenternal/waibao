@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * /jobseeker/profile/video-resume — T2203.
@@ -99,74 +100,71 @@ export default function VideoResumePage() {
   const active = items.find((i) => i.id === activeId);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-6">
-      <header>
-        <h1 className="text-2xl font-bold text-slate-900">视频简历</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          30~60 秒自我介绍视频,AI 自动评估沟通能力 / 表达清晰度 / 专业度 / 自信度 / 亲和力。
-        </p>
-      </header>
-
-      {error && (
-        <div className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>
-      )}
-
-      <VideoResumeRecorder
-        onUploaded={handleUploaded}
-        authToken={localStorage.getItem("sb_token") || undefined}
-      />
-
-      <section>
-        <h2 className="mb-3 text-lg font-semibold text-slate-900">已上传的视频简历</h2>
-        {loading ? (
-          <div className="text-sm text-slate-500">加载中…</div>
-        ) : items.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-500">
-            尚未录制视频简历
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex flex-wrap gap-2">
-              {items.map((it) => (
-                <button
-                  key={it.id}
-                  type="button"
-                  onClick={() => setActiveId(it.id)}
-                  className={`rounded-lg border px-3 py-1.5 text-xs ${
-                    activeId === it.id
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-200 bg-white text-slate-700"
-                  }`}
-                >
-                  {new Date(it.created_at).toLocaleString()} ·{" "}
-                  {Math.round(it.duration_sec)}s · {it.status}
-                </button>
-              ))}
-            </div>
-
-            {active && (
-              <div className="space-y-3">
-                <VideoResumePlayer
-                  videoUrl={active.video_url}
-                  analysis={active.analysis}
-                />
-                {active.status !== "analyzed" && active.status !== "analyzing" && (
-                  <button
-                    type="button"
-                    onClick={() => handleAnalyze(active.id)}
-                    className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-                  >
-                    运行 AI 评估
-                  </button>
-                )}
-                {active.status === "analyzing" && (
-                  <span className="text-sm text-slate-500">AI 评估中…</span>
-                )}
-              </div>
-            )}
-          </div>
+    <ErrorBoundary>(<div className="mx-auto max-w-6xl space-y-6 p-6">
+        <header>
+          <h1 className="text-2xl font-bold text-slate-900">视频简历</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            30~60 秒自我介绍视频,AI 自动评估沟通能力 / 表达清晰度 / 专业度 / 自信度 / 亲和力。
+          </p>
+        </header>
+        {error && (
+          <div className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>
         )}
-      </section>
-    </div>
+        <VideoResumeRecorder
+          onUploaded={handleUploaded}
+          authToken={localStorage.getItem("sb_token") || undefined}
+        />
+        <section>
+          <h2 className="mb-3 text-lg font-semibold text-slate-900">已上传的视频简历</h2>
+          {loading ? (
+            <div className="text-sm text-slate-500">加载中…</div>
+          ) : items.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-500">
+              尚未录制视频简历
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {items.map((it) => (
+                  <button
+                    key={it.id}
+                    type="button"
+                    onClick={() => setActiveId(it.id)}
+                    className={`rounded-lg border px-3 py-1.5 text-xs ${
+                      activeId === it.id
+                        ? "border-slate-900 bg-slate-900 text-white"
+                        : "border-slate-200 bg-white text-slate-700"
+                    }`}
+                  >
+                    {new Date(it.created_at).toLocaleString()} ·{" "}
+                    {Math.round(it.duration_sec)}s · {it.status}
+                  </button>
+                ))}
+              </div>
+
+              {active && (
+                <div className="space-y-3">
+                  <VideoResumePlayer
+                    videoUrl={active.video_url}
+                    analysis={active.analysis}
+                  />
+                  {active.status !== "analyzed" && active.status !== "analyzing" && (
+                    <button
+                      type="button"
+                      onClick={() => handleAnalyze(active.id)}
+                      className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+                    >
+                      运行 AI 评估
+                    </button>
+                  )}
+                  {active.status === "analyzing" && (
+                    <span className="text-sm text-slate-500">AI 评估中…</span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      </div>)</ErrorBoundary>
   );
 }

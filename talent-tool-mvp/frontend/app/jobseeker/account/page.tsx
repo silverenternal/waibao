@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v9.1 — 求职者账户中心.
@@ -138,323 +139,322 @@ export default function AccountPage() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
-      {/* 顶部账户卡 */}
-      <Card className="mb-6 overflow-hidden border-none bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 text-white shadow-lg">
-        <div className="grid gap-4 p-5 sm:grid-cols-[auto_1fr_auto] sm:items-center sm:p-7">
-          <Avatar
-            className="size-16 border-2 border-white/40 bg-white/20 text-lg font-semibold sm:size-20"
-            aria-label="用户头像"
-          >
-            {profile.fullName.slice(0, 1) || "我"}
-          </Avatar>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="truncate text-xl font-bold sm:text-2xl">
-                {profile.fullName}
-              </h1>
-              <Badge className="bg-white/20 text-white hover:bg-white/30">
-                <Sparkles className="mr-1 size-3" aria-hidden="true" />
-                Pro 会员
-              </Badge>
-            </div>
-            <p className="mt-1 truncate text-sm text-white/85">
-              {profile.headline}
-            </p>
-            <p className="mt-0.5 flex items-center gap-1 text-xs text-white/75">
-              <MapPin className="size-3" aria-hidden="true" />
-              {profile.city} · 账户 ID: hb-88219
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2 sm:flex-col sm:items-end">
-            <Button asChild variant="secondary" size="sm">
-              <Link href="/jobseeker/profile">
-                <User className="mr-1.5 size-4" aria-hidden="true" />
-                公开档案
-              </Link>
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setEditing((v) => !v)}
-              aria-pressed={editing}
+    <ErrorBoundary>(<div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
+        {/* 顶部账户卡 */}
+        <Card className="mb-6 overflow-hidden border-none bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 text-white shadow-lg">
+          <div className="grid gap-4 p-5 sm:grid-cols-[auto_1fr_auto] sm:items-center sm:p-7">
+            <Avatar
+              className="size-16 border-2 border-white/40 bg-white/20 text-lg font-semibold sm:size-20"
+              aria-label="用户头像"
             >
-              <Pencil className="mr-1.5 size-4" aria-hidden="true" />
-              {editing ? "退出编辑" : "编辑信息"}
-            </Button>
-          </div>
-        </div>
-      </Card>
-
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-6">
-          {/* 个人信息 */}
-          <Card>
-            <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
-              <div>
-                <CardTitle className="text-base">个人信息</CardTitle>
-                <CardDescription>
-                  这些信息仅用于匹配和招聘方联系,不会公开展示邮箱和电话。
-                </CardDescription>
-              </div>
-              {savedAt && !editing && (
-                <Badge variant="outline" className="text-[10px] text-emerald-600">
-                  已保存 · {savedAt}
+              {profile.fullName.slice(0, 1) || "我"}
+            </Avatar>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="truncate text-xl font-bold sm:text-2xl">
+                  {profile.fullName}
+                </h1>
+                <Badge className="bg-white/20 text-white hover:bg-white/30">
+                  <Sparkles className="mr-1 size-3" aria-hidden="true" />
+                  Pro 会员
                 </Badge>
-              )}
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {!hydrated ? (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <Skeleton key={i} className="h-10 w-full" />
-                  ))}
-                </div>
-              ) : (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field
-                    id="fullName"
-                    label="姓名"
-                    value={profile.fullName}
-                    onChange={(v) => updateProfile("fullName", v)}
-                    disabled={!editing}
-                    icon={User}
-                  />
-                  <Field
-                    id="email"
-                    label="邮箱"
-                    type="email"
-                    value={profile.email}
-                    onChange={(v) => updateProfile("email", v)}
-                    disabled={!editing}
-                    icon={Mail}
-                  />
-                  <Field
-                    id="phone"
-                    label="电话"
-                    value={profile.phone}
-                    onChange={(v) => updateProfile("phone", v)}
-                    disabled={!editing}
-                    icon={Phone}
-                  />
-                  <Field
-                    id="city"
-                    label="所在城市"
-                    value={profile.city}
-                    onChange={(v) => updateProfile("city", v)}
-                    disabled={!editing}
-                    icon={MapPin}
-                  />
-                  <Field
-                    id="headline"
-                    label="职位头衔"
-                    value={profile.headline}
-                    onChange={(v) => updateProfile("headline", v)}
-                    disabled={!editing}
-                    className="sm:col-span-2"
-                  />
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <Label htmlFor="bio" className="text-sm font-medium">
-                      个人简介
-                    </Label>
-                    <Textarea
-                      id="bio"
-                      value={profile.bio}
-                      onChange={(e) => updateProfile("bio", e.target.value)}
-                      disabled={!editing}
-                      className="min-h-24"
-                      placeholder="一句话介绍你自己的背景和求职方向"
-                    />
-                    <p className="text-[11px] text-muted-foreground">
-                      建议 50-200 字,AI 会据此匹配岗位。
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <Separator />
-
-              <div className="space-y-3">
-                <h3 className="text-sm font-medium">订阅与提示</h3>
-                <CheckboxRow
-                  id="marketing"
-                  label="接收合作方营销邮件"
-                  description="如行业报告、雇主品牌活动等(每月 ≤ 2 封)"
-                  checked={profile.marketing}
-                  onChange={(v) => updateProfile("marketing", v)}
-                  disabled={!editing}
-                />
-                <CheckboxRow
-                  id="tips"
-                  label="求职小贴士"
-                  description="面试技巧、薪资谈判、签证政策等(每周精选)"
-                  checked={profile.tips}
-                  onChange={(v) => updateProfile("tips", v)}
-                  disabled={!editing}
-                />
               </div>
-
-              {editing && (
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setProfile(DEFAULT_PROFILE);
-                      setEditing(false);
-                    }}
-                  >
-                    放弃修改
-                  </Button>
-                  <Button size="sm" onClick={save} disabled={saving}>
-                    {saving ? (
-                      <span className="flex items-center gap-1">
-                        <span className="size-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                        保存中
-                      </span>
-                    ) : (
-                      <>
-                        <Save className="mr-1.5 size-4" aria-hidden="true" />
-                        保存修改
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* 安全 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">账户安全</CardTitle>
-              <CardDescription>
-                建议开启两步验证,并定期检查登录设备。
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <CheckboxRow
-                id="2fa"
-                label="两步验证 (2FA)"
-                description="使用身份验证器应用,登录时需输入动态码"
-                checked={security.twoFactor}
-                onChange={(v) =>
-                  setSecurity((s) => ({ ...s, twoFactor: v }))
-                }
-              />
-              <CheckboxRow
-                id="login-alerts"
-                label="新设备登录提醒"
-                description="非常用设备登录时,发送邮件 + 应用内通知"
-                checked={security.loginAlerts}
-                onChange={(v) =>
-                  setSecurity((s) => ({ ...s, loginAlerts: v }))
-                }
-              />
-              <Separator />
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm">
-                  <KeyRound className="mr-1.5 size-4" aria-hidden="true" />
-                  修改密码
-                </Button>
-                <Button variant="outline" size="sm">
-                  <ShieldCheck className="mr-1.5 size-4" aria-hidden="true" />
-                  查看登录设备 (3 台)
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 危险区 */}
-          <Card className="border-rose-200/60 bg-rose-50/40 dark:border-rose-900/40 dark:bg-rose-950/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base text-rose-700 dark:text-rose-300">
-                <Shield className="size-4" aria-hidden="true" />
-                危险操作
-              </CardTitle>
-              <CardDescription>
-                注销仅关闭会话;删除账户将永久清除数据,且不可恢复。
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm">
-                <Lock className="mr-1.5 size-4" aria-hidden="true" />
-                注销所有设备
+              <p className="mt-1 truncate text-sm text-white/85">
+                {profile.headline}
+              </p>
+              <p className="mt-0.5 flex items-center gap-1 text-xs text-white/75">
+                <MapPin className="size-3" aria-hidden="true" />
+                {profile.city} · 账户 ID: hb-88219
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 sm:flex-col sm:items-end">
+              <Button asChild variant="secondary" size="sm">
+                <Link href="/jobseeker/profile">
+                  <User className="mr-1.5 size-4" aria-hidden="true" />
+                  公开档案
+                </Link>
               </Button>
               <Button
-                asChild
-                variant="outline"
+                variant="secondary"
                 size="sm"
-                className="border-rose-300 text-rose-700 hover:bg-rose-100 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/40"
+                onClick={() => setEditing((v) => !v)}
+                aria-pressed={editing}
               >
-                <Link href="/jobseeker/account/delete-account">
-                  <Trash2 className="mr-1.5 size-4" aria-hidden="true" />
-                  永久删除账户
-                </Link>
+                <Pencil className="mr-1.5 size-4" aria-hidden="true" />
+                {editing ? "退出编辑" : "编辑信息"}
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+        </Card>
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+          <div className="space-y-6">
+            {/* 个人信息 */}
+            <Card>
+              <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
+                <div>
+                  <CardTitle className="text-base">个人信息</CardTitle>
+                  <CardDescription>
+                    这些信息仅用于匹配和招聘方联系,不会公开展示邮箱和电话。
+                  </CardDescription>
+                </div>
+                {savedAt && !editing && (
+                  <Badge variant="outline" className="text-[10px] text-emerald-600">
+                    已保存 · {savedAt}
+                  </Badge>
+                )}
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {!hydrated ? (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <Skeleton key={i} className="h-10 w-full" />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field
+                      id="fullName"
+                      label="姓名"
+                      value={profile.fullName}
+                      onChange={(v) => updateProfile("fullName", v)}
+                      disabled={!editing}
+                      icon={User}
+                    />
+                    <Field
+                      id="email"
+                      label="邮箱"
+                      type="email"
+                      value={profile.email}
+                      onChange={(v) => updateProfile("email", v)}
+                      disabled={!editing}
+                      icon={Mail}
+                    />
+                    <Field
+                      id="phone"
+                      label="电话"
+                      value={profile.phone}
+                      onChange={(v) => updateProfile("phone", v)}
+                      disabled={!editing}
+                      icon={Phone}
+                    />
+                    <Field
+                      id="city"
+                      label="所在城市"
+                      value={profile.city}
+                      onChange={(v) => updateProfile("city", v)}
+                      disabled={!editing}
+                      icon={MapPin}
+                    />
+                    <Field
+                      id="headline"
+                      label="职位头衔"
+                      value={profile.headline}
+                      onChange={(v) => updateProfile("headline", v)}
+                      disabled={!editing}
+                      className="sm:col-span-2"
+                    />
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label htmlFor="bio" className="text-sm font-medium">
+                        个人简介
+                      </Label>
+                      <Textarea
+                        id="bio"
+                        value={profile.bio}
+                        onChange={(e) => updateProfile("bio", e.target.value)}
+                        disabled={!editing}
+                        className="min-h-24"
+                        placeholder="一句话介绍你自己的背景和求职方向"
+                      />
+                      <p className="text-[11px] text-muted-foreground">
+                        建议 50-200 字,AI 会据此匹配岗位。
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <Separator />
+
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium">订阅与提示</h3>
+                  <CheckboxRow
+                    id="marketing"
+                    label="接收合作方营销邮件"
+                    description="如行业报告、雇主品牌活动等(每月 ≤ 2 封)"
+                    checked={profile.marketing}
+                    onChange={(v) => updateProfile("marketing", v)}
+                    disabled={!editing}
+                  />
+                  <CheckboxRow
+                    id="tips"
+                    label="求职小贴士"
+                    description="面试技巧、薪资谈判、签证政策等(每周精选)"
+                    checked={profile.tips}
+                    onChange={(v) => updateProfile("tips", v)}
+                    disabled={!editing}
+                  />
+                </div>
+
+                {editing && (
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setProfile(DEFAULT_PROFILE);
+                        setEditing(false);
+                      }}
+                    >
+                      放弃修改
+                    </Button>
+                    <Button size="sm" onClick={save} disabled={saving}>
+                      {saving ? (
+                        <span className="flex items-center gap-1">
+                          <span className="size-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          保存中
+                        </span>
+                      ) : (
+                        <>
+                          <Save className="mr-1.5 size-4" aria-hidden="true" />
+                          保存修改
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* 安全 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">账户安全</CardTitle>
+                <CardDescription>
+                  建议开启两步验证,并定期检查登录设备。
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <CheckboxRow
+                  id="2fa"
+                  label="两步验证 (2FA)"
+                  description="使用身份验证器应用,登录时需输入动态码"
+                  checked={security.twoFactor}
+                  onChange={(v) =>
+                    setSecurity((s) => ({ ...s, twoFactor: v }))
+                  }
+                />
+                <CheckboxRow
+                  id="login-alerts"
+                  label="新设备登录提醒"
+                  description="非常用设备登录时,发送邮件 + 应用内通知"
+                  checked={security.loginAlerts}
+                  onChange={(v) =>
+                    setSecurity((s) => ({ ...s, loginAlerts: v }))
+                  }
+                />
+                <Separator />
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm">
+                    <KeyRound className="mr-1.5 size-4" aria-hidden="true" />
+                    修改密码
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <ShieldCheck className="mr-1.5 size-4" aria-hidden="true" />
+                    查看登录设备 (3 台)
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 危险区 */}
+            <Card className="border-rose-200/60 bg-rose-50/40 dark:border-rose-900/40 dark:bg-rose-950/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base text-rose-700 dark:text-rose-300">
+                  <Shield className="size-4" aria-hidden="true" />
+                  危险操作
+                </CardTitle>
+                <CardDescription>
+                  注销仅关闭会话;删除账户将永久清除数据,且不可恢复。
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm">
+                  <Lock className="mr-1.5 size-4" aria-hidden="true" />
+                  注销所有设备
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="border-rose-300 text-rose-700 hover:bg-rose-100 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/40"
+                >
+                  <Link href="/jobseeker/account/delete-account">
+                    <Trash2 className="mr-1.5 size-4" aria-hidden="true" />
+                    永久删除账户
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* 侧栏:快速入口 + 数据 */}
+          <aside className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">设置</CardTitle>
+                <CardDescription>常用设置快捷入口</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-1.5 p-2">
+                <QuickLink
+                  href="/jobseeker/account/notifications-prefs"
+                  icon={Bell}
+                  title="通知偏好"
+                  description="分类 × 优先级 × 通道"
+                  tone="indigo"
+                />
+                <QuickLink
+                  href="/jobseeker/account/privacy"
+                  icon={ShieldCheck}
+                  title="隐私设置"
+                  description="GDPR · Cookie · 数据可见性"
+                  tone="emerald"
+                />
+                <QuickLink
+                  href="/jobseeker/account/feedback-history"
+                  icon={Sparkles}
+                  title="反馈历史"
+                  description="NPS / 问卷 / 主动反馈"
+                  tone="amber"
+                />
+                <QuickLink
+                  href="/jobseeker/subscriptions"
+                  icon={Bell}
+                  title="订阅管理"
+                  description="求职订阅规则 CRUD"
+                  tone="sky"
+                />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">数据与导出</CardTitle>
+                <CardDescription>你随时可以拿回自己的数据</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button asChild variant="outline" size="sm" className="w-full">
+                  <Link href="/jobseeker/account/export-data">
+                    <Download className="mr-1.5 size-4" aria-hidden="true" />
+                    申请数据导出
+                  </Link>
+                </Button>
+                <p className="text-[11px] text-muted-foreground">
+                  导出文件包含你的档案、消息、订阅、反馈,通常 24 小时内通过邮件发送。
+                </p>
+              </CardContent>
+            </Card>
+          </aside>
         </div>
-
-        {/* 侧栏:快速入口 + 数据 */}
-        <aside className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">设置</CardTitle>
-              <CardDescription>常用设置快捷入口</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-1.5 p-2">
-              <QuickLink
-                href="/jobseeker/account/notifications-prefs"
-                icon={Bell}
-                title="通知偏好"
-                description="分类 × 优先级 × 通道"
-                tone="indigo"
-              />
-              <QuickLink
-                href="/jobseeker/account/privacy"
-                icon={ShieldCheck}
-                title="隐私设置"
-                description="GDPR · Cookie · 数据可见性"
-                tone="emerald"
-              />
-              <QuickLink
-                href="/jobseeker/account/feedback-history"
-                icon={Sparkles}
-                title="反馈历史"
-                description="NPS / 问卷 / 主动反馈"
-                tone="amber"
-              />
-              <QuickLink
-                href="/jobseeker/subscriptions"
-                icon={Bell}
-                title="订阅管理"
-                description="求职订阅规则 CRUD"
-                tone="sky"
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">数据与导出</CardTitle>
-              <CardDescription>你随时可以拿回自己的数据</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button asChild variant="outline" size="sm" className="w-full">
-                <Link href="/jobseeker/account/export-data">
-                  <Download className="mr-1.5 size-4" aria-hidden="true" />
-                  申请数据导出
-                </Link>
-              </Button>
-              <p className="text-[11px] text-muted-foreground">
-                导出文件包含你的档案、消息、订阅、反馈,通常 24 小时内通过邮件发送。
-              </p>
-            </CardContent>
-          </Card>
-        </aside>
-      </div>
-    </div>
+      </div>)</ErrorBoundary>
   );
 }
 

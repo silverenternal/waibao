@@ -1,4 +1,5 @@
 "use client";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 /**
  * v9.1 — 求职者隐私设置 (GDPR / 中国《个人信息保护法》双视角).
@@ -285,472 +286,464 @@ export default function PrivacyPage() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
-      {/* 顶部 */}
-      <header className="mb-6 sm:mb-8">
-        <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
-          <Link
-            href="/jobseeker/account"
-            className="inline-flex items-center gap-1 hover:text-foreground"
-          >
-            <ArrowLeft className="size-3" aria-hidden="true" />
-            返回账户
-          </Link>
-          <span aria-hidden="true">/</span>
-          <span aria-current="page">隐私设置</span>
-        </div>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-              <ShieldCheck className="size-3.5" aria-hidden="true" />
-              GDPR · PIPL 双视角
-            </div>
-            <h1 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
-              你的数据,你说了算
-            </h1>
-            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-              我们按「数据最小化」原则收集信息;你可以随时撤回同意、导出或删除数据。
-            </p>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            {saving ? (
-              <span className="inline-flex items-center gap-1">
-                <Loader2 className="size-3 animate-spin" aria-hidden="true" />
-                保存中
-              </span>
-            ) : savedAt ? (
-              <span className="inline-flex items-center gap-1 text-emerald-600">
-                <CheckCheck className="size-3" aria-hidden="true" />
-                已保存 · {savedAt}
-              </span>
-            ) : (
-              <span>尚未修改</span>
-            )}
-            <Button
-              size="sm"
-              onClick={() => doSave(true)}
-              disabled={!dirty || saving}
+    <ErrorBoundary>(<div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
+        {/* 顶部 */}
+        <header className="mb-6 sm:mb-8">
+          <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
+            <Link
+              href="/jobseeker/account"
+              className="inline-flex items-center gap-1 hover:text-foreground"
             >
-              <Save className="mr-1.5 size-4" aria-hidden="true" />
-              立即保存
-            </Button>
+              <ArrowLeft className="size-3" aria-hidden="true" />
+              返回账户
+            </Link>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page">隐私设置</span>
           </div>
-        </div>
-      </header>
-
-      {/* 概览卡 */}
-      <section
-        aria-label="隐私概览"
-        className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4"
-      >
-        <PrivacyKpi
-          icon={Eye}
-          label="档案可见性"
-          value={
-            VISIBILITY.find((v) => v.key === state.visibility)?.title ?? "私密"
-          }
-          tone="indigo"
-        />
-        <PrivacyKpi
-          icon={Sparkles}
-          label="AI 训练"
-          value={state.consents.ai_training ? "已授权" : "未授权"}
-          tone="amber"
-        />
-        <PrivacyKpi
-          icon={Database}
-          label="跨境传输"
-          value={state.consents.cross_border ? "已授权" : "未授权"}
-          tone="sky"
-        />
-        <PrivacyKpi
-          icon={Cookie}
-          label="Cookie 模式"
-          value={
-            state.cookieSet === "all"
-              ? "全部接受"
-              : state.cookieSet === "essential"
-                ? "仅必要"
-                : "自定义"
-          }
-          tone="rose"
-        />
-      </section>
-
-      {/* 数据类别同意 */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-base">数据类别同意</CardTitle>
-          <CardDescription>
-            每项可独立开启 / 关闭;必要项无法关闭。
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {!hydrated ? (
-            <div className="space-y-2">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-16 w-full" />
-              ))}
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                <ShieldCheck className="size-3.5" aria-hidden="true" />
+                GDPR · PIPL 双视角
+              </div>
+              <h1 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
+                你的数据,你说了算
+              </h1>
+              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                我们按「数据最小化」原则收集信息;你可以随时撤回同意、导出或删除数据。
+              </p>
             </div>
-          ) : (
-            CATEGORIES.map((c) => {
-              const on = state.consents[c.key];
-              return (
-                <ConsentRow
-                  key={c.key}
-                  def={c}
-                  checked={on}
-                  onChange={(v) => setConsent(c.key, v)}
-                />
-              );
-            })
-          )}
-        </CardContent>
-      </Card>
-
-      <div className="mb-6 grid gap-4 lg:grid-cols-2">
-        {/* 档案可见性 */}
-        <Card>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              {saving ? (
+                <span className="inline-flex items-center gap-1">
+                  <Loader2 className="size-3 animate-spin" aria-hidden="true" />
+                  保存中
+                </span>
+              ) : savedAt ? (
+                <span className="inline-flex items-center gap-1 text-emerald-600">
+                  <CheckCheck className="size-3" aria-hidden="true" />
+                  已保存 · {savedAt}
+                </span>
+              ) : (
+                <span>尚未修改</span>
+              )}
+              <Button
+                size="sm"
+                onClick={() => doSave(true)}
+                disabled={!dirty || saving}
+              >
+                <Save className="mr-1.5 size-4" aria-hidden="true" />
+                立即保存
+              </Button>
+            </div>
+          </div>
+        </header>
+        {/* 概览卡 */}
+        <section
+          aria-label="隐私概览"
+          className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4"
+        >
+          <PrivacyKpi
+            icon={Eye}
+            label="档案可见性"
+            value={
+              VISIBILITY.find((v) => v.key === state.visibility)?.title ?? "私密"
+            }
+            tone="indigo"
+          />
+          <PrivacyKpi
+            icon={Sparkles}
+            label="AI 训练"
+            value={state.consents.ai_training ? "已授权" : "未授权"}
+            tone="amber"
+          />
+          <PrivacyKpi
+            icon={Database}
+            label="跨境传输"
+            value={state.consents.cross_border ? "已授权" : "未授权"}
+            tone="sky"
+          />
+          <PrivacyKpi
+            icon={Cookie}
+            label="Cookie 模式"
+            value={
+              state.cookieSet === "all"
+                ? "全部接受"
+                : state.cookieSet === "essential"
+                  ? "仅必要"
+                  : "自定义"
+            }
+            tone="rose"
+          />
+        </section>
+        {/* 数据类别同意 */}
+        <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="text-base">档案可见性</CardTitle>
+            <CardTitle className="text-base">数据类别同意</CardTitle>
             <CardDescription>
-              控制谁可以在匹配池中看到你的资料。
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {VISIBILITY.map((v) => {
-              const Icon = v.icon;
-              const active = state.visibility === v.key;
-              return (
-                <button
-                  key={v.key}
-                  type="button"
-                  onClick={() => setVisibility(v.key)}
-                  aria-pressed={active}
-                  className={cn(
-                    "flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors",
-                    active
-                      ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                      : "border-border hover:bg-muted/40",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "mt-0.5 grid size-9 place-items-center rounded-md",
-                      active
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground",
-                    )}
-                    aria-hidden="true"
-                  >
-                    <Icon className="size-4" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-2">
-                      <span className="text-sm font-medium leading-tight">
-                        {v.title}
-                      </span>
-                      {active && (
-                        <Badge variant="outline" className="h-4 px-1 text-[9px]">
-                          当前
-                        </Badge>
-                      )}
-                    </span>
-                    <span className="mt-0.5 block text-[11px] text-muted-foreground">
-                      {v.desc}
-                    </span>
-                  </span>
-                </button>
-              );
-            })}
-          </CardContent>
-        </Card>
-
-        {/* AI 训练 + 共享 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">AI 与第三方</CardTitle>
-            <CardDescription>
-              决定你的数据是否参与模型训练、是否与合作伙伴共享。
+              每项可独立开启 / 关闭;必要项无法关闭。
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <ToggleRow
-              icon={Sparkles}
-              title="参与 AI 训练"
-              description="经过脱敏的档案与匹配记录用于训练和评估模型。"
-              checked={state.aiTraining}
-              onChange={(v) => {
-                setFlag("aiTraining", v);
-                setConsent("ai_training", v);
-              }}
+            {!hydrated ? (
+              <div className="space-y-2">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-16 w-full" />
+                ))}
+              </div>
+            ) : (
+              CATEGORIES.map((c) => {
+                const on = state.consents[c.key];
+                return (
+                  <ConsentRow
+                    key={c.key}
+                    def={c}
+                    checked={on}
+                    onChange={(v) => setConsent(c.key, v)}
+                  />
+                );
+              })
+            )}
+          </CardContent>
+        </Card>
+        <div className="mb-6 grid gap-4 lg:grid-cols-2">
+          {/* 档案可见性 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">档案可见性</CardTitle>
+              <CardDescription>
+                控制谁可以在匹配池中看到你的资料。
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {VISIBILITY.map((v) => {
+                const Icon = v.icon;
+                const active = state.visibility === v.key;
+                return (
+                  <button
+                    key={v.key}
+                    type="button"
+                    onClick={() => setVisibility(v.key)}
+                    aria-pressed={active}
+                    className={cn(
+                      "flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors",
+                      active
+                        ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                        : "border-border hover:bg-muted/40",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "mt-0.5 grid size-9 place-items-center rounded-md",
+                        active
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground",
+                      )}
+                      aria-hidden="true"
+                    >
+                      <Icon className="size-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-2">
+                        <span className="text-sm font-medium leading-tight">
+                          {v.title}
+                        </span>
+                        {active && (
+                          <Badge variant="outline" className="h-4 px-1 text-[9px]">
+                            当前
+                          </Badge>
+                        )}
+                      </span>
+                      <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                        {v.desc}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </CardContent>
+          </Card>
+
+          {/* AI 训练 + 共享 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">AI 与第三方</CardTitle>
+              <CardDescription>
+                决定你的数据是否参与模型训练、是否与合作伙伴共享。
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <ToggleRow
+                icon={Sparkles}
+                title="参与 AI 训练"
+                description="经过脱敏的档案与匹配记录用于训练和评估模型。"
+                checked={state.aiTraining}
+                onChange={(v) => {
+                  setFlag("aiTraining", v);
+                  setConsent("ai_training", v);
+                }}
+              />
+              <ToggleRow
+                icon={Users}
+                title="与签约合作伙伴共享"
+                description="仅共享招聘方需要的字段(如技能、薪资区间),不共享联系方式。"
+                checked={state.shareWithPartners}
+                onChange={(v) => setFlag("shareWithPartners", v)}
+              />
+              <ToggleRow
+                icon={Globe2}
+                title="允许跨境传输 (SCC)"
+                description="为匹配海外岗位,数据可能传输至 EEA / 英国 / 美国 (使用标准合同条款)。"
+                checked={state.consents.cross_border}
+                onChange={(v) => setConsent("cross_border", v)}
+              />
+              <ToggleRow
+                icon={EyeOff}
+                title="匿名化分析"
+                description="允许在完全去标识化后用于产品分析。"
+                checked={state.shareAnonymized}
+                onChange={(v) => setFlag("shareAnonymized", v)}
+              />
+            </CardContent>
+          </Card>
+        </div>
+        {/* Cookie */}
+        <Card className="mb-6">
+          <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
+            <div>
+              <CardTitle className="text-base">Cookie 同意</CardTitle>
+              <CardDescription>
+                控制网站 Cookie 类型;影响本地化、统计与营销功能。
+              </CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => applyCookieSet("essential")}
+              >
+                仅必要
+              </Button>
+              <Button size="sm" onClick={() => applyCookieSet("all")}>
+                全部接受
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="grid gap-2 sm:grid-cols-2">
+            <CookieRow
+              label="必要 Cookie"
+              desc="登录会话、CSRF、负载均衡"
+              checked={state.cookies.essential}
+              disabled
+              onChange={() => undefined}
             />
-            <ToggleRow
-              icon={Users}
-              title="与签约合作伙伴共享"
-              description="仅共享招聘方需要的字段(如技能、薪资区间),不共享联系方式。"
-              checked={state.shareWithPartners}
-              onChange={(v) => setFlag("shareWithPartners", v)}
+            <CookieRow
+              label="功能 Cookie"
+              desc="语言、主题、视图偏好"
+              checked={state.cookies.functional}
+              onChange={(v) => setCookie("functional", v)}
             />
-            <ToggleRow
-              icon={Globe2}
-              title="允许跨境传输 (SCC)"
-              description="为匹配海外岗位,数据可能传输至 EEA / 英国 / 美国 (使用标准合同条款)。"
-              checked={state.consents.cross_border}
-              onChange={(v) => setConsent("cross_border", v)}
+            <CookieRow
+              label="分析 Cookie"
+              desc="页面访问、停留时长(匿名)"
+              checked={state.cookies.analytics}
+              onChange={(v) => setCookie("analytics", v)}
             />
-            <ToggleRow
-              icon={EyeOff}
-              title="匿名化分析"
-              description="允许在完全去标识化后用于产品分析。"
-              checked={state.shareAnonymized}
-              onChange={(v) => setFlag("shareAnonymized", v)}
+            <CookieRow
+              label="营销 Cookie"
+              desc="站内 / 站外个性化推荐"
+              checked={state.cookies.marketing}
+              onChange={(v) => setCookie("marketing", v)}
             />
           </CardContent>
         </Card>
-      </div>
-
-      {/* Cookie */}
-      <Card className="mb-6">
-        <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
-          <div>
-            <CardTitle className="text-base">Cookie 同意</CardTitle>
+        {/* GDPR 权利 */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-base">你的 GDPR 权利</CardTitle>
             <CardDescription>
-              控制网站 Cookie 类型;影响本地化、统计与营销功能。
+              行使这些权利无需任何理由,我们会在 30 天内响应。
             </CardDescription>
-          </div>
-          <div className="flex gap-2">
+          </CardHeader>
+          <CardContent className="grid gap-2 sm:grid-cols-2">
+            {GDPR_RIGHTS.map((r) => (
+              <div
+                key={r.key}
+                className="rounded-lg border bg-muted/30 p-3"
+                role="region"
+                aria-label={r.title}
+              >
+                <p className="text-sm font-medium">{r.title}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{r.desc}</p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+        {/* 数据导出 / 删除 */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-base">数据导出与删除</CardTitle>
+            <CardDescription>
+              你随时可以拿回、或者永久删除你的数据。
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => applyCookieSet("essential")}
+              onClick={() => setExportOpen((v) => !v)}
+              aria-expanded={exportOpen}
             >
-              仅必要
+              <Download className="mr-1.5 size-4" aria-hidden="true" />
+              申请数据导出
             </Button>
-            <Button size="sm" onClick={() => applyCookieSet("all")}>
-              全部接受
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+            >
+              <Link href="/jobseeker/account/export-data">
+                <FileLock2 className="mr-1.5 size-4" aria-hidden="true" />
+                前往导出页
+              </Link>
             </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="grid gap-2 sm:grid-cols-2">
-          <CookieRow
-            label="必要 Cookie"
-            desc="登录会话、CSRF、负载均衡"
-            checked={state.cookies.essential}
-            disabled
-            onChange={() => undefined}
-          />
-          <CookieRow
-            label="功能 Cookie"
-            desc="语言、主题、视图偏好"
-            checked={state.cookies.functional}
-            onChange={(v) => setCookie("functional", v)}
-          />
-          <CookieRow
-            label="分析 Cookie"
-            desc="页面访问、停留时长(匿名)"
-            checked={state.cookies.analytics}
-            onChange={(v) => setCookie("analytics", v)}
-          />
-          <CookieRow
-            label="营销 Cookie"
-            desc="站内 / 站外个性化推荐"
-            checked={state.cookies.marketing}
-            onChange={(v) => setCookie("marketing", v)}
-          />
-        </CardContent>
-      </Card>
-
-      {/* GDPR 权利 */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-base">你的 GDPR 权利</CardTitle>
-          <CardDescription>
-            行使这些权利无需任何理由,我们会在 30 天内响应。
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-2 sm:grid-cols-2">
-          {GDPR_RIGHTS.map((r) => (
-            <div
-              key={r.key}
-              className="rounded-lg border bg-muted/30 p-3"
-              role="region"
-              aria-label={r.title}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setDeleteOpen(true);
+                setDeleteStep(1);
+              }}
+              className="border-rose-300 text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/30"
             >
-              <p className="text-sm font-medium">{r.title}</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">{r.desc}</p>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      {/* 数据导出 / 删除 */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-base">数据导出与删除</CardTitle>
-          <CardDescription>
-            你随时可以拿回、或者永久删除你的数据。
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setExportOpen((v) => !v)}
-            aria-expanded={exportOpen}
-          >
-            <Download className="mr-1.5 size-4" aria-hidden="true" />
-            申请数据导出
-          </Button>
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-          >
-            <Link href="/jobseeker/account/export-data">
-              <FileLock2 className="mr-1.5 size-4" aria-hidden="true" />
-              前往导出页
-            </Link>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setDeleteOpen(true);
-              setDeleteStep(1);
-            }}
-            className="border-rose-300 text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/30"
-          >
-            <Trash2 className="mr-1.5 size-4" aria-hidden="true" />
-            申请删除账户
-          </Button>
-        </CardContent>
-
-        {exportOpen && (
-          <CardContent className="border-t pt-4">
-            <div
-              className="rounded-lg border border-emerald-200/60 bg-emerald-50 p-3 text-sm dark:border-emerald-900/40 dark:bg-emerald-950/30"
-              role="status"
-              aria-live="polite"
-            >
-              <p className="font-medium text-emerald-800 dark:text-emerald-200">
-                导出请求已提交
-              </p>
-              <p className="mt-0.5 text-xs text-emerald-700/80 dark:text-emerald-300/80">
-                我们会在 24 小时内把包含你的档案、消息、订阅、反馈的 JSON / CSV
-                文件,通过邮件发送到 {`<账户邮箱>`}。
-              </p>
-            </div>
+              <Trash2 className="mr-1.5 size-4" aria-hidden="true" />
+              申请删除账户
+            </Button>
           </CardContent>
-        )}
 
-        {deleteOpen && (
-          <CardContent className="border-t pt-4">
-            <div
-              className="rounded-lg border border-rose-200/60 bg-rose-50 p-4 dark:border-rose-900/40 dark:bg-rose-950/30"
-              role="alertdialog"
-              aria-labelledby="del-title"
-              aria-describedby="del-desc"
-            >
-              <div className="flex items-start gap-2">
-                <TriangleAlert
-                  className="mt-0.5 size-5 shrink-0 text-rose-600"
-                  aria-hidden="true"
-                />
-                <div className="flex-1">
-                  <p id="del-title" className="font-semibold text-rose-800 dark:text-rose-200">
-                    {deleteStep === 1 ? "确认删除账户?" : "最后确认 - 此操作不可撤销"}
-                  </p>
-                  <p id="del-desc" className="mt-1 text-sm text-rose-700/90 dark:text-rose-300/90">
-                    {deleteStep === 1
-                      ? "我们会在 7 天宽限期内保留你的数据(可恢复),之后将永久删除并断开与第三方合作伙伴的共享。"
-                      : "请输入邮箱确认。我们将立即冻结账户,7 天后永久删除所有个人数据。"}
-                  </p>
-                </div>
+          {exportOpen && (
+            <CardContent className="border-t pt-4">
+              <div
+                className="rounded-lg border border-emerald-200/60 bg-emerald-50 p-3 text-sm dark:border-emerald-900/40 dark:bg-emerald-950/30"
+                role="status"
+                aria-live="polite"
+              >
+                <p className="font-medium text-emerald-800 dark:text-emerald-200">
+                  导出请求已提交
+                </p>
+                <p className="mt-0.5 text-xs text-emerald-700/80 dark:text-emerald-300/80">
+                  我们会在 24 小时内把包含你的档案、消息、订阅、反馈的 JSON / CSV
+                  文件,通过邮件发送到 {`<账户邮箱>`}。
+                </p>
               </div>
-              {deleteStep === 2 && (
-                <div className="mt-3 space-y-2">
-                  <label
-                    htmlFor="del-email"
-                    className="block text-xs font-medium text-rose-800 dark:text-rose-200"
-                  >
-                    输入账户邮箱以确认
-                  </label>
-                  <input
-                    id="del-email"
-                    type="email"
-                    placeholder="hugo.wang@example.com"
-                    className="w-full rounded-md border border-rose-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-400 dark:border-rose-800 dark:bg-rose-950/40"
+            </CardContent>
+          )}
+
+          {deleteOpen && (
+            <CardContent className="border-t pt-4">
+              <div
+                className="rounded-lg border border-rose-200/60 bg-rose-50 p-4 dark:border-rose-900/40 dark:bg-rose-950/30"
+                role="alertdialog"
+                aria-labelledby="del-title"
+                aria-describedby="del-desc"
+              >
+                <div className="flex items-start gap-2">
+                  <TriangleAlert
+                    className="mt-0.5 size-5 shrink-0 text-rose-600"
+                    aria-hidden="true"
                   />
+                  <div className="flex-1">
+                    <p id="del-title" className="font-semibold text-rose-800 dark:text-rose-200">
+                      {deleteStep === 1 ? "确认删除账户?" : "最后确认 - 此操作不可撤销"}
+                    </p>
+                    <p id="del-desc" className="mt-1 text-sm text-rose-700/90 dark:text-rose-300/90">
+                      {deleteStep === 1
+                        ? "我们会在 7 天宽限期内保留你的数据(可恢复),之后将永久删除并断开与第三方合作伙伴的共享。"
+                        : "请输入邮箱确认。我们将立即冻结账户,7 天后永久删除所有个人数据。"}
+                    </p>
+                  </div>
                 </div>
-              )}
-              <div className="mt-3 flex flex-wrap justify-end gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setDeleteOpen(false)}
-                >
-                  取消
-                </Button>
-                {deleteStep === 1 ? (
-                  <Button
-                    size="sm"
-                    className="bg-rose-600 text-white hover:bg-rose-700"
-                    onClick={() => setDeleteStep(2)}
-                  >
-                    继续
-                  </Button>
-                ) : (
-                  <Button
-                    asChild
-                    size="sm"
-                    className="bg-rose-600 text-white hover:bg-rose-700"
-                  >
-                    <Link href="/jobseeker/account/delete-account">
-                      永久删除
-                    </Link>
-                  </Button>
+                {deleteStep === 2 && (
+                  <div className="mt-3 space-y-2">
+                    <label
+                      htmlFor="del-email"
+                      className="block text-xs font-medium text-rose-800 dark:text-rose-200"
+                    >
+                      输入账户邮箱以确认
+                    </label>
+                    <input
+                      id="del-email"
+                      type="email"
+                      placeholder="hugo.wang@example.com"
+                      className="w-full rounded-md border border-rose-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-400 dark:border-rose-800 dark:bg-rose-950/40"
+                    />
+                  </div>
                 )}
+                <div className="mt-3 flex flex-wrap justify-end gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDeleteOpen(false)}
+                  >
+                    取消
+                  </Button>
+                  {deleteStep === 1 ? (
+                    <Button
+                      size="sm"
+                      className="bg-rose-600 text-white hover:bg-rose-700"
+                      onClick={() => setDeleteStep(2)}
+                    >
+                      继续
+                    </Button>
+                  ) : (
+                    <Button
+                      asChild
+                      size="sm"
+                      className="bg-rose-600 text-white hover:bg-rose-700"
+                    >
+                      <Link href="/jobseeker/account/delete-account">
+                        永久删除
+                      </Link>
+                    </Button>
+                  )}
+                </div>
               </div>
+            </CardContent>
+          )}
+        </Card>
+        {/* 合规说明 + DPO */}
+        <Card className="border-dashed">
+          <CardContent className="grid gap-4 p-5 sm:grid-cols-[1fr_auto] sm:items-center sm:p-6">
+            <div>
+              <p className="text-sm font-medium">数据保护官 (DPO)</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                如对您的数据处理有任何疑问、投诉或行权请求,可通过以下方式联系:
+              </p>
+              <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                <li className="flex items-center gap-2">
+                  <Mail className="size-3" aria-hidden="true" />
+                  dpo@waibao.example
+                </li>
+                <li className="flex items-center gap-2">
+                  <Globe2 className="size-3" aria-hidden="true" />
+                  欧洲代表: 21 Rue de la Privacy, 75001 Paris
+                </li>
+                <li className="flex items-center gap-2">
+                  <Info className="size-3" aria-hidden="true" />
+                  响应时效: 一般 7 个工作日,最多 30 天(GDPR Art.12(3))
+                </li>
+              </ul>
             </div>
+            <Button asChild size="sm" variant="outline">
+              <Link href="/jobseeker/account/feedback-history">查看处理记录</Link>
+            </Button>
           </CardContent>
-        )}
-      </Card>
-
-      {/* 合规说明 + DPO */}
-      <Card className="border-dashed">
-        <CardContent className="grid gap-4 p-5 sm:grid-cols-[1fr_auto] sm:items-center sm:p-6">
-          <div>
-            <p className="text-sm font-medium">数据保护官 (DPO)</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              如对您的数据处理有任何疑问、投诉或行权请求,可通过以下方式联系:
-            </p>
-            <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
-              <li className="flex items-center gap-2">
-                <Mail className="size-3" aria-hidden="true" />
-                dpo@waibao.example
-              </li>
-              <li className="flex items-center gap-2">
-                <Globe2 className="size-3" aria-hidden="true" />
-                欧洲代表: 21 Rue de la Privacy, 75001 Paris
-              </li>
-              <li className="flex items-center gap-2">
-                <Info className="size-3" aria-hidden="true" />
-                响应时效: 一般 7 个工作日,最多 30 天(GDPR Art.12(3))
-              </li>
-            </ul>
-          </div>
-          <Button asChild size="sm" variant="outline">
-            <Link href="/jobseeker/account/feedback-history">查看处理记录</Link>
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Separator className="my-6" />
-      <p className="text-center text-xs text-muted-foreground">
-        我们遵循 GDPR (EU 2016/679) · UK GDPR · 中国《个人信息保护法》。
-      </p>
-    </div>
+        </Card>
+        <Separator className="my-6" />
+        <p className="text-center text-xs text-muted-foreground">
+          我们遵循 GDPR (EU 2016/679) · UK GDPR · 中国《个人信息保护法》。
+        </p>
+      </div>)</ErrorBoundary>
   );
 }
 

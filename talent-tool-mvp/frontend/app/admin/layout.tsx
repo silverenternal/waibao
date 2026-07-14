@@ -13,6 +13,7 @@
  */
 
 import * as React from "react";
+import type { Metadata } from "next";
 import {
   Activity,
   Blocks,
@@ -29,6 +30,10 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/shared/AppShell";
 import { RefineAdminProvider } from "@/lib/admin";
+import { generatePrivacyMetadata } from "@/lib/metadata";
+
+// Authenticated workspace — noindex, no previews.
+export const metadata: Metadata = generatePrivacyMetadata("Admin Console");
 
 const NAV = [
   { label: "Overview", href: "/admin", icon: LayoutDashboard },
