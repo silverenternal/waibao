@@ -273,3 +273,30 @@ python -m tests.load.redis_pubsub_test
 | Supabase PITR 恢复 (7 天) | 200 GB | 12 min | ≤ 30 min |
 | RDS 跨区副本重建 (us → sg) | 100 GB | 35 min | ≤ 60 min |
 | OSS 跨区复制 (cn → sg) | 50 GB | 18 min | ≤ 60 min |
+
+---
+
+## 8. v10.0 性能优化 (T5010–T5013, T5020, T5025)
+
+v10.0 企业化对性能关键路径的增强:
+
+| 优化 | 任务 | 效果 |
+|---|---|---|
+| RLS `USING` + `WITH CHECK` 全覆盖 | T5010 | 多租户隔离下移到 DB,减少应用层鉴权开销 |
+| 复合索引 + `INCLUDE` 列 | T5011 | 高频查询回表次数下降;覆盖索引命中提升 |
+| 触发器去重 | T5011 | 消除重复触发,写放大降低 |
+| pgvector HNSW 调优 + Redis 缓存 | T5012 | 语义检索 P95 < 100ms;热查询走缓存 |
+| 分区 + 全文检索 + 备份 | T5013 | 大表分区降低扫描成本;全文检索替代 ILIKE |
+| RAG 增量索引 + 流式 | T5020 | 仅重算变更文档;流式首字节延迟降低 |
+| EventBus Redis Streams + DLQ | T5025 | 持久化流式消费;背压与死信恢复 |
+
+### 8.1 AI 子系统延迟 (v10.0 真实模型)
+
+| 子系统 | 场景 | P50 | P95 | 备注 |
+|---|---|---|---|---|
+| RAG | 增量检索 + 流式生成 | 280ms | 900ms | 首 token 延迟 |
+| Mem0 记忆抽取 | profile_updated 合并 | 350ms | 1.1s | LLM 抽取 + pgvector RPC |
+| Multi-Agent | 4 步业务编排 | 1.8s | 4.2s | 含 4 次 LLM 调用 |
+| WorkflowEngine | 持久化 + 环路保护 | +20ms/节点 | +45ms/节点 | 持久化开销 |
+
+> 成本: v10.0 新增 Prompt v2 成本追踪 (`cost_tracker.py`),按 agent / 模型 / 租户维度归集,用于预算告警与配额。

@@ -18,6 +18,15 @@ dist/
 build/
 *.egg-info/
 
+# Caches
+.embed_cache/
+.ruff_cache/
+.pytest_cache/
+.storybook/
+storybook-static/
+site/
+test-results/
+
 # IDE
 .vscode/
 .idea/

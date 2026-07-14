@@ -47,6 +47,13 @@ from ._core import (  # noqa: F401
 from .dependency import *  # noqa: F401,F403
 from .gate import *  # noqa: F401,F403
 from .registry import *  # noqa: F401,F403
+from .fallback import (  # noqa: F401
+    MockToggleRegistry,
+    check_service_access_safe,
+    get_mock_registry,
+    is_enabled_safe,
+    reset_fallback_state,
+)
 
 __all__ = [
     "CACHE_TTL_SECONDS",
@@ -56,4 +63,10 @@ __all__ = [
     "ServiceToggleError",
     "invalidate_cache",
     "service_toggle",
+    # T5029 fallback
+    "MockToggleRegistry",
+    "is_enabled_safe",
+    "check_service_access_safe",
+    "get_mock_registry",
+    "reset_fallback_state",
 ]

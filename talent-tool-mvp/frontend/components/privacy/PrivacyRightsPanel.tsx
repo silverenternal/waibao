@@ -110,7 +110,6 @@ function isPIPLRegion(region: string): boolean {
 export function PrivacyRightsPanel({ region, tokenHeader }: PrivacyRightsPanelProps) {
   const lang = pickLang();
   const t = COPY[lang];
-  const { toast } = useToast();
 
   const [busy, setBusy] = React.useState<string | null>(null);
   const [ccpa, setCcpa] = React.useState<CCPAStatus | null>(null);
@@ -142,7 +141,7 @@ export function PrivacyRightsPanel({ region, tokenHeader }: PrivacyRightsPanelPr
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      toast({ title: t.exportDone });
+      toast.success(t.exportDone);
     } catch {
       toast.error(t.error);
     } finally {
@@ -160,7 +159,7 @@ export function PrivacyRightsPanel({ region, tokenHeader }: PrivacyRightsPanelPr
         body: "{}",
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      toast({ title: lang === "zh" ? "已提交删除申请" : "Deletion request submitted" });
+      toast.success(lang === "zh" ? "已提交删除申请" : "Deletion request submitted");
     } catch {
       toast.error(t.error);
     } finally {
@@ -185,7 +184,7 @@ export function PrivacyRightsPanel({ region, tokenHeader }: PrivacyRightsPanelPr
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const updated = (await res.json()) as CCPAStatus;
       setCcpa(updated);
-      toast({ title: t.optOutSaved });
+      toast.success(t.optOutSaved);
     } catch {
       toast.error(t.error);
     } finally {

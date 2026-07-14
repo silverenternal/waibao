@@ -28,6 +28,43 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 
+# ---------------------------------------------------------------------------
+# T5027 — Resilience classification
+# ---------------------------------------------------------------------------
+class ResilienceClass:
+    """How a provider call should behave when it fails after exhausting retries.
+
+    * ``CRITICAL``  — the call is load-bearing; a failure **must** propagate so
+      the caller can surface an error (no silent degradation). e.g. the main
+      LLM chat that drives an agent's answer.
+    * ``DEGRADE``   — a failure should fall back to a cheaper/mock result and
+      mark the response ``degraded=True`` so the caller keeps working. e.g.
+      reranking, memory injection, structured enrichment.
+    * ``OPTIONAL``  — a failure is silently swallowed (returns the mock /
+      ``None``); used for best-effort telemetry, suggestions, warm prefetches.
+    """
+
+    CRITICAL = "critical"
+    DEGRADE = "degrade"
+    OPTIONAL = "optional"
+
+
+def _default_mock_fallback(provider: str, method: str) -> Any:
+    """Default mock result when a DEGRADE/OPTIONAL call fails.
+
+    Returns a minimal dict shaped like an LLMResponse so callers that don't
+    supply a custom fallback still get a usable, non-None payload.
+    """
+    return {
+        "content": "",
+        "degraded": True,
+        "degraded_reason": f"{provider}.{method} unavailable",
+        "provider": provider,
+        "model": "mock-fallback",
+        "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+    }
+
+
 def _otel_span(name: str, attributes: dict | None = None):
     """T1001: 返回 OTel span context manager; 依赖缺失时返回 nullcontext."""
     try:
@@ -321,8 +358,18 @@ def with_resilience(
     cost_calculator: Callable[[Any], float] | None = None,
     tenant_arg: str | None = None,
     cache_config: "CacheConfig | None" = None,
+    criticality: str = ResilienceClass.CRITICAL,
+    mock_fallback: Callable[[str, str], Any] | None = None,
 ) -> Callable[[Callable[..., Awaitable[T]]], Callable[..., Awaitable[T]]]:
-    """统一为外部调用加上: cache -> rate limit -> circuit breaker -> retry -> cost -> metrics."""
+    """统一为外部调用加上: cache -> rate limit -> circuit breaker -> retry -> cost -> metrics.
+
+    T5027 新增 ``criticality`` + ``mock_fallback``:
+
+    * ``CRITICAL`` — 失败继续抛出 (默认).
+    * ``DEGRADE``  — 重试耗尽后调用 ``mock_fallback`` 返回降级结果
+                     (默认标记 degraded=True),不抛出.
+    * ``OPTIONAL`` — 同 DEGRADE 但完全静默 (只记 debug 日志).
+    """
     policy = retry or RetryPolicy()
     circuit = get_circuit(provider)
     bucket = get_bucket(provider, rate_per_sec, burst)
@@ -346,9 +393,30 @@ def with_resilience(
                     "provider": provider,
                     "method": method,
                     "model": str(model_name),
+                    "criticality": criticality,
                 },
             ):
-                return await _run(args, kwargs, fn)
+                try:
+                    return await _run(args, kwargs, fn)
+                except Exception as exc:
+                    # T5027 — DEGRADE / OPTIONAL calls fall back instead of
+                    # propagating. CRITICAL re-raises unchanged.
+                    if criticality == ResilienceClass.CRITICAL:
+                        raise
+                    level = (logger.debug if criticality == ResilienceClass.OPTIONAL
+                             else logger.warning)
+                    level(
+                        "resilience.degraded provider=%s method=%s criticality=%s err=%s",
+                        provider, method, criticality, exc,
+                    )
+                    metrics.observe(provider, method, "degraded", 0.0)
+                    fb = mock_fallback or _default_mock_fallback
+                    try:
+                        return fb(provider, method)  # type: ignore[return-value]
+                    except Exception:  # noqa: BLE001 — fallback must never crash
+                        logger.exception(
+                            "resilience.mock_fallback_failed provider=%s", provider)
+                        return _default_mock_fallback(provider, method)  # type: ignore[return-value]
 
         return wrapper
 

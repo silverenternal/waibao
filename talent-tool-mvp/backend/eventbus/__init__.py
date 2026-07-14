@@ -1,6 +1,19 @@
 """Event Bus — public package surface."""
 
 from .base import Event, EventBus, InMemoryEventBus, RedisEventBus, Subscription
+from .schema_registry import (
+    EventSchema,
+    IncompatibleSchemaError,
+    SchemaRegistry,
+    get_schema_registry,
+    set_schema_registry,
+)
+from .streams import (
+    DLQEntry,
+    InMemoryStreamBackend,
+    StreamEventBus,
+    StreamRetryPolicy,
+)
 from .decorators import (
     await_event,
     clear_registered,
@@ -37,4 +50,8 @@ __all__ = [
     "on_event", "emit", "fire", "listen", "await_event",
     "registered_subscriptions", "clear_registered",
     "register_all_subscribers", "SUBSCRIBERS",
+    # v10.0 T5025 — Streams + DLQ + schema registry
+    "StreamEventBus", "StreamRetryPolicy", "DLQEntry", "InMemoryStreamBackend",
+    "SchemaRegistry", "EventSchema", "IncompatibleSchemaError",
+    "get_schema_registry", "set_schema_registry",
 ]

@@ -154,11 +154,12 @@ class InMemoryPromptRegistry:
         parent_version: Optional[int] = None,
         created_by: str = "system",
         metadata: Optional[Dict[str, Any]] = None,
+        version: Optional[int] = None,
     ) -> PromptVersion:
         with self._lock:
             key = (tenant_id, name, agent)
             versions = self._version_index.setdefault(key, [])
-            next_version = (max(versions) + 1) if versions else 1
+            next_version = version or ((max(versions) + 1) if versions else 1)
 
             row = PromptVersion(
                 tenant_id=tenant_id,

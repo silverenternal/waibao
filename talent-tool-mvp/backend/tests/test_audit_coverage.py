@@ -132,13 +132,22 @@ def test_enforce_coverage_auto_decorates(synthetic_api, monkeypatch, tmp_path):
     monkeypatch.syspath_prepend(str(tmp_path))
     # Drop any previously-imported real `api` package so the synthetic wins.
     import sys
+    real_api = sys.modules.get("api")
     sys.modules.pop("api", None)
     sys.modules.pop("api.untracked", None)
-    rep = enforce_pii_decorator_coverage(
-        api_dir="api", min_coverage_pct=100.0, auto_decorate=True
-    )
-    assert rep["untracked"] == 0
-    assert rep["coverage_pct"] == 100.0
+    try:
+        rep = enforce_pii_decorator_coverage(
+            api_dir="api", min_coverage_pct=100.0, auto_decorate=True
+        )
+        assert rep["untracked"] == 0
+        assert rep["coverage_pct"] == 100.0
+    finally:
+        # Restore the real backend `api` package so that subsequent tests that
+        # monkeypatch string paths like "api.tickets.get_supabase_admin" still
+        # resolve. Without this, Python 3.14 leaves the parent package missing
+        # from sys.modules and downstream setattr() calls raise AttributeError.
+        if real_api is not None:
+            sys.modules["api"] = real_api
 
 
 # ---------------------------------------------------------------------------

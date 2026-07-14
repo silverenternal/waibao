@@ -1,5 +1,5 @@
 site_name: 招聘智能体
-site_description: v9.1 - Jobseeker 端整体重做完成 (Refine + shadcn-admin + Tremor + Open WebUI + OpenResume + Cal.com)
+site_description: v10.0 - 企业化硬化 (强契约 Agent Gateway + RLS 多租户 + PII/KMS + GDPR/PIPL/CCPA + 真实模型 AI 子系统)
 site_author: waibao
 
 repo_name: silverenternal/waibao
@@ -74,6 +74,17 @@ nav:
   - 灾备: DISASTER_RECOVERY.md
   - 运维手册: RUNBOOK.md
   - 性能压测: PERFORMANCE.md
+  - 安全策略: SECURITY.md
+  - 隐私合规 (GDPR/PIPL/CCPA): COMPLIANCE.md
+  - 发布记录:
+      - v10.0.0 (企业化硬化): releases/v10.0.0.md
+      - v9.1.0: releases/v9.1.0.md
+      - v9.0.0: releases/v9.0.0.md
+      - v8.1.0: releases/v8.1.0.md
+      - v8.0.0: releases/v8.0.0.md
+      - v7.0.0: releases/v7.0.0.md
+      - v5.0.0: releases/v5.0.0.md
+      - v4.0.0: releases/v4.0.0.md
   - i18n 指南: I18N_GUIDE.md
   - 覆盖审计 v3: COVERAGE-AUDIT-v3.md
   - 覆盖审计 v4: COVERAGE-AUDIT-v4.md
@@ -85,7 +96,7 @@ nav:
   - 跨端一致性: CROSS_END_CONSISTENCY.md
   - 性能与 Lighthouse: PERFORMANCE_LIGHTHOUSE.md
   - 商业化与合规: COMMERCIAL.md
-  - 服务开关规格:
+  - 服务开关规格: SERVICE_TOGGLE_SPEC.md
   - 路线图: ROADMAP.md
   - 贡献指南: CONTRIBUTING.md
 

@@ -8,12 +8,9 @@ agent event-emission coverage.
 from __future__ import annotations
 
 import asyncio
-import json
-import os
 import threading
 import time
 import uuid
-from dataclasses import FrozenInstanceError
 from typing import List
 from unittest.mock import MagicMock, patch
 
@@ -55,7 +52,6 @@ from eventbus.integration import (
     emit_ticket_created,
     emit_ticket_escalated,
 )
-from eventbus.registry import _bus as _registry_bus
 from eventbus.subscribers import (
     SUBSCRIBERS,
     register_all_subscribers,

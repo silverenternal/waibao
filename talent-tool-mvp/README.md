@@ -2,6 +2,8 @@
 
 # talent-tool-mvp
 
+> **v10.0.0 — Enterprise Hardening** (2026-07). Strong-contract Agent Gateway, DB-level multi-tenancy (RLS `USING`+`WITH CHECK`), PII/KMS encryption, three-jurisdiction privacy (GDPR / PIPL / CCPA), and real-model AI subsystems (RAG streaming, Mem0, Multi-Agent, EventBus Redis Streams + DLQ). Full notes: [docs/releases/v10.0.0.md](docs/releases/v10.0.0.md).
+
 A proof-of-concept recruitment platform built to demonstrate the **Mind + Mothership** architecture -- two interconnected products that together form an AI-powered operating system for modern recruitment agencies.
 
 **Live Demo:**

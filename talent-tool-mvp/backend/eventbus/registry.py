@@ -23,7 +23,16 @@ def get_event_bus() -> EventBus:
     with _lock:
         if _bus is None:
             kind = os.getenv("WAIBAO_EVENTBUS", "memory").lower()
-            if kind == "redis":
+            if kind in ("streams", "redis-streams", "stream"):
+                # v10.0 T5025 — Redis Streams + DLQ + retry + schema registry.
+                from .streams import StreamEventBus
+                from .schema_registry import get_schema_registry
+                url = os.getenv("WAIBAO_REDIS_URL", "redis://localhost:6379/0")
+                _bus = StreamEventBus(
+                    url=url,
+                    schema_registry=get_schema_registry(),
+                )
+            elif kind == "redis":
                 from .base import RedisEventBus  # local import — optional dep
                 _bus = RedisEventBus(url=os.getenv("WAIBAO_REDIS_URL",
                                                   "redis://localhost:6379/0"))

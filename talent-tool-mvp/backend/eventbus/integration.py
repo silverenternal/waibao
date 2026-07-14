@@ -16,7 +16,7 @@ Usage::
 
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, Optional
+from typing import Iterable, Optional
 
 from .decorators import emit as _emit
 
