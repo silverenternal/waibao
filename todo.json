@@ -1,634 +1,314 @@
 {
   "meta": {
-    "project": "招聘智能体 (Recruitment Agent)",
-    "subtitle": "v10.0 — 企业化升级 (深耕 16 项做透 + 修复 5 审计 Top 50)",
-    "based_on": "v9.1.0 (前端企业级, 3 端) + v8.1.0 (16 项做透)",
-    "version": "10.0.0",
-    "created": "2026-07-13",
-    "supersedes": "v8.1 todo.json (16 tasks, 全部完成)",
-    "owner": "waibao",
-    "language": ["zh-CN", "en-US", "ja-JP"],
-    "stack": {
-      "backend": "FastAPI + Python 3.12 + ServiceToggle + Mem0 + LlamaIndex + EventBus",
-      "frontend": "Next.js 16 + TypeScript + Tailwind + next-intl + Storybook + TanStack Query",
-      "infra": "Supabase Postgres + pgvector + Redis Streams + Qdrant"
-    },
-    "audit_artifacts": [
-      "docs/audits/AUDIT_BACKEND.md",
-      "docs/audits/AUDIT_DATABASE.md",
-      "docs/audits/AUDIT_SECURITY.md",
-      "docs/audits/AUDIT_AI.md",
-      "talent-tool-mvp/docs/audits/AUDIT_FRONTEND.md",
-      "docs/COVERAGE-AUDIT-v10.md"
-    ]
+    "project": "体育用品企业AI招聘助手",
+    "subtitle": "v11.0 — 合同交付版 (本地 LLM + 招聘市场模型 + 硬条件匹配 + 推送)",
+    "based_on": "甲方确认需求 (2026-07-15, 26 项已选, ¥4,070, 9.8 工日, 交付 2026-09-15)",
+    "version": "11.0.0",
+    "created": "2026-07-15",
+    "supersedes": "v10.0 todo.json (30 tasks 企业化升级)",
+    "budget": "¥4,070",
+    "working_days": 9.8,
+    "deadline": "2026-09-15",
+    "deployment": "本地/演示环境 (响应式网页 PC+手机)",
+    "data_rule": "LLM 完全不允许离开甲方环境 (用 Ollama 本地模型)",
+    "product_vision": "招聘市场: 人才入库 → 企业入库 → 硬条件匹配 → 推送人才给企业 → 不淘汰只排序"
   },
-  "goal": "不造新功能。把 v9.1 16 项做透 + 5 份审计 Top 50 问题修复 + 真实业务化(RAG/Multi-Agent/Mem0/Workflow/plugin 沙箱/前端 loading+error+TanStack Query+SEO+i18n+SAML 安全/KMS+tenant_id 全覆盖+索引/缓存/分区)。v10.0 = 企业化升级。",
-  "out_of_scope": [
-    "新业务功能 (16 项已覆盖)",
-    "新开源项目发布",
-    "新增端 (5 端已稳定)",
-    "商业化 tier / 合同 / billing (P3 之后再开)",
-    "重写 agent 框架",
-    "新数据库 / 新 LLM provider (除 Anomaly / Vllm / LocalAI)"
-  ],
-  "phases": {
-    "P0_phase0_backend": {
-      "name": "后端企业化 (P0 修复)",
-      "weeks": "1-3",
-      "scope": "Agent gateway 改造、Service 层拆分、API 契约治理、Provider 失败处理、基础设施状态分布式化"
+  "goal": "把现有 v10.0 系统改造成甲方合同要求的招聘市场。3 件事: (1) 接本地 LLM (Ollama) 满足数据不出环境; (2) 新建招聘市场模型 (人才池+岗位池+匹配+推送); (3) 匹配重写为硬条件过滤 + 匹配结果 4 元素展示 (分数/理由/缺口/风险)。隐藏所有过度工程功能。",
+  "phases": [
+    {
+      "id": "P0",
+      "title": "本地 LLM (Ollama)",
+      "goal": "数据不出甲方环境",
+      "priority": "P0",
+      "days": 2
     },
-    "P1_phase1_frontend": {
-      "name": "前端企业化 (P0/P1 修复)",
-      "weeks": "3-6",
-      "scope": "loading.tsx/error.tsx 全覆盖、TanStack Query 集成、SEO metadata 全覆盖、react-hook-form + Zod、表单/i18n/Storybook 100% 覆盖、Mobile/A11y/Perf/Dark mode"
+    {
+      "id": "P1",
+      "title": "招聘市场模型",
+      "goal": "人才池+岗位池+匹配+推送 UX",
+      "priority": "P0",
+      "days": 4
     },
-    "P2_phase2_db_perf": {
-      "name": "数据库 + 性能",
-      "weeks": "6-8",
-      "scope": "tenant_id 全表覆盖、触发器函数去重、12 复合/部分/INCLUDE 索引、HNSW 调参、pgvector 缓存、备份灾备 SOP"
+    {
+      "id": "P2",
+      "title": "硬条件匹配引擎",
+      "goal": "技能/学历/薪资/城市/到岗 硬过滤 + 4 元素展示",
+      "priority": "P0",
+      "days": 2
     },
-    "P3_phase3_security_compliance": {
-      "name": "安全 + 合规",
-      "weeks": "8-10",
-      "scope": "PII 加密 fail-fast + KMS、JWT 默认 secret 删 + SAML 签名校验、GPDR Art.15/17/30/33 完整、CCPA opt-out、3 层 rate limit、prompt injection 防护、PIPL 数据出境"
+    {
+      "id": "P3",
+      "title": "简化+隐藏过度功能",
+      "goal": "降级 6 项 + 隐藏 10+ 项",
+      "priority": "P1",
+      "days": 1.5
     },
-    "P4_phase4_ai_business": {
-      "name": "AI 集成真实业务化",
-      "weeks": "10-14",
-      "scope": "RAG 真模型 + 多租户隔离、Mem0 pgvector RPC、Multi-Agent 真实 LLM executor + 4 场景、Plugin 容器化 + 签名、Workflow 持久化 + cycle/timeout、EventBus Redis Streams + DLQ"
+    {
+      "id": "P4",
+      "title": "本地部署+测试数据+交付",
+      "goal": "一键启动+1000 简历导入+部署说明",
+      "priority": "P0",
+      "days": 1.3
     }
-  },
+  ],
   "tasks": [
     {
-      "_section": "Phase 0 — 后端企业化",
-      "_comment_marker": 1,
-      "id": "T5001",
+      "_section": "P0 — 本地 LLM (数据不出环境)",
+      "id": "T6101",
       "phase": "P0",
       "priority": "P0",
-      "title": "Agent Gateway 强契约化",
-      "description": "16 个 Agent 全部 hardcoded prompt + JSON.loads → 强制 AgentRuntime 契约。AgentInput/Output Pydantic v2 模型 + token/byte cap + PII policy + Provider 原生 structured output + Pydantic 二次验证;失败仅 repair/retry,之后走 degraded/fallback(可审计)。",
+      "title": "Ollama 本地 LLM Provider",
+      "description": "新建 Ollama provider,替换所有外网 LLM 调用。docker-compose 集成 Ollama + Qwen2.5-7B 模型。",
       "deliverables": [
-        "backend/agents/contracts.py: AgentInputModel / AgentOutputModel 基类",
-        "backend/agents/runtime.py: 强制契约 + 错误分类 (degraded/retryable/source/confidence)",
-        "16 个 *_agent.py 全部改造 (移除模块级 PROMPT 常量 → PromptRegistry)",
-        "tests/test_agent_contracts.py 100+ 测试 (含 PII policy + injection scenario)"
+        "backend/providers/llm/ollama_provider.py: OllamaProvider (OpenAI 兼容 API, base_url=http://ollama:11434/v1)",
+        "模型: Qwen2.5-7B-Instruct (中文最好) 或 GLM-4-9B",
+        "docker-compose.yml 加 ollama 服务 + 模型自动拉取",
+        "改 LLM_PROVIDER=ollama 为默认",
+        "scripts/setup_ollama.sh: 一键拉模型",
+        "tests/test_ollama_provider.py"
       ],
-      "depends_on": [],
-      "estimate_days": 18,
-      "addresses_audit": ["BACKEND P0#5", "AI P0#2"]
+      "days": 1.5
     },
     {
-      "id": "T5002",
+      "_section": "P0 — 本地 LLM",
+      "id": "T6102",
       "phase": "P0",
       "priority": "P0",
-      "title": "Service 层拆分 + 错误统一",
-      "description": ">400 行 Service 拆分;874 个 except Exception 收口;统一错误信封 (error_code/request_id/details/retryable)。删除根目录兼容 forwarding 层,建立 application/domain/infrastructure 三层 import graph。",
+      "title": "本地 OCR (简历/资质 不出环境)",
+      "description": "简历和资质的 OCR 也必须本地。用 PaddleOCR (开源,本地) 替换腾讯云/百度。",
       "deliverables": [
-        "collaboration_room 1115 行 → 拆 Room + Thread + Member + Reaction + Mention (5 文件)",
-        "predictive 846 行 → 拆 Model + Forecast + Calibration 3 文件",
-        "service_toggle 792 行 → 拆 Registry + Gate + Dependency 三层",
-        "billing 681 行 → 拆 Subscription + Invoice + Usage",
-        "统一 envelope {code, message, request_id, details, retryable}",
-        "tests/test_error_envelope.py + tests/test_service_splits.py 100+ 测试"
+        "backend/providers/ocr/paddle_ocr.py: PaddleOCR 本地 OCR",
+        "docker-compose.yml 加 paddleocr 服务",
+        "OCR_PROVIDER=paddle 为默认",
+        "tests/test_paddle_ocr.py"
       ],
-      "depends_on": [],
-      "estimate_days": 15,
-      "addresses_audit": ["BACKEND P1#5", "BACKEND P1#9", "BACKEND P2#1"]
+      "days": 0.5
     },
     {
-      "id": "T5003",
-      "phase": "P0",
-      "priority": "P0",
-      "title": "API 契约治理 + tenant 强制",
-      "description": "640 路由 → 100% request/response Pydantic 模型 + 显式 auth/tenant/entitlement dependency;CI AST 检查 + OpenAPI diff gate 阻止破坏性变更;tenant_context manager 替代隐式 middleware。",
-      "deliverables": [
-        "每个非公开路由显式 auth+tenant+entitlement dependency",
-        "每路由 Pydantic request/response model + examples + operation_id",
-        "tenant_context(ctx) context-manager 替代隐式 middleware,所有 Supabase call 必须在 manager 内",
-        "CI:openapi-diff 阻止破坏性变更;lint 规则检查每个 router 必须有 response_model",
-        "88 个路由文件 + 96 个 response_model 缺口全补",
-        "tests/test_api_tenant_isolation.py 跨租户拒绝测试"
-      ],
-      "depends_on": [],
-      "estimate_days": 14,
-      "addresses_audit": ["BACKEND P1#3", "SECURITY P0#2", "SECURITY P1#9"]
-    },
-    {
-      "id": "T5004",
-      "phase": "P0",
-      "priority": "P0",
-      "title": "Provider + Plugin 弹性 + 沙箱重设计",
-      "description": "Provider contract:统一 timeout/retry-after/idempotency/error taxonomy + mock 显式禁用。Plugin:强制独立容器/微 VM + 默认 deny egress + 签名验证 + Windows Job Object polyfill。Anthropic Provider 重写为 adaptive thinking + structured output + streaming + typed exceptions。",
-      "deliverables": [
-        "providers/base.py: 统一 ProviderContract + 显式 mock gate",
-        "providers/llm/anthropic_provider.py: 重写 (Claude 4.x + adaptive thinking + structured output)",
-        "plugins/sdk/sandbox.py: 强制 PluginContainerRunner (Docker/gVisor) + NetworkGuard 默认 deny",
-        "plugins/sdk/manifest.py: SignatureVerifier (SHA-256 / minisign / cosign)",
-        "Windows Job Object polyfill + secrets from Secret Manager (Vault/AWS SM)",
-        "tests/test_provider_contracts.py + tests/test_plugin_sandbox.py 100+ 测试"
-      ],
-      "depends_on": ["T5001"],
-      "estimate_days": 22,
-      "addresses_audit": ["BACKEND P0#1", "BACKEND P0#2", "AI P1#6"]
-    },
-    {
-      "id": "T5005",
-      "phase": "P0",
-      "priority": "P1",
-      "title": "横切状态分布式化 + 可观测性生产门禁",
-      "description": "FeatureFlag/Config/ServiceToggle 在 Redis 故障时 fail-closed (安全/计费) / fail-open (UI);消除 flushdb 风险。Observability production profile 下启动失败 fail-fast;100% 请求 trace 关联 trace_id/tenant_id/route/prompt_version;Prometheus 增加 degraded / provider_mock_fallback / queue_lag 指标。结构化 JSON 日志 + redaction。",
-      "deliverables": [
-        "platform/feature_flag.py: Redis CAS + 区分 fail-open/fail-closed;flushdb 禁用",
-        "platform/service_toggle.py: 进程内 registry fallback + Redis atomic",
-        "platform/config_service.py: schema 校验 + 双人审批 + secret redaction",
-        "observability/telemetry.py: production fail-fast + trace_id 强制 + PII scrubber",
-        "prometheus 增加 provider_mock_fallback / degraded / queue_lag / tenant_safe 标签",
-        "structlog 统一 JSON + contextvars 注入",
-        "tests/test_state_distribution.py + tests/test_obs_failfast.py 60+"
-      ],
-      "depends_on": ["T5003"],
-      "estimate_days": 12,
-      "addresses_audit": ["BACKEND P0#3", "BACKEND P1#7", "BACKEND P1#8", "BACKEND P1#10"]
-    },
-    {
-      "_section": "Phase 1 — 前端企业化",
-      "_comment_marker": 2,
-      "id": "T5006",
+      "_section": "P1 — 招聘市场模型",
+      "id": "T6103",
       "phase": "P1",
       "priority": "P0",
-      "title": "全局 ErrorBoundary + loading.tsx/error.tsx 覆盖",
-      "description": "零 loading.tsx / zero error.tsx / no global ErrorBoundary → 任意 API 慢 30s 空白,任意 component throw 全 white screen。补 root segment global-error.tsx + 5 个 layout 级 loading.tsx + ErrorBoundary 包装组件。所有 page.tsx 走 Suspense + streaming。",
+      "title": "市场首页 + 人才池 + 岗位池",
+      "description": "新建招聘市场首页: 人才来了入库(简历上传), 企业来了入库(创建岗位), 两边都可浏览。",
       "deliverables": [
-        "app/global-error.tsx (root segment, catch-all)",
-        "app/error.tsx (root segment)",
-        "app/(public)/loading.tsx + app/(authenticated)/loading.tsx + app/jobseeker/loading.tsx + app/employer/loading.tsx + app/admin/loading.tsx + app/mothership/loading.tsx",
-        "<AppErrorBoundary /> 包装组件 + ErrorState 真正应用 (修复 0 hits)",
-        "key dashboard pages Suspense + streaming",
-        "双 layout 去重:删除 app/employer/** 平行 12 路由保留 (employer)/",
-        "tests/test_error_boundary.spec.ts + Playwright per persona smoke"
+        "frontend/app/marketplace/page.tsx: 市场首页 (人才池入口 + 岗位池入口 + 最新匹配)",
+        "frontend/app/marketplace/talents/page.tsx: 人才池 (浏览/搜索/筛选, 企业可见完整简历+联系方式)",
+        "frontend/app/marketplace/jobs/page.tsx: 岗位池 (浏览/搜索/筛选, 求职者可见岗位卡)",
+        "backend/api/marketplace.py: 市场数据 API (人才列表/岗位列表/匹配推荐)",
+        "lib/api-marketplace.ts"
       ],
-      "depends_on": [],
-      "estimate_days": 8,
-      "addresses_audit": ["FRONTEND P0 (F1)", "FRONTEND P0 (F14)"]
+      "days": 2
     },
     {
-      "id": "T5007",
+      "_section": "P1 — 招聘市场模型",
+      "id": "T6104",
       "phase": "P1",
       "priority": "P0",
-      "title": "TanStack Query + 数据获取层 + mock 隔离",
-      "description": "50+ lib/api-*.ts 直接 fetch → 全部转 useQuery hooks;QueryClient 集中 (retry/staleTime/cacheTime);React Query Devtools。mock-data.ts 4193 行不再 import 进生产:lazy import + env gate;api.ts interceptor 自动 fallback。",
+      "title": "匹配推送流程 (匹配成功 → 推送人才给企业)",
+      "description": "硬条件匹配通过后,自动创建推荐记录(含完整简历+联系方式),推送给企业 HR。企业可查看/下载。",
       "deliverables": [
-        "@tanstack/react-query v5 引入 + Provider + Devtools",
-        "50+ api-*.ts 改 useQuery hooks (useCandidates、useRoles、useMatching…)",
-        "lib/api.ts 加 mockApi interceptor + NEXT_PUBLIC_USE_MOCK env gate",
-        "lib/api-mock.ts 改为 NODE_ENV !== production 才 lazy import",
-        "mock-data.ts 4193 行压缩到 seed.json 供 Storybook/fixture",
-        "delete imports 直接 from '@/lib/mock-data' (CI lint 拦截)",
-        "tests/test_data_layer.spec.tsx + MSW 替代 mock-data"
+        "backend/services/matching/recommendation.py: 推荐服务 (匹配 → 创建推荐记录 → 通知企业)",
+        "supabase/migrations/061_recommendations.sql: recommendations 表 (candidate_id, role_id, org_id, match_score, match_reasons jsonb, skill_gaps jsonb, risks jsonb, resume_snapshot jsonb, status, created_at)",
+        "backend/api/recommendations.py: CRUD + 企业查看 + 下载简历",
+        "frontend/app/marketplace/recommendations/page.tsx: 企业收到的推荐列表 (含匹配分数+理由+缺口+风险+完整简历+联系方式+下载按钮)",
+        "前端: 推送通知 (站内提醒)"
       ],
-      "depends_on": ["T5006"],
-      "estimate_days": 15,
-      "addresses_audit": ["FRONTEND F2", "FRONTEND F3"]
+      "days": 2
     },
     {
-      "id": "T5008",
-      "phase": "P1",
-      "priority": "P1",
-      "title": "SEO metadata + i18n 全覆盖 + form 表单",
-      "description": "170 page 中 5 个 metadata → 90 个公开/SEO 重要页面加 generateMetadata() + JsonLd。170 页面 + 100 组件中 useTranslations 5 处 → 80% 覆盖率;ESLint fail build on hardcoded string。50+ 表单加 react-hook-form + Zod(与 backend Pydantic 同步生成 Zod schema)。",
-      "deliverables": [
-        "generatePageMetadata() helper + routes.seo.json 配置",
-        "90 个 page.tsx 加 generateMetadata + JsonLd (含 og:image / canonical / hreflang)",
-        "lint 规则:禁止 hardcoded 字符串(useTranslations 强制)",
-        "scripts/i18n:check + missing-keys 自动报告",
-        "react-hook-form + @hookform/resolvers + zod",
-        "scripts/gen-zod-schemas.mjs 从 backend Pydantic OpenAPI 生成 Zod",
-        "20+ 关键表单改造 + tests/test_forms.spec.tsx"
-      ],
-      "depends_on": ["T5007"],
-      "estimate_days": 16,
-      "addresses_audit": ["FRONTEND F4", "FRONTEND F5", "FRONTEND F6"]
-    },
-    {
-      "id": "T5009",
-      "phase": "P1",
-      "priority": "P1",
-      "title": "Storybook + 设计系统 + Mobile + A11y + 性能 + Dark mode",
-      "description": "业务组件 Storybook 覆盖 20%→100%(36 子目录 0 story 补全);design tokens ts 强制引用(Tailwind preset + ESLint 禁 inline hex);Mobile responsive per viewport 测试;A11y WCAG 2.1 AA(axe-core per story + per page);perf LCP<2.5s / FID<100ms / 图片优化 / virtual scroll / bundle analyzer。Dark mode 业务组件全验证。",
-      "deliverables": [
-        "80+ 业务组件 .stories.tsx 补全(每个子目录全覆盖)",
-        "tailwind.config 引用 tokens.ts(brand-* classes)",
-        "ESLint:no-restricted-syntax 禁 inline hex(in tokens.ts 除外)",
-        "Storybook viewport + a11y addon + 强制 run CI",
-        "@next/bundle-analyzer + dynamic import(Tremor/Recharts/RichText 懒加载)",
-        "virtual scroll(candidates/tickets/matches 用 react-virtuoso)",
-        "Image 优化:所有图换 next/image,font preload,FCP/LCP score 验证",
-        "axe-core unit 测试 80% + WCAG 2.1 AA 验证",
-        "4 theme × N stories visual regression(Chromatic 或 Percy)",
-        "Lighthouse CI:performance≥90 / a11y≥95 / SEO≥95 / best-practices≥95"
-      ],
-      "depends_on": ["T5007"],
-      "estimate_days": 18,
-      "addresses_audit": ["FRONTEND F7", "FRONTEND F8", "FRONTEND F10", "FRONTEND F11", "FRONTEND F12", "FRONTEND F16"]
-    },
-    {
-      "_section": "Phase 2 — 数据库 + 性能",
-      "_comment_marker": 3,
-      "id": "T5010",
+      "_section": "P2 — 硬条件匹配",
+      "id": "T6105",
       "phase": "P2",
       "priority": "P0",
-      "title": "tenant_id 全表覆盖 + RLS USING+WITH CHECK",
-      "description": "47 张业务表只 26 张有 tenant_id → 100% 覆盖:046 表清单扩张 + NOT NULL + trigger 回填;FOR ALL 必须同时含 USING + WITH CHECK;CI 规则禁止新增表无 tenant_id。",
+      "title": "硬条件匹配引擎 (重写)",
+      "description": "删除 harmonic score + 语义匹配。只按硬条件过滤: 技能(必须满足) + 学历/证书(必须满足) + 薪资/城市/工作时间(高优先级) + 到岗时间/求职意愿(高优先级)。不淘汰,只排序+标记。",
       "deliverables": [
-        "supabase/migrations/054_tenant_full_coverage.sql: 21 张缺失表加 tenant_id + RLS + trigger",
-        "RLS audit: 18 张表 FOR ALL USING 必须补 WITH CHECK (CI AST 检查)",
-        "organisation_id 兼容视图 + tenant_id GENERATED 列(部分表)",
-        "tests/db/test_tenant_rls.sql (pgTAP): 跨租户读写全禁止",
-        "CI:禁止新增表无 tenant_id 列"
+        "backend/matching/hard_filter.py: 硬条件过滤器",
+        "匹配因素权重: skill_match(硬) + education_match(硬) + salary_city(高) + availability(高)",
+        "不淘汰: 所有候选人保留,按匹配度排序",
+        "匹配结果 4 元素: match_score + match_reasons + skill_gaps + risks",
+        "tests/test_hard_filter.py",
+        "改造 frontend/app/match/ 页面: 展示 4 元素"
       ],
-      "depends_on": [],
-      "estimate_days": 12,
-      "addresses_audit": ["DATABASE P0#1", "DATABASE P1#1", "SECURITY P1#9"]
+      "days": 1.5
     },
     {
-      "id": "T5011",
+      "_section": "P2 — 硬条件匹配",
+      "id": "T6106",
       "phase": "P2",
       "priority": "P0",
-      "title": "触发器函数去重 + 复合/部分/INCLUDE 索引补全",
-      "description": "update_updated_at 函数 30+ 次重复定义 → 统一 public.set_updated_at() IMMUTABLE + SECURITY INVOKER。补 12 业务热点复合/部分/INCLUDE 索引(candidates/matches/tickets/emotion_timeline/room_messages/daily_journals)。",
+      "title": "匹配结果展示 (分数+理由+缺口+风险)",
+      "description": "匹配卡显示 4 个 section: 匹配分数 / 匹配理由 / 能力缺口 / 风险提示。",
       "deliverables": [
-        "supabase/migrations/055_triggers_dedup.sql: 53 个 migration 审计 + 函数统一",
-        "12 索引(candidates_filter / matches_role_status_score / tickets_assignee_status_sla / emotion_timeline_user_time_cover / room_messages_room_active 等)",
-        "CREATE INDEX CONCURRENTLY 防止锁表",
-        "EXPLAIN ANALYZE 验证;pg_stat_statements + auto_explain 配置",
-        "tests/db/test_index_usage.sql 验证热点 query 走 index"
+        "frontend/components/marketplace/MatchResultCard.tsx: 4 section 展示",
+        "  1. 分数: 0-100 进度条",
+        "  2. 理由: '技能匹配 5/5, 学历满足, 薪资符合'",
+        "  3. 缺口: '缺少 K8s 经验, 英语 B2 以下'",
+        "  4. 风险: '到岗时间不确定 / 薪资期望偏高'",
+        "改造 match 页面用新卡"
       ],
-      "depends_on": ["T5010"],
-      "estimate_days": 10,
-      "addresses_audit": ["DATABASE P0#2", "DATABASE P0#5", "DATABASE P1#9"]
+      "days": 0.5
     },
     {
-      "id": "T5012",
+      "_section": "P2 — 硬条件匹配",
+      "id": "T6107",
+      "phase": "P2",
+      "priority": "P0",
+      "title": "岗位卡 (职责+条件+边界)",
+      "description": "新建明确的岗位卡页面: 职责 / 硬条件 / 加分项 / 边界 (不做什么)。",
+      "deliverables": [
+        "frontend/app/marketplace/jobs/[id]/page.tsx: 岗位卡 (4 部分)",
+        "  1. 职责: 岗位职责列表",
+        "  2. 硬条件: 必须满足 (技能/学历/证书)",
+        "  3. 加分项: 优先考虑",
+        "  4. 边界: 这个岗位不做什么 / 工作时间 / 地点",
+        "lib/api-jobcard.ts"
+      ],
+      "days": 0.5
+    },
+    {
+      "_section": "P2 — 硬条件匹配",
+      "id": "T6108",
       "phase": "P2",
       "priority": "P1",
-      "title": "pgvector 调参 + HNSW 一致 + Redis 缓存",
-      "description": "pgvector 索引策略:HNSW 统一 m=16/ef_construction=64/ef_search=100;删除 IVFFlat;embedding 维度统一(1024 或 1536);RAG/Memory 缓存抽象(emb:{tenant}:hash(query) TTL 5min + mutation 主动 DEL)。",
+      "title": "简历比较 + 报告导出 + 面试题模板",
+      "description": "HR 助手: 多份简历并排比较 + 导出比较报告 + 面试题模板生成。",
       "deliverables": [
-        "supabase/migrations/056_pgvector_hnsw.sql: 4 个 HNSW 索引统一调参",
-        "ALTER INDEX ... SET (ef_search = 100)",
-        "backend/services/platform/cache/invalidator.py: (table, tenant_id, row_id) 订阅 + migration LISTEN/NOTIFY",
-        "RAG/Memory/embedding 缓存接入",
-        "tests/test_pgvector_recall.py: Recall@5 ≥ 0.7"
+        "frontend/app/marketplace/compare/page.tsx: 简历并排比较 (已有 compare API, 补 UI)",
+        "导出: 复用 document_generator 导出 PDF/Word 比较报告",
+        "面试题模板: 从 question_bank 按岗位生成 5-10 题 + 导出",
+        "backend/api/hr_assistant.py: 比较报告 + 面试题模板 API"
       ],
-      "depends_on": ["T5011"],
-      "estimate_days": 8,
-      "addresses_audit": ["DATABASE P0#4", "DATABASE P1#10", "AI P0#1"]
+      "days": 1
     },
     {
-      "id": "T5013",
+      "_section": "P2 — 硬条件匹配",
+      "id": "T6109",
       "phase": "P2",
       "priority": "P1",
-      "title": "备份 + 灾备 SOP + 分区表 + 全文搜索",
-      "description": "docs/audits/AUDIT_BACKUP_DR.md: PITR window 7d + 跨区域 hourly + 凌晨全量 + 季度演练。audit_log_v2/llm_cost_events/notification_log/room_messages 按月分区。中英混合全文搜索(zhparser / pg_jieba)。CHECK 约束批量补全 + FK CASCADE/SET NULL 统一。",
+      "title": "候选人联系记录 + 简单面试安排",
+      "description": "端到端招聘流程: HR 联系候选人记录 + 简单面试安排表。",
       "deliverables": [
-        "docs/audits/AUDIT_BACKUP_DR.md (RPO 5min / RTO 30min)",
-        "supabase/migrations/057_partitioned_tables.sql: audit_log / llm_cost_events / notification_log / room_messages 按月 PARTITION BY RANGE",
-        "冷数据归档:audit_archive_yYYYYmMM 分区表 / S3 Parquet",
-        "zhparser 扩展 + multi-locale tsvector (simple + english + 中文分词 加权)",
-        "CHECK 约束批量补 + FK 孤儿消除",
-        "scripts/backup_drill.sh + scripts/restore_drill.sh 季度跑"
+        "supabase/migrations/062_contact_log.sql: contact_logs 表 (candidate_id, org_id, hr_id, contact_method, contact_date, status, notes)",
+        "supabase/migrations/063_interview_schedule.sql: interview_schedule 表 (candidate_id, role_id, org_id, date, time, location, status)",
+        "backend/api/recruitment_flow.py: 联系记录 CRUD + 面试安排 CRUD",
+        "frontend/app/marketplace/recruitment/page.tsx: 招聘流程看板 (联系 → 面试 → 结果)"
       ],
-      "depends_on": ["T5011"],
-      "estimate_days": 14,
-      "addresses_audit": ["DATABASE P1#6", "DATABASE P1#8", "DATABASE P1#11", "DATABASE P1#12", "DATABASE P1#13"]
+      "days": 1
     },
     {
-      "_section": "Phase 3 — 安全 + 合规",
-      "_comment_marker": 4,
-      "id": "T5014",
-      "phase": "P3",
-      "priority": "P0",
-      "title": "JWT/SAML/cryptography 全部 fail-fast + audit 强制",
-      "description": "JWT 默认 secret fallback 删 → start fail-fast;cryptography 缺 production fail-fast;services/auth/sso.py: wire python3-saml 真实签名校验(SAML strip 修复);audit 装饰器失败 raise alert(非 silent);select(*) on PII tables CI lint 拦截@audit_pii。",
-      "deliverables": [
-        "services/auth/session.py: 删除默认 secret + start fail if SSO_JWT_SECRET missing",
-        "services/auth/sso.py: wire python3-saml 完整 XMLDSig + XSW 防护",
-        "compliance/encryption.py: cryptography 缺 production fail-fast;scripts/check_encryption_deps.py",
-        "services/observability/audit.py: 失败 raise alert (logger.error + observability.incident)",
-        "CI:select(*) on PII tables 必须 @audit_pii / @audit",
-        "tests/test_auth_failfast.py + test_audit_alerting.py"
-      ],
-      "depends_on": [],
-      "estimate_days": 10,
-      "addresses_audit": ["SECURITY P0#1", "SECURITY P0#3", "SECURITY P1#13"]
-    },
-    {
-      "id": "T5015",
-      "phase": "P3",
-      "priority": "P0",
-      "title": "PII 加密 + KMS + 字段级加密全覆盖",
-      "description": "cv_text / users.email / users.phone / journal.entry_text 字段级加密;envelope encryption + KMS(Vault/AWS KMS);key rotation cadence 制度化(90 天);rotate_key 自动化 + 审计;CI 扫描 ORM/JSON 字段明文 PII。",
-      "deliverables": [
-        "compliance/encryption.py: envelope encryption (KMS + DEK per field);Vault/AWS KMS 集成",
-        "migration 058_pii_field_encryption.sql: candidates.cv_text / users.email / users.phone / journal.entry_text 加 ciphertext 列 + 触发器自动加解密 + key_id",
-        "scripts/pii_key_rotate.py + scripts/check_pii_plaintext.py (CI grep)",
-        "services/observability/audit.py: 加密字段 access 强制 @audit_pii",
-        "tests/test_pii_encryption_roundtrip.py + test_kms_rotation.py"
-      ],
-      "depends_on": ["T5014"],
-      "estimate_days": 14,
-      "addresses_audit": ["SECURITY P0#2", "SECURITY P1#18", "SECURITY P3#1"]
-    },
-    {
-      "id": "T5016",
-      "phase": "P3",
-      "priority": "P0",
-      "title": "GDPR Art. 15/17/30/33 + PIPL 数据出境 + CCPA opt-out",
-      "description": "GDPR Art. 17 forget RPC 加 admin override(财务/audit 7y 不可全删)、30d grace、idempotent transaction;Art. 30 RoPA 平台级清单;Art. 33 breach detection → DPO alert;CCPA Do-Not-Sell endpoint;PIPL cross_border flag 接入数据驻留 + SCC 模板。",
-      "deliverables": [
-        "compliance/forget.py: legal_obligation 跳过 + 30d grace + idempotent + log 审计",
-        "gdpr RPC export_user_data / forget_user 改造 + 表覆盖 audit",
-        "compliance/ropa.json: 平台级 RoPA (categories/legal_basis/recipients/retention/transfers)",
-        "services/observability/breach_detector.py: anomaly + DPO email/PagerDuty alert",
-        "api/ccpa.py: /api/ccpa/do-not-sell endpoint + privacy policy link",
-        "compliance/data_residency.py: PIPL default cn-north;cross_border flag 自动 set",
-        "docs/SUBPROCESSORS.md + docs/RETENTION.md",
-        "tests/test_gdpr_forget_legal_obligation.py + test_ccpa_optout.py"
-      ],
-      "depends_on": ["T5015"],
-      "estimate_days": 12,
-      "addresses_audit": ["SECURITY P0#4", "SECURITY P1#16", "SECURITY P1#17", "SECURITY P2#5"]
-    },
-    {
-      "id": "T5017",
+      "_section": "P3 — 简化+隐藏",
+      "id": "T6110",
       "phase": "P3",
       "priority": "P1",
-      "title": "3 层 Rate Limit + Webhook SSRF 防护 + CSRF",
-      "description": "Per-tenant per-minute + per-user + per-endpoint + LLM token cap 3 层;webhook dispatcher block private-IP(169.254/link-local/loopback/RFC1918 + DNS rebinding);SSO cookie state CSRF 强制 expected_state;GET 导航 OK;非公共 POST 走 double-submit cookie 或 __Host-。",
+      "title": "ServiceToggle 隐藏过度功能",
+      "description": "用 v8.0 ServiceToggle 隐藏所有 B 级合同不需要的功能。只保留合同 26 项。",
       "deliverables": [
-        "services/platform/quota.py: per-user + per-endpoint + LLM token cap (redis 原子)",
-        "services/webhook/dispatcher.py: SSRFGuard block private-IP + DNS rebinding protection",
-        "services/auth/sso.py: expected_state 必传;CSRF token double-submit cookie",
-        "SSO_COOKIE_SECURE 默认 true",
-        "tests/test_3layer_ratelimit.py + test_webhook_ssrf.py + test_csrf.py"
+        "隐藏: Realtime 语音 / 多端(小程序/钉钉/飞书) / MultiAgent / Plugin / Workflow / AI 面试官 / BI / 数据仓库 / ATS / 视频",
+        "保留: 简历上传 / 文字聊天 / 情绪 / 澄清 / 画像 / 规划 / 资质(简化) / 愿景(简化) / 制度(简化) / 人才框架 / 岗位细节 / 互动(简化) / 匹配 / 推送",
+        "config/services_disabled_v11.json: 隐藏清单",
+        "前端: FeatureGate 自动隐藏"
       ],
-      "depends_on": [],
-      "estimate_days": 8,
-      "addresses_audit": ["SECURITY P0#5", "SECURITY P1#8", "SECURITY P1#12"]
+      "days": 0.5
     },
     {
-      "id": "T5018",
+      "_section": "P3 — 简化+隐藏",
+      "id": "T6111",
       "phase": "P3",
       "priority": "P1",
-      "title": "LLM Prompt Injection 防护 + SSO/JIT 治理",
-      "description": "services/llm/prompt_firewall.py 扫 user input + RAG context jailbreak markers;所有 user content 走 XML delimiters(<user_input>…</user_input>);tool calls server-side allowlist(非 LLM 驱动);SSO link_by_email 默认 False for enterprise IdPs;JIT default_org 删除;PII consent 在 signup 强制。",
+      "title": "降级 6 项过度功能",
+      "description": "把 6 项过度功能降级到 B 级合同水平。",
       "deliverables": [
-        "services/llm/prompt_firewall.py: 输入 firewall + RAG 隔离 + 类别 classification",
-        "services/llm/protocol.py: <user_input></user_input> + <rag_context></rag_context>",
-        "ToolRegistry: server-side allowlist(bypass LLM)",
-        "services/auth/sso.py: link_by_email 默认 False + JIT default_org 删 + admin-approval 首次 SSO",
-        "api/auth.py: signup 强制 consent gate",
-        "tests/test_prompt_firewall.py + test_sso_jit_default_off.py"
+        "资质验证: 删 PS 检测, 只留清晰度+字段一致性+人工确认",
+        "愿景: 只存文档+AI 引用, 不做 4 层战略地图",
+        "制度: 只存+检索引用, 不做法律风险分析",
+        "部门互动: 只保存对话+AI 追问, 不做实时协同房间",
+        "匹配: 硬条件过滤, 不做 harmonic score",
+        "记忆删除: 只做基础删除, 不做 GDPR Art.33 复杂流程"
       ],
-      "depends_on": ["T5014"],
-      "estimate_days": 10,
-      "addresses_audit": ["SECURITY P1#6", "SECURITY P1#14"]
+      "days": 0.5
     },
     {
-      "id": "T5019",
+      "_section": "P3 — 简化+隐藏",
+      "id": "T6112",
       "phase": "P3",
-      "priority": "P2",
-      "title": "容器/CI 加固 + 依赖 lock + SOC2 证据包",
-      "description": "Dockerfile:non-root USER + multi-stage + distroless;Trivy + Snyk CI;requirements.lock hash-pinning;npm package-lock hash 验证;runbook breach section;retention matrix 文档;RBAC 细粒度 (recruiter / account_manager / finance / compliance)。",
+      "priority": "P0",
+      "title": "转人工规则 (自伤风险 + 劳动争议)",
+      "description": "合同要求: 必须转人工的情形 — 自伤风险, 劳动争议。AI 检测到时必须提示转人工。",
       "deliverables": [
-        "Dockerfile multi-stage + non-root + distroless",
-        "Trivy CI scan + GitHub Actions security step",
-        "pip-compile --generate-hashes + npm ci --audit",
-        "docs/RUNBOOK.md (breach section + DPO contact + rollback)",
-        "docs/RETENTION.md (6/7 年矩阵 by legal_basis)",
-        "services/auth/rbac.py: 6+ 角色粒度",
-        "tests/test_container_security.sh + test_lockfile_verification.sh"
+        "backend/agents/governance.py: 加 escalate_to_human 规则",
+        "自伤风险: emotion_agent 检测到 → 立即弹窗 '建议联系专业心理咨询' + 通知 HR",
+        "劳动争议: 关键词检测 → '建议联系 HR/法务' + 创建工单",
+        "前端: EscalateToHumanDialog.tsx"
       ],
-      "depends_on": ["T5016"],
-      "estimate_days": 8,
-      "addresses_audit": ["SECURITY P1#20", "SECURITY P1#21", "SECURITY P2#3", "SECURITY P3#2", "SECURITY P3#5"]
+      "days": 0.5
     },
     {
-      "_section": "Phase 4 — AI 集成真实业务化",
-      "_comment_marker": 5,
-      "id": "T5020",
+      "_section": "P4 — 部署+交付",
+      "id": "T6113",
       "phase": "P4",
       "priority": "P0",
-      "title": "RAG 真模型接入 + 多租户隔离 + 增量更新",
-      "description": "embedding/reranker 默认走 hash-bucket / lexical fallback → CI 引入 sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 + BGE-reranker-base 真模型;RagService 强制 qdrant_collection_template={tenant_id}__{collection_id};add() 增加 update_document API。",
+      "title": "一键本地部署 (docker-compose + Ollama)",
+      "description": "甲方要求: 本地/演示环境运行说明。需要 docker-compose 一键启动所有服务。",
       "deliverables": [
-        "services/rag/embedder.py: 接受 embedding_model_path;真模型 fixture + mock fallback 并存 (生产禁用 mock)",
-        "services/rag/reranker.py: cross-encoder 真模型 + lexical fallback 仅 dev",
-        "services/rag/service.py: qdrant_collection_template 强制 + tenant_id 校验",
-        "services/rag/retriever.py: update_document(chunks)",
-        "tests/test_rag_real_model.py: Recall@5 ≥ 0.7 (CI GPU runner)",
-        "tests/test_rag_multitenant_isolation.py: cross-tenant 拒绝"
+        "docker-compose.local.yml: 一键启动 (backend + frontend + postgres + redis + ollama + paddleocr)",
+        "scripts/start_local.sh: 一键启动脚本",
+        "scripts/stop_local.sh",
+        "docs/LOCAL_DEPLOYMENT.md: 完整运行说明 (环境要求/启动/停止/常见问题)",
+        ".env.local.example: 本地配置模板"
       ],
-      "depends_on": ["T5004"],
-      "estimate_days": 14,
-      "addresses_audit": ["AI P0#1", "AI P1#7"]
+      "days": 0.5
     },
     {
-      "id": "T5021",
+      "_section": "P4 — 部署+交付",
+      "id": "T6114",
       "phase": "P4",
       "priority": "P0",
-      "title": "Mem0 真 LLM extractor + pgvector RPC + RLS 验证",
-      "description": "EntityExtractor 全 regex → 接 LLM extractor;SupabaseBackend.search 切 pgvector RPC match_memories >1k 行 P95 < 50ms;memories_v2 RLS + tenant_id 强制;_on_profile_updated 合并为单条 EVENT;MemoryInjector context schema 限制。",
+      "title": "测试数据导入 (1000 简历 + 10 企业 + 5 岗位)",
+      "description": "甲方提供脱敏简历样例。需要批量导入脚本 + 假数据生成。",
       "deliverables": [
-        "supabase/migrations/059_memory_pgvector.sql: match_memories RPC + tenant 维度 HNSW",
-        "services/memory/extractor.py: LLM extractor (with cache);regex 仅作 fallback",
-        "services/memory/store.py: SupabaseBackend.search 切 pgvector RPC",
-        "services/memory/injector.py: context schema 限制 + system prompt XML delimiter",
-        "services/memory/subscribers.py: _on_profile_updated 合并单条 EVENT",
-        "tests/test_memory_pgvector.py: 1000 行 P95 < 50ms",
-        "tests/test_memory_extractor_llm.py"
+        "scripts/seed_test_data.py: 批量导入 1000 求职者 + 10 企业 + 5 岗位",
+        "scripts/seed_resumes/: 放甲方脱敏简历样例 (PDF/Word)",
+        "scripts/generate_fake_data.py: Faker 生成 1000 假简历 (如甲方没给够)",
+        "frontend/app/admin/data-import/page.tsx: 批量导入 UI"
       ],
-      "depends_on": ["T5020"],
-      "estimate_days": 10,
-      "addresses_audit": ["AI P0#3", "DATABASE (memories_v2)"]
+      "days": 0.5
     },
     {
-      "id": "T5022",
+      "_section": "P4 — 部署+交付",
+      "id": "T6115",
       "phase": "P4",
       "priority": "P0",
-      "title": "Multi-Agent 真实 LLM executor + 4 场景真实跑通",
-      "description": "default_executor stub _synthesize_decision → llm_provider_executor(通过 with_resilience provider);Orchestrator 工厂在 app boot 注入真 executor;CI test_multiagent_real_llm.py 用 mock LLM provider 验证 resume_scoring 输含 score/confidence/rationale 且 ≥3 agent 输出不同 decision;_safe_write_memory 改 multiagent_runs 表不入 MemoryStore 减少污染。",
+      "title": "验收演示流程 + 交付文档",
+      "description": "甲方验收依据: 逐项功能清单和演示流程。交付物: 运行/部署说明。",
       "deliverables": [
-        "services/multiagent/executor.py: LLMProviderExecutor(real LLM with_resilience)",
-        "services/multiagent/orchestrator.py: default_executor = llm_provider_executor",
-        "get_orchestrator() factory 注入 (config_service.get)",
-        "supabase/migrations/060_multiagent_runs.sql: 独立表 run_id/scenario/status/decision_json/confidence/tenant_id",
-        "services/multiagent/orchestrator.py: _post_run 写 multiagent_runs(confidence < 0.5 skip memory)",
-        "services/multiagent/patterns.py: PARALLEL pattern 真 parallel asyncio.TaskGroup",
-        "tests/test_multiagent_real_llm.py + tests/test_parallel_pattern.py"
+        "docs/ACCEPTANCE_CHECKLIST.md: 26 项逐项验收清单 (每项: 功能描述 + 演示步骤 + 通过标准)",
+        "docs/DEMO_SCRIPT.md: 演示流程脚本 (5 个角色走完整流程)",
+        "docs/DEPLOYMENT_GUIDE.md: 完整部署说明",
+        "docs/USER_MANUAL.md: 用户手册 (求职者/HR/老板/部门负责人 4 角色)"
       ],
-      "depends_on": ["T5020"],
-      "estimate_days": 12,
-      "addresses_audit": ["AI P0#2", "AI P1#10"]
-    },
-    {
-      "id": "T5023",
-      "phase": "P4",
-      "priority": "P0",
-      "title": "Plugin 容器化 + 签名 + Windows 兼容",
-      "description": "PluginContainerRunner(Docker/gVisor) 默认独立进程;NetworkGuard 默认 deny-by-default;SignatureVerifier (SHA-256/minisign/cosign);Windows ctypes.windll.jobobjects CPU/MEM 限;plugin manifest dependencies 自动 resolve + pip install。",
-      "deliverables": [
-        "plugins/sdk/runner.py: PluginContainerRunner (Docker / gVisor subprocess)",
-        "plugins/sdk/sandbox.py: SignatureVerifier + NetworkGuard deny-default + FilesystemGuard read-only root",
-        "plugins/sdk/sandbox.py: Windows Job Object polyfill (ctypes)",
-        "plugins/sdk/manifest.py: dependencies 自动 resolve (whl only)",
-        "docs/PLUGIN_SIGNING.md + scripts/plugin_sign.py",
-        "tests/test_plugin_container.py + tests/test_plugin_signature.py + tests/test_plugin_windows.py"
-      ],
-      "depends_on": ["T5004"],
-      "estimate_days": 18,
-      "addresses_audit": ["AI P1#6", "BACKEND P0#2"]
-    },
-    {
-      "id": "T5024",
-      "phase": "P4",
-      "priority": "P0",
-      "title": "WorkflowEngine 持久化 + cycle/timeout + metrics",
-      "description": "WorkflowEngine 持久 frontier + Tarjan cycle detection + 节点 asyncio.wait_for timeout + Prometheus nodes_executed_total / node_latency_seconds / runs_in_progress;Supabase WorkflowStore;NodeOutput dataclass 替代 dict {paused};plug-in NodeMetrics。",
-      "deliverables": [
-        "services/platform/workflow_engine.py: Tarjan cycle detection + NodeOutput dataclass",
-        "supabase/migrations/061_workflow_runs.sql: workflow_runs + workflow_nodes 表 + WorkflowStore Supabase 持久",
-        "asyncio.wait_for(node.timeout) + timed_out 状态走 FAILED",
-        "services/platform/workflow_metrics.py: Prometheus histogram + counter",
-        "tests/test_workflow_cycle.py + tests/test_workflow_timeout.py + tests/test_workflow_persistence.py"
-      ],
-      "depends_on": [],
-      "estimate_days": 12,
-      "addresses_audit": ["BACKEND P0#4", "AI P0#5"]
-    },
-    {
-      "id": "T5025",
-      "phase": "P4",
-      "priority": "P1",
-      "title": "EventBus Redis Streams + DLQ + schema registry",
-      "description": "RedisEventBus 改 Redis Streams(XADD + consumer group + DLQ XADD events:dlq);eventbus/schemas.py Pydantic EventPayload (16 个)+ schema_version;Event 增加 schema_version 字段;consumer 失败 N 次入 DLQ;CI orphan producer/consumer check。",
-      "deliverables": [
-        "eventbus/base.py: RedisEventBus 切 Streams + DLQ + at-least-once + lag metrics",
-        "eventbus/schemas.py: ProfileUpdatedPayload / AgentCompletedPayload / ... 16 个 Pydantic 模型 + schema_version",
-        "eventbus/registry.py: orphan producer/consumer 静态分析 + CI check",
-        "scripts/events_dlq_drill.sh 演练",
-        "tests/test_eventbus_dlq.py + tests/test_eventbus_schema.py"
-      ],
-      "depends_on": ["T5024"],
-      "estimate_days": 10,
-      "addresses_audit": ["BACKEND P1#7", "AI P0#4"]
-    },
-    {
-      "id": "T5026",
-      "phase": "P4",
-      "priority": "P1",
-      "title": "Prompt v2 eval runner + 热更新 + cost/tokens",
-      "description": "PromptService 改为订阅 config.changed event;新增 prompt_evaluator.py 定时跑 golden set 4 维度(accuracy/fluency/safety/bias) + 自动 record_metric;render() 加 {{schema_version}} 占位符 + token / cost 字段。",
-      "deliverables": [
-        "platform/prompt_v2.py: 订阅 config.changed(scope=prompt) + 清缓存 + reload",
-        "platform/prompt_evaluator.py: golden set + 定时(每 6h) + auto record_metric",
-        "platform/prompt_v2.py: render() 输出 token_estimate + cost_estimate",
-        "metrics/prompt_eval_dashboard.json (Grafana)",
-        "tests/test_prompt_hot_reload.py + tests/test_prompt_evaluator.py"
-      ],
-      "depends_on": [],
-      "estimate_days": 8,
-      "addresses_audit": ["AI P1#9"]
-    },
-    {
-      "id": "T5027",
-      "phase": "P4",
-      "priority": "P1",
-      "title": "Provider with_resilience mock_fallback 分类 + RAG query_stream 真 stream",
-      "description": "Provider 内部 fallback 时返回 _MockFallback sentinel;_run 检测到 metrics observe mock_fallback 分类;RAG query_stream(generator) 接真实 LLM stream API(OpenAI/Anthropic stream) → 真实 TTFT。",
-      "deliverables": [
-        "providers/base.py: _MockFallback sentinel + metrics{status=mock_fallback}",
-        "services/rag/service.py: query_stream 接真 LLM stream(OpenAI stream / Anthropic stream)",
-        "providers/llm/openai_provider.py: stream() async generator + structured output",
-        "tests/test_provider_mock_fallback_metric.py + tests/test_rag_stream_latency.py"
-      ],
-      "depends_on": ["T5020"],
-      "estimate_days": 6,
-      "addresses_audit": ["AI P1#11", "AI P2#13"]
-    },
-    {
-      "id": "T5028",
-      "phase": "P4",
-      "priority": "P2",
-      "title": "AI 子系统端到端业务化验证套件",
-      "description": "RAGAS / Mem0 benchmark 套件;Recall@K / F1 / A/B dashboard;跨 agent 决策对齐手动验证;Plugin 签名 + 多版本兼容矩阵;Workflow crash/restart/duplicate delivery 测试。",
-      "deliverables": [
-        "tests/ai_evals/test_ragas.py: RAG Recall / Faithfulness / Answer-Relevancy",
-        "tests/ai_evals/test_mem0_benchmark.py: 实体抽取 F1 / 多租户召回 0 交叉",
-        "tests/ai_evals/test_multiagent_e2e.py: resume_scoring e2e + bias_review e2e",
-        "tests/plugins/test_plugin_version_compat.py: v1 host 加载 v2 plugin / v2 host 加载 v1 plugin",
-        "tests/workflow/test_crash_restart.py + test_duplicate_delivery.py",
-        "docs/AI_INTEGRATION_PLAYBOOK.md"
-      ],
-      "depends_on": ["T5020", "T5021", "T5022", "T5023", "T5024"],
-      "estimate_days": 10,
-      "addresses_audit": ["AI 30/60/90 天持续"]
-    },
-    {
-      "id": "T5029",
-      "phase": "P4",
-      "priority": "P2",
-      "title": "Memory profile_updated 合并 + ServiceToggle registry fallback + CI lints 收尾",
-      "description": "Memory _on_profile_updated 合并单条 EVENT;ServiceToggle _find_dependents 在 sb None 时回退 _in_memory_registry;FeatureFlag unknown flag 负缓存 5s TTL;Prometheus metrics 命名统一 + tenant_safe label。",
-      "deliverables": [
-        "services/memory/subscribers.py: _on_profile_updated content=json.dumps(fields) 单条 EVENT",
-        "platform/service_toggle.py: _in_memory_registry 回退 + register_service 填充",
-        "platform/feature_flag.py: 负缓存 5s + batch invalidate(prefix)",
-        "metrics/prometheus.yml: 统一命名 + tenant_safe label 强制",
-        "tests/test_memory_event_consolidation.py + test_servicetoggle_registry.py"
-      ],
-      "depends_on": ["T5021"],
-      "estimate_days": 5,
-      "addresses_audit": ["AI P1#11", "AI P1#12", "AI P2#17"]
-    },
-    {
-      "id": "T5030",
-      "phase": "P4",
-      "priority": "P0",
-      "title": "v10.0.0 Release 集成验证 + 文档 + Release notes",
-      "description": "5 phases 完成后的端到端集成:backend pytest 全量 + coverage.py >=85%;frontend tsc + next build + Playwright per persona + Lighthouse CI;安全 SOC2 evidence 打包;sre runbook 更新;docs 同步(README / ARCHITECTURE / COMPONENTS / SERVICE_TOGGLE / DEPTH_PLAN);分批 commit + push + v10.0.0 GitHub Release。",
-      "deliverables": [
-        "backend pytest 全量 + coverage.py >=85%(核心安全/计费/租户/Agent runtime/provider/workflow 模块分支 >=90%)",
-        "frontend tsc --noEmit + next build + Playwright per persona smoke(5×5=25 用例)",
-        "Lighthouse CI:performance >=90 / a11y >=95 / SEO >=95 / best-practices >=95",
-        "sre runbook + on-call 手册 + DR 演练报告",
-        "docs/README.md + ARCHITECTURE.md + COMPONENTS.md + I18N_GUIDE.md 更新 + COVERAGE-AUDIT-v10.md 引用 + RELEASE_NOTES_v10.0.0.md",
-        "Agent A/B 分批 commit + push + GitHub Actions 全绿 + v10.0.0 GitHub Release"
-      ],
-      "depends_on": ["T5001", "T5002", "T5003", "T5004", "T5005", "T5006", "T5007", "T5008", "T5009", "T5010", "T5011", "T5012", "T5013", "T5014", "T5015", "T5016", "T5017", "T5018", "T5019", "T5020", "T5021", "T5022", "T5023", "T5024", "T5025", "T5026", "T5027", "T5028", "T5029"],
-      "estimate_days": 8,
-      "addresses_audit": ["ALL — 集成收尾"]
+      "days": 0.3
     }
   ],
-  "summary": {
-    "total_tasks": 30,
-    "phase_counts": {
-      "P0 (后端企业化)": 6,
-      "P1 (前端企业化)": 4,
-      "P2 (数据库+性能)": 4,
-      "P3 (安全+合规)": 6,
-      "P4 (AI 真实业务化)": 10,
-      "集成 release (T5030)": 1
-    },
-    "total_estimate_days": 326,
-    "estimated_weeks": "10-14 周 (取决于并行度;单 agent 串行 ~26 人周;4 agent 并行 ~7-9 周)",
-    "audit_coverage": {
-      "BACKEND": "T5001-T5005 (Agent 契约 / Service 拆分 / API 治理 / Provider+Plugin / 可观测性)",
-      "FRONTEND": "T5006-T5009 (ErrorBoundary / TanStack Query / SEO+i18n+form / Storybook+A11y+Perf)",
-      "DATABASE": "T5010-T5013 (tenant 覆盖 / 触发器去重 / pgvector 调参 / 备份分区)",
-      "SECURITY": "T5014-T5019 (JWT/SAML fail-fast / PII KMS / GDPR+PIPL+CCPA / Rate limit / Prompt firewall / SOC2)",
-      "AI": "T5020-T5029 (RAG / Mem0 / Multi-Agent / Plugin / Workflow / EventBus / Prompt v2 / Provider / AI eval / Memory cleanup)",
-      "Integration": "T5030"
-    }
-  }
+  "total_days": "9.8 (合同要求)",
+  "deadline": "2026-09-15",
+  "not_in_scope": [
+    "真实学历/资质核验 (合同: 后续再做)",
+    "AI 主动外联 (合同: 站内提醒频率待定)",
+    "用户删除和遗忘 (合同: 暂不提供,需在协议中说明)",
+    "多端 (小程序/钉钉/飞书) (合同: 只做响应式网页)",
+    "AI 淘汰候选人 (合同: 不可以,只提供建议)",
+    "管理员查看原始私人对话 (合同: 不能,只看风险提醒)",
+    "用户资料用于模型改进 (合同: 不允许)",
+    "服务器/域名/大模型 Token 费用 (合同: 不含,甲方另付)"
+  ],
+  "key_decisions": [
+    "本地 LLM = Ollama + Qwen2.5-7B (数据不出环境)",
+    "本地 OCR = PaddleOCR (数据不出环境)",
+    "匹配 = 硬条件过滤 (技能+学历+薪资+城市+到岗), 不做语义匹配",
+    "不淘汰 = 所有人才保留, 按匹配度排序",
+    "推送 = 匹配后创建推荐记录 (含完整简历+联系方式), 推送给企业",
+    "产品 = 招聘市场 (人才池 + 岗位池 + 匹配 + 推送)"
+  ]
 }
