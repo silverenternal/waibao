@@ -36,6 +36,9 @@ EXEMPT_PREFIXES: Set[str] = {
     "/api/admin/services",
     # Service catalog and decision endpoints; used by the catalog UI.
     "/api/public/services",
+    # T6103: recruitment marketplace is public-browse (talent + job pool).
+    # PII on the talent side is gated inside the router via _optional_user.
+    "/api/talent-market",
 }
 
 # Internal services whose toggle is admin-only and irrelevant to runtime

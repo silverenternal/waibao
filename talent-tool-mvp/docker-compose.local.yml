@@ -1,0 +1,181 @@
+# =============================================================================
+# docker-compose.local.yml — v11.0 / T6111 一键本地全离线部署
+# ============================================================================
+# 单文件、自包含,6 个服务全量起:
+#   backend   (FastAPI, :8000)   —— 业务 API + AI Agent
+#   frontend  (Next.js,  :3000)   —— 求职者 / HR / 老板 / 部门负责人 四端 UI
+#   postgres  (:5432)             —— 业务库 (启动自动加载迁移)
+#   redis     (:6379)             —— 缓存 / 限流 / EventBus Streams
+#   ollama    (:11434)            —— 本地大模型推理 (OpenAI 兼容 /v1), 数据不出网
+#   paddleocr (:8500)             —— 本地 OCR 推理 (PaddleOCR), 简历/资质不出网
+#
+# 一键启动 (检查 Docker → 起服务 → 拉模型 → 等就绪 → 打印 URL):
+#   bash scripts/start_local.sh
+# 一键停止:
+#   bash scripts/stop_local.sh
+#
+# 数据全程不出甲方环境:
+#   LLM_PROVIDER=ollama  + OCR_PROVIDER=paddle  → 无任何外部 LLM / OCR API。
+# =============================================================================
+
+services:
+  # --------------------------------------------------------------------------
+  # 数据库
+  # --------------------------------------------------------------------------
+  postgres:
+    image: postgres:15-alpine
+    container_name: waibao-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-waibao}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # 启动时自动执行迁移 (DDL): supabase/migrations/*.sql
+      - ./supabase/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-waibao}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  # --------------------------------------------------------------------------
+  # 缓存 / 限流 / EventBus
+  # --------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: waibao-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # --------------------------------------------------------------------------
+  # 本地大模型 (数据不出网)
+  # --------------------------------------------------------------------------
+  ollama:
+    image: ollama/ollama:latest
+    container_name: waibao-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    # 可选: 挂载宿主 NVIDIA GPU。无 GPU 注释掉整段即可走 CPU。
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list > /dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  # --------------------------------------------------------------------------
+  # 本地 OCR (简历 / 资质识别不出网)
+  # --------------------------------------------------------------------------
+  paddleocr:
+    image: waibao/paddleocr:local
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.paddleocr
+    container_name: waibao-paddleocr
+    restart: unless-stopped
+    ports:
+      - "8500:8500"
+    volumes:
+      # 预下载的 PaddleOCR 模型 (det/rec/cls), 离线复用, 避免每次拉权重
+      - paddleocr_models:/models/paddle
+    environment:
+      - PADDLE_OCR_MODEL_DIR=/models/paddle
+      - PADDLE_OCR_LANG=ch
+      - PADDLE_OCR_USE_GPU=false
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import paddleocr\" > /dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+
+  # --------------------------------------------------------------------------
+  # 后端
+  # --------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: waibao-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # ---- 数据库 / 缓存 (容器内服务名) ----
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-waibao}
+      - REDIS_URL=redis://redis:6379/0
+      # ---- 本地 LLM (数据不出网) ----
+      - LLM_PROVIDER=ollama
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:7b-instruct}
+      # ---- 本地 OCR (数据不出网) ----
+      - OCR_PROVIDER=paddle
+      - PADDLE_OCR_MODEL_DIR=/models/paddle
+      - PADDLE_OCR_LANG=ch
+      - PADDLE_OCR_USE_GPU=false
+      # ---- 前端同源访问后端的 CORS ----
+      - CORS_ORIGINS=http://localhost:3000
+      # ---- 本地部署不依赖云 Supabase,留空 ----
+      - SUPABASE_URL=
+      - SUPABASE_KEY=
+    volumes:
+      - ./backend:/app
+      - paddleocr_models:/models/paddle:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --proxy-headers
+
+  # --------------------------------------------------------------------------
+  # 前端
+  # --------------------------------------------------------------------------
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        # 浏览器端访问宿主暴露的后端端口
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    container_name: waibao-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:
+  ollama_data:
+  paddleocr_models:

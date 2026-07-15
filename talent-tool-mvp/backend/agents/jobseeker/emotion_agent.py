@@ -105,6 +105,39 @@ class EmotionAgent(BaseAgent):
                 "全国24小时心理援助热线: 400-161-9995。"
             )
 
+        # v11.0 T6110 — mandatory human-escalation (self-harm + labour dispute).
+        # The AI never makes a hiring decision here; it only detects, surfaces a
+        # warm recommendation, and hands off to a human.  Original private text
+        # is screened then discarded — only risk_level + reason are persisted.
+        escalation_hits: list = []
+        try:
+            from agents.governance import EscalationRules
+            escalation_hits = EscalationRules().scan(text)
+            if escalation_hits:
+                try:
+                    from services.platform.escalation import escalate
+                    for hit in escalation_hits:
+                        await escalate(
+                            user_id=agent_input.user_id,
+                            reason=hit.reason,
+                            risk_level=hit.risk_level,
+                            metadata={
+                                "rule": hit.rule,
+                                "matched_keywords": list(hit.matched_keywords),
+                                "organisation_id": ctx.get("organisation_id"),
+                                "message": hit.message,
+                            },
+                        )
+                    # If self-harm was detected, replace the canned copy with the
+                    # warm governance message (which carries the hotline).
+                    sh = next((h for h in escalation_hits if h.rule == "self_harm"), None)
+                    if sh:
+                        response_text = sh.message
+                except Exception as _e:  # noqa: BLE001 — detection still stands
+                    logger.debug("T6110 escalate side-effects failed: %s", _e)
+        except Exception as _e:  # noqa: BLE001 — governance must never break chat
+            logger.debug("T6110 escalation screen failed: %s", _e)
+
         # v8.1 T3604 — 高风险自动触发关怀 workflow
         intensity = max(
             (e.get("intensity", 0) for e in result.get("emotions", [])),

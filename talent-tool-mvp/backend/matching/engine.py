@@ -12,6 +12,7 @@ from contracts.shared import (
     SalaryRange,
     SeniorityLevel,
 )
+from matching.hard_filter import HardConditionFilter, MatchResult as HardMatchResult
 from matching.scorer import AB_WEIGHT_VARIANTS, CompositeScorer, EXPERIMENT_MATCH_WEIGHTS
 from matching.semantic import SemanticSearch
 from matching.structured import StructuredFilter
@@ -32,6 +33,71 @@ class MatchingEngine:
         self.structured_filter = StructuredFilter(supabase)
         self.semantic_search = SemanticSearch(supabase)
         self.scorer = CompositeScorer()
+        # T6105: 硬条件匹配引擎 (不淘汰, 只排序)
+        self.hard_filter = HardConditionFilter()
+
+    async def run_hard_filter_matching(
+        self,
+        role_id: UUID,
+        candidate_ids: list[UUID] | None = None,
+        top_k: int = 100,
+    ) -> list[HardMatchResult]:
+        """T6105 — 硬条件匹配模式 (甲方合同版).
+
+        甲方要求 **不淘汰, 只排序**:
+          * 硬条件 (技能/学历/证书) 决定达标与否 + 显著权重影响
+          * 高优先级 (薪资/城市/工作时间 + 到岗/意愿) 打分
+          * 工作/行业经历 **不使用**
+          * 所有人保留, 按 match_score 排序返回
+
+        Args:
+            role_id: 岗位 ID.
+            candidate_ids: 显式候选人池; 缺省时全量取 candidates 表 (上限 top_k).
+            top_k: 返回上限 (仍按分数排序).
+
+        Returns:
+            按 match_score 降序的 MatchResult 列表 (含 candidate_id / role_id).
+        """
+        # 1. 加载岗位
+        role_row = (
+            self.supabase.table("roles")
+            .select("*")
+            .eq("id", str(role_id))
+            .single()
+            .execute()
+        )
+        role_data = role_row.data or {}
+
+        # 2. 加载候选人池
+        if candidate_ids:
+            cand_rows = (
+                self.supabase.table("candidates")
+                .select("*")
+                .in_("id", [str(c) for c in candidate_ids])
+                .execute()
+            ).data or []
+        else:
+            cand_rows = (
+                self.supabase.table("candidates")
+                .select("*")
+                .limit(top_k)
+                .execute()
+            ).data or []
+
+        # 3. 逐个评分 (不淘汰)
+        results: list[HardMatchResult] = []
+        for row in cand_rows:
+            res = self.hard_filter.filter(row, role_data)
+            # 关联 candidate_id / role_id 供上游展示
+            res.candidate_id = str(row.get("id"))
+            res.role_id = str(role_id)
+            results.append(res)
+
+        # 4. 排序: passed_hard 优先, 再按 match_score 降序
+        results.sort(
+            key=lambda m: (m.passed_hard, m.match_score), reverse=True
+        )
+        return results[:top_k]
 
     async def run_matching(
         self,

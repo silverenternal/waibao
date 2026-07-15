@@ -55,7 +55,7 @@ export function PluginDetailClient({
           data-testid="plugin-not-found"
         >
           Plugin <code>{slug}</code> not found.{" "}
-          <a className="text-blue-600 underline" href="/marketplace">
+          <a className="text-blue-600 underline" href="/app-store">
             Back to marketplace
           </a>
         </div>
@@ -66,7 +66,7 @@ export function PluginDetailClient({
   return (
     <main className="container mx-auto max-w-5xl px-4 py-12">
       <a
-        href="/marketplace"
+        href="/app-store"
         className="mb-4 inline-block text-xs text-slate-500 hover:text-slate-700"
       >
         ← All plugins

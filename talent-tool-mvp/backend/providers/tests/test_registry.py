@@ -137,12 +137,14 @@ def test_unknown_llm_provider_raises(monkeypatch: pytest.MonkeyPatch):
         registry.get_llm_provider()
 
 
-def test_default_provider_is_mock_when_env_unset(monkeypatch: pytest.MonkeyPatch):
-    """没有 LLM_PROVIDER 时,registry 默认 mock 而不是抛错."""
+def test_default_provider_is_ollama_when_env_unset(monkeypatch: pytest.MonkeyPatch):
+    """v11.0: 没有 LLM_PROVIDER 时,registry 默认本地 ollama (数据不出网)."""
+    from backend.providers.llm.ollama_provider import OllamaProvider
+
     monkeypatch.delenv("LLM_PROVIDER", raising=False)
     registry.reset_cache()
     p = registry.get_llm_provider()
-    assert isinstance(p, MockLLMProvider)
+    assert isinstance(p, OllamaProvider)
 
 
 def test_registry_module_imports_clean():

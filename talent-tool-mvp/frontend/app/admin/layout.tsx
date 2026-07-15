@@ -17,6 +17,7 @@ import type { Metadata } from "next";
 import {
   Activity,
   Blocks,
+  DatabaseZap,
   Flag,
   LayoutDashboard,
   Settings,
@@ -39,6 +40,7 @@ const NAV = [
   { label: "Overview", href: "/admin", icon: LayoutDashboard },
   { label: "Services", href: "/admin/services", icon: Blocks },
   { label: "Users", href: "/admin/users", icon: UsersRound },
+  { label: "Data import", href: "/admin/data-import", icon: DatabaseZap },
   { label: "Feature flags", href: "/admin/feature-flags", icon: Flag },
   { label: "Workflows", href: "/admin/workflows", icon: Workflow },
   { label: "Tickets", href: "/admin/tickets", icon: Ticket },

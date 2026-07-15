@@ -155,7 +155,7 @@ export function PluginGrid() {
             <div className="flex items-start justify-between gap-2">
               <div>
                 <Link
-                  href={`/marketplace/${p.slug}`}
+                  href={`/app-store/${p.slug}`}
                   className="text-base font-semibold text-slate-900 hover:text-blue-600"
                 >
                   {p.name}

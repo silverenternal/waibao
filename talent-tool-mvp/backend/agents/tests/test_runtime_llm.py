@@ -95,15 +95,19 @@ def test_provider_kw_openai_client_legacy_compat(monkeypatch):
     assert llm.model == "gpt-4o"
 
 
-def test_unknown_provider_string_falls_back_to_mock():
-    """未知 provider 字符串 → 兜底 mock(不让 Agent 在生产环境静默崩溃)."""
-    from agents.runtime import LLMClient
-    from providers.llm.mock_provider import MockLLMProvider
+def test_unknown_provider_string_falls_back_to_local():
+    """v11.0: 未知 provider 字符串 → 兜底到本地默认 provider (不再崩溃).
 
-    # 强制走 _resolve_provider_by_name 路径;registry 在没有 API key 时也会失败,
-    # 我们应兜底到 mock 而非抛错
+    旧版默认回落 MockLLMProvider;v11.0 起 registry 默认 ollama (本地优先),
+    因此未知 provider 字符串解析为 OllamaProvider (本地) 而非 MockLLMProvider。
+    关键保证:不抛异常,Agent 拿到一个可用 provider。
+    """
+    from agents.runtime import LLMClient
+    from providers.llm.base import LLMProvider
+
     llm = LLMClient(provider="nonexistent-provider-xyz")
-    assert isinstance(llm.provider, MockLLMProvider)
+    # 不崩溃 + 是合法 LLMProvider (v11.0 默认 ollama)
+    assert isinstance(llm.provider, LLMProvider)
 
 
 # ---------------------------------------------------------------------------

@@ -18,6 +18,7 @@ from .deepseek_provider import DeepSeekProvider
 from .custom_lora import CustomLoRAProvider, get_custom_lora_provider
 from .mock_provider import MockLLMProvider
 from .moonshot_provider import MoonshotProvider
+from .ollama_provider import OllamaProvider
 from .openai_provider import OpenAIProvider
 from .tongyi_provider import TongyiProvider
 from .zhipu_provider import ZhipuProvider
@@ -31,6 +32,7 @@ __all__ = [
     "Message",
     "MockLLMProvider",
     "MoonshotProvider",
+    "OllamaProvider",
     "OpenAIProvider",
     "ToolCall",
     "ToolCallResult",

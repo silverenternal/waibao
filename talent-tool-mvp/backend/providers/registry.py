@@ -127,7 +127,9 @@ def get_llm_provider() -> Any:
     with _lock:
         if _llm is not None:
             return _llm
-        name = (os.getenv("LLM_PROVIDER") or "mock").lower()
+        # v11.0: 默认本地化 —— 未配置时回落到 ollama (数据不出甲方环境),
+        # 显式 "mock" 才走纯本地 MockLLMProvider。
+        name = (os.getenv("LLM_PROVIDER") or "ollama").lower()
         if name == "mock":
             _llm = _mock_provider("llm")
             return _llm
@@ -136,12 +138,14 @@ def get_llm_provider() -> Any:
             CustomLoRAProvider,
             DeepSeekProvider,
             MoonshotProvider,
+            OllamaProvider,
             OpenAIProvider,
             TongyiProvider,
             ZhipuProvider,
         )
 
         mapping = {
+            "ollama": OllamaProvider,
             "openai": OpenAIProvider,
             "anthropic": AnthropicProvider,
             "deepseek": DeepSeekProvider,
@@ -230,14 +234,18 @@ def get_vision_provider() -> Any:
 # OCR
 # ---------------------------------------------------------------------------
 def get_ocr_provider() -> Any:
-    """根据 OCR_PROVIDER env 返回对应 OCRProvider."""
+    """根据 OCR_PROVIDER env 返回对应 OCRProvider.
+
+    v11.0: 默认本地化 —— 未配置时回落到 paddle (PaddleOCR 本地推理,
+    简历/资质数据不出甲方环境),显式 "mock" 才走纯本地 MockOCRProvider。
+    """
     global _ocr
     if _ocr is not None:
         return _ocr
     with _lock:
         if _ocr is not None:
             return _ocr
-        name = (os.getenv("OCR_PROVIDER") or "mock").lower()
+        name = (os.getenv("OCR_PROVIDER") or "paddle").lower()
         if name == "mock":
             _ocr = _mock_provider("ocr")
             return _ocr
@@ -245,9 +253,15 @@ def get_ocr_provider() -> Any:
         if name == "gpt4v":
             _ocr = get_vision_provider()
             return _ocr
-        from .ocr import AliyunOCRProvider, BaiduOCRProvider, TencentOCRProvider
+        from .ocr import (
+            AliyunOCRProvider,
+            BaiduOCRProvider,
+            PaddleOCRProvider,
+            TencentOCRProvider,
+        )
 
         mapping = {
+            "paddle": PaddleOCRProvider,
             "tencent": TencentOCRProvider,
             "baidu": BaiduOCRProvider,
             "aliyun": AliyunOCRProvider,

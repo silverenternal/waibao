@@ -8,7 +8,7 @@ export const metadata: Metadata = generatePageMetadata({
   title: "Marketplace — Apps, integrations, automations",
   description:
     "Extend your RecruitTech workspace with 1-click installs, reviews, and built-in billing. Browse, search, and discover community plugins, integrations, and analytics apps.",
-  path: "/marketplace",
+  path: "/app-store",
   jsonLd: [
     faqJsonLd([
       {

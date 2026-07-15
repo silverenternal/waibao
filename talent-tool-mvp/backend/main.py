@@ -245,6 +245,10 @@ app.include_router(voice_router, prefix="/api/voice", tags=["agents-voice"])
 from api.escalation import router as escalation_router
 app.include_router(escalation_router, prefix="/api/escalation", tags=["agents-escalation"])
 
+# v11.0 T6110: Admin risk-alerts (mandatory human-escalation, redacted)
+from api.admin_risk_alerts import router as admin_risk_alerts_router
+app.include_router(admin_risk_alerts_router, prefix="/api/admin/risk-alerts", tags=["admin-risk-alerts"])
+
 # T802: Webhook subscription + dispatch
 from api.webhooks import router as webhooks_router
 app.include_router(webhooks_router, prefix="", tags=["webhooks"])
@@ -345,6 +349,22 @@ app.include_router(
     prefix="/api/recommendations",
     tags=["recommendations"],
 )
+
+# T6104: Push talent to employer (recommendation records) — list/detail/status/download.
+# Shares the /api/recommendations prefix with T1304 but uses non-colliding
+# paths ("" / "{id}" / "{id}/status" / "{id}/download").
+try:
+    from api.recommendation_records import router as recommendation_records_router
+    app.include_router(
+        recommendation_records_router,
+        prefix="/api/recommendations",
+        tags=["recommendations"],
+    )
+except ImportError as _e:  # pragma: no cover - defensive
+    import logging
+    logging.getLogger("waibao.main").warning(
+        "T6104 recommendation_records not enabled: %s", _e
+    )
 
 # T1804: Push engine + 实时推送
 from api.push import router as push_router
@@ -448,6 +468,30 @@ try:
 except ImportError as _e:  # pragma: no cover - defensive
     import logging
     logging.getLogger("waibao.main").warning("T2903 marketplace not enabled: %s", _e)
+
+# T6103: Recruitment Marketplace (two-sided talent pool + job pool + matches)
+try:
+    from api.talent_market import router as talent_market_router
+    app.include_router(talent_market_router, prefix="/api/talent-market")
+except ImportError as _e:  # pragma: no cover - defensive
+    import logging
+    logging.getLogger("waibao.main").warning("T6103 talent_market not enabled: %s", _e)
+
+# T6108: HR Assistant — resume compare + report + interview question template.
+try:
+    from api.hr_assistant import router as hr_assistant_router
+    app.include_router(hr_assistant_router, tags=["hr-assistant"])
+except ImportError as _e:  # pragma: no cover - defensive
+    import logging
+    logging.getLogger("waibao.main").warning("T6108 hr_assistant not enabled: %s", _e)
+
+# T6109: Recruitment flow — contact logs + interview schedule (org-scoped).
+try:
+    from api.recruitment_flow import router as recruitment_flow_router
+    app.include_router(recruitment_flow_router, prefix="/api/recruitment", tags=["recruitment"])
+except ImportError as _e:  # pragma: no cover - defensive
+    import logging
+    logging.getLogger("waibao.main").warning("T6109 recruitment_flow not enabled: %s", _e)
 
 # T2904: API 版本化 — 同时挂载 /api 和 /api/v1/v2 双套路由 + 旧 URL 兼容
 try:

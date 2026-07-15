@@ -223,9 +223,180 @@ class InjectionGuard:
         return matches
 
 
+# ===========================================================================
+# v11.0 T6110 — Mandatory human-escalation rules
+# ===========================================================================
+# Per 甲方要求, two conversation topics *must always* be escalated to a human
+# and never handled autonomously by the AI:
+#
+#   1. 自伤风险 (self-harm / suicide)   → critical, immediate HR ping + warm
+#      popup with the national psychological-aid hotline.
+#   2. 劳动争议 (labour dispute)         → high, create a ticket routed to HR /
+#      legal.
+#
+# The AI never "eliminates" (淘汰) a candidate over these — it only surfaces a
+# recommendation and hands off.  Original private conversation is NEVER exposed
+# to admins/HR: the escalation record carries only ``risk_level`` + ``reason``
+# (+ an opaque evidence count), never the raw message text.
+
+# Self-harm keywords — broad on purpose; false positives are acceptable, false
+# negatives are not.  Mixed simplified + spoken Chinese phrasings.
+SELF_HARM_KEYWORDS: tuple[str, ...] = (
+    "自杀", "自残", "自伤", "轻生", "想死", "不想活", "了结自己",
+    "活不下去", "解脱", "割腕", "服毒", "跳楼", "结束生命", "寻死",
+    "没有意义", "活着没意思", "suicide", "self-harm", "self harm",
+    "kill myself", "end my life", "hurt myself",
+)
+
+# Labour-dispute keywords.
+LABOUR_DISPUTE_KEYWORDS: tuple[str, ...] = (
+    "仲裁", "劳动仲裁", "诉讼", "起诉", "违法", "非法", "欠薪", "拖欠工资",
+    "克扣工资", "辞退补偿", "经济补偿", "n+1", "赔偿金", "违法解除",
+    "无理解雇", "强制辞退", "劳动法", "劳动监察", "工伤认定", "维权",
+)
+
+# Risk levels are ordered low→critical so callers can compare severity.
+RISK_LEVELS: tuple[str, ...] = ("low", "medium", "high", "critical")
+
+# Warm self-harm popup copy + the national 24h psychological-aid hotline.
+SELF_HARM_HOTLINE: str = "400-161-9995"
+SELF_HARM_MESSAGE: str = (
+    "我注意到你可能正在经历困难。你不是一个人,建议联系专业心理援助热线: "
+    f"{SELF_HARM_HOTLINE}。我会同时帮你转接给 HR。"
+)
+LABOUR_DISPUTE_MESSAGE: str = (
+    "这个问题涉及劳动争议,建议联系 HR 或法务部门,我帮你创建一个工单转给他们处理。"
+)
+
+
+@dataclass(frozen=True)
+class EscalationRuleHit:
+    """A mandatory human-escalation rule match.
+
+    ``raw_text`` / the triggering message is deliberately **not** stored here:
+    escalation records and risk alerts must carry only ``risk_level`` +
+    ``reason`` so admins/HR never read the user's private conversation.
+    """
+
+    rule: str            # self_harm | labour_dispute
+    risk_level: str      # critical | high
+    reason: str          # human-readable, no PII / no verbatim quote
+    matched_keywords: tuple[str, ...]
+    message: str         # warm copy shown to the user in the popup
+
+
+@dataclass
+class EscalationRules:
+    """Detect mandatory-escalation topics (self-harm + labour dispute).
+
+    Two layers:
+
+    * **Keyword pre-screen** (deterministic, fast, zero network) — catches the
+      explicit high-signal phrasings.  This is the authoritative gate: any hit
+      forces escalation regardless of what an LLM later says.
+    * **Optional LLM confirmation** — ``llm_confirm`` runs a small classifier
+      over borderline inputs so that euphemisms ("我不想再醒过来") are caught
+      too.  It can only *add* detections, never suppress a keyword hit.
+    """
+
+    self_harm_keywords: tuple[str, ...] = SELF_HARM_KEYWORDS
+    labour_dispute_keywords: tuple[str, ...] = LABOUR_DISPUTE_KEYWORDS
+    # When True, an LLM is consulted to confirm self-harm on borderline text.
+    llm_confirm: bool = True
+
+    # ---- keyword layer --------------------------------------------------
+    def _keyword_hits(self, text: str) -> list[EscalationRuleHit]:
+        if not text:
+            return []
+        hits: list[EscalationRuleHit] = []
+        lower = text.lower()
+        sh = tuple(kw for kw in self.self_harm_keywords if kw.lower() in lower)
+        if sh:
+            hits.append(EscalationRuleHit(
+                rule="self_harm",
+                risk_level="critical",
+                reason="检测到自伤/自杀风险信号,需立即转人工",
+                matched_keywords=sh,
+                message=SELF_HARM_MESSAGE,
+            ))
+        ld = tuple(kw for kw in self.labour_dispute_keywords if kw.lower() in lower)
+        if ld:
+            hits.append(EscalationRuleHit(
+                rule="labour_dispute",
+                risk_level="high",
+                reason="检测到劳动争议信号,建议转 HR/法务",
+                matched_keywords=ld,
+                message=LABOUR_DISPUTE_MESSAGE,
+            ))
+        return hits
+
+    # ---- full scan ------------------------------------------------------
+    def scan(self, text: str, *, llm=None) -> list[EscalationRuleHit]:
+        """Return all mandatory-escalation hits in ``text``.
+
+        Keyword hits are always authoritative.  When ``llm_confirm`` is True
+        and an ``llm`` callable is supplied, a borderline self-harm classifier
+        may add an additional ``self_harm`` hit when keywords missed it.
+        """
+        hits = self._keyword_hits(text)
+        if (
+            self.llm_confirm
+            and llm is not None
+            and not any(h.rule == "self_harm" for h in hits)
+        ):
+            try:
+                flagged = _llm_self_harm_check(llm, text)
+            except Exception:  # noqa: BLE001 — LLM is advisory, never fatal
+                flagged = False
+            if flagged:
+                hits.append(EscalationRuleHit(
+                    rule="self_harm",
+                    risk_level="critical",
+                    reason="LLM 判定存在自伤风险,需立即转人工",
+                    matched_keywords=(),
+                    message=SELF_HARM_MESSAGE,
+                ))
+        # Critical sorts first so callers can act on hits[0].
+        hits.sort(key=lambda h: RISK_LEVELS.index(h.risk_level), reverse=True)
+        return hits
+
+    def highest(self, text: str, *, llm=None) -> EscalationRuleHit | None:
+        """Return the highest-severity hit, or ``None`` if clean."""
+        hits = self.scan(text, llm=llm)
+        return hits[0] if hits else None
+
+    def must_escalate(self, text: str, *, llm=None) -> bool:
+        """True if ``text`` triggers any mandatory-escalation rule."""
+        return bool(self.scan(text, llm=llm))
+
+
+def _llm_self_harm_check(llm: Any, text: str) -> bool:
+    """Best-effort LLM self-harm classifier (advisory only).
+
+    Returns True when the model judges the text expresses intent to harm
+    oneself.  Any error / unparsable response → False (keywords remain the
+    authoritative gate).  The prompt is explicit that the AI must NOT make a
+    hiring decision — only flag the risk.
+    """
+    prompt = (
+        "你是安全审核助手。判断下面这段话是否表达了对自身的伤害意图(自杀/自残/自伤)。"
+        "注意:只判断风险,不做任何招聘淘汰决定。只回答 'YES' 或 'NO'。\n\n"
+        f"文本: {text[:500]}"
+    )
+    resp = llm.complete(prompt) if hasattr(llm, "complete") else llm(prompt)
+    raw = (resp.text if hasattr(resp, "text") else str(resp)).strip().upper()
+    return raw.startswith("Y")
+
+
 __all__ = [
     "PIIMatch",
     "PIIPolicy",
     "InjectionMatch",
     "InjectionGuard",
+    "EscalationRuleHit",
+    "EscalationRules",
+    "SELF_HARM_HOTLINE",
+    "SELF_HARM_MESSAGE",
+    "LABOUR_DISPUTE_MESSAGE",
+    "RISK_LEVELS",
 ]

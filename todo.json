@@ -92,12 +92,14 @@
       "priority": "P0",
       "title": "推送人才给企业 (匹配成功 → 推荐记录)",
       "description": "硬条件匹配通过后,创建推荐记录(完整简历+联系方式),推送给企业。企业可查看/下载。资料查看下载导出权限仅平台管理员。",
+      "status": "completed",
       "deliverables": [
-        "supabase/migrations/061_recommendations.sql: recommendations 表",
-        "backend/services/matching/recommendation.py: 推荐服务",
-        "backend/api/recommendations.py: CRUD + 企业查看 + 下载简历 (管理员权限)",
-        "frontend/app/marketplace/recommendations/page.tsx: 企业收到的推荐 (匹配分数+理由+缺口+风险+完整简历+联系方式+下载)",
-        "站内推送通知"
+        "supabase/migrations/061_recommendations.sql: recommendations 表 + RLS (org-scoped) + admin-only download",
+        "backend/services/matching/recommendation.py: 推荐服务 (快照+联系方式+站内通知 dispatch+状态机+下载文本)",
+        "backend/api/recommendation_records.py: list/detail/status/download (下载仅 admin) — 挂载 /api/recommendations",
+        "frontend/lib/api-recommendations.ts + components/marketplace/RecommendationCard.tsx + app/marketplace/recommendations/page.tsx+_client.tsx",
+        "站内推送通知 (复用 v6.0 notify dispatcher dispatch)",
+        "tests/test_recommendations.py (27 tests)"
       ],
       "days": 2
     },

@@ -132,6 +132,9 @@ NEVER_REDIRECT_PREFIXES = (
     "/api/discovery",
     "/api/recommendations",
     "/api/marketplace",
+    "/api/talent-market",  # T6103 recruitment marketplace (talent + job pool)
+    "/api/hr-assistant",   # T6108 HR assistant (resume compare + interview questions)
+    "/api/recruitment",    # T6109 recruitment flow (contact logs + interview schedule)
     "/api/feature-flags",
     "/api/feature_flags",
     "/api/admin/feature",

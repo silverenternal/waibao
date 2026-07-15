@@ -1,92 +1,114 @@
 "use client";
+
+/**
+ * T6106 — 硬条件匹配页 (甲方合同版).
+ *
+ * HR 输入岗位 ID, 调用 T6105 硬条件匹配引擎 (POST /api/matches/hard-filter/{id}),
+ * 用 MatchResultCard 渲染结果. 甲方要求 "不淘汰只排序": 所有人保留, 按分数
+ * 降序展示, 有缺口的卡片仍显示 (标黄 + 硬条件未达标提示).
+ */
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-
-import { useEffect, useState } from "react";
-
-type Match = {
-  id: string;
-  candidate_id: string;
-  role_id: string;
-  candidate_to_role: number;
-  role_to_candidate: number;
-  harmonic_score: number;
-  status: string;
-};
+import { MatchResultCard } from "@/components/marketplace/MatchResultCard";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  runHardFilterMatch,
+  type MatchResultItem,
+} from "@/lib/api-hard-filter";
+import { useCallback, useState } from "react";
 
 export default function MatchPage() {
   const [roleId, setRoleId] = useState("");
-  const [matches, setMatches] = useState<Match[]>([]);
+  const [items, setItems] = useState<MatchResultItem[]>([]);
+  const [passedHard, setPassedHard] = useState(0);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  async function load() {
-    if (!roleId) return;
+  const load = useCallback(async () => {
+    if (!roleId.trim()) return;
     setLoading(true);
+    setError(null);
     try {
-      const token = localStorage.getItem("sb_token") || "";
-      const r = await fetch(`/api/two-way-match/for-role/${roleId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await r.json();
-      setMatches(data || []);
-    } finally { setLoading(false); }
-  }
+      const res = await runHardFilterMatch(roleId.trim(), { topK: 50 });
+      setItems(res.items);
+      setPassedHard(res.passed_hard);
+      setTotal(res.total);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "匹配失败");
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [roleId]);
 
   return (
-    <ErrorBoundary>(<div className="min-h-screen bg-slate-50">
-        <div className="bg-white border-b px-6 py-4">
-          <h1 className="text-xl font-semibold">🤝 双向匹配</h1>
-          <p className="text-sm text-slate-500 mt-1">求职者 ↔ 用人单位 双向打分</p>
+    <ErrorBoundary>
+      <main className="min-h-screen bg-slate-50">
+        <div className="border-b bg-white px-6 py-4">
+          <h1 className="text-xl font-semibold">🎯 硬条件匹配</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            技能/学历/证书 硬条件 + 薪资/城市/到岗 高优先级 · 不淘汰, 只排序
+          </p>
         </div>
-        <div className="max-w-4xl mx-auto p-6">
-          <div className="bg-white rounded-2xl shadow-sm p-6 mb-6">
+
+        <div className="mx-auto max-w-6xl p-6">
+          {/* 查询框 */}
+          <div className="mb-6 rounded-2xl bg-white p-6 shadow-sm">
             <label className="text-sm text-slate-600">岗位 ID</label>
             <div className="mt-2 flex gap-2">
-              <input
+              <Input
                 value={roleId}
                 onChange={(e) => setRoleId(e.target.value)}
                 placeholder="输入 role UUID"
-                className="flex-1 border rounded-lg p-2"
+                aria-label="岗位 ID"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") load();
+                }}
               />
-              <button onClick={load} disabled={loading || !roleId} className="px-5 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50">
-                {loading ? "查询中..." : "查询"}
-              </button>
+              <Button onClick={load} disabled={loading || !roleId.trim()}>
+                {loading ? "匹配中..." : "匹配"}
+              </Button>
             </div>
-          </div>
-
-          <div className="space-y-3">
-            {matches.map((m, i) => (
-              <div key={m.id} className="bg-white rounded-xl shadow-sm p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="text-sm text-slate-500">排名 #{i + 1}</div>
-                  <span className="text-xs px-2 py-0.5 bg-slate-100 rounded">{m.status}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <div className="text-xs text-slate-500">求职者→岗位</div>
-                    <div className="text-xl font-bold text-blue-600">{(m.candidate_to_role * 100).toFixed(0)}%</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-500">岗位→求职者</div>
-                    <div className="text-xl font-bold text-green-600">{(m.role_to_candidate * 100).toFixed(0)}%</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-slate-500">调和值</div>
-                    <div className="text-xl font-bold text-purple-600">{(m.harmonic_score * 100).toFixed(0)}%</div>
-                  </div>
-                </div>
-                <div className="mt-3 h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-blue-500 via-green-500 to-purple-500"
-                    style={{ width: `${m.harmonic_score * 100}%` }}
-                  />
-                </div>
+            {error && (
+              <p className="mt-2 text-sm text-rose-600" role="alert">
+                {error}
+              </p>
+            )}
+            {total > 0 && (
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                <Badge variant="secondary">共 {total} 人</Badge>
+                <Badge variant="outline" className="text-emerald-600">
+                  硬条件达标 {passedHard}
+                </Badge>
+                <Badge variant="outline" className="text-amber-600">
+                  未达标 {total - passedHard}
+                </Badge>
               </div>
-            ))}
-            {matches.length === 0 && !loading && (
-              <div className="text-center py-12 text-slate-400">输入岗位 ID 后查看匹配结果</div>
             )}
           </div>
+
+          {/* 结果网格 */}
+          {items.length > 0 ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {items.map((r, i) => (
+                <MatchResultCard
+                  key={r.candidate_id || i}
+                  result={r}
+                  rank={i + 1}
+                />
+              ))}
+            </div>
+          ) : (
+            !loading && (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-12 text-center text-sm text-slate-400">
+                输入岗位 ID 后查看匹配结果
+              </div>
+            )
+          )}
         </div>
-      </div>)</ErrorBoundary>
+      </main>
+    </ErrorBoundary>
   );
 }

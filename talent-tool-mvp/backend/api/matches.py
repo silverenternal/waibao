@@ -338,3 +338,34 @@ async def regenerate_explanation(
     if not result:
         raise HTTPException(status_code=404, detail="Match not found")
     return {"match_id": str(match_id), "explanation": result}
+
+
+@router.post("/hard-filter/{role_id}")
+async def hard_filter_matching(
+    role_id: UUID,
+    top_k: int = Query(default=50, le=200),
+    user: CurrentUser = Depends(
+        require_role(UserRole.talent_partner, UserRole.client, UserRole.admin)
+    ),
+):
+    """T6105 — 硬条件匹配 (甲方合同版, 不淘汰只排序).
+
+    返回按 match_score 降序的候选人匹配结果列表, 每项含:
+      candidate_id / match_score / match_reasons / skill_gaps / risks /
+      hard_conditions / high_priority / passed_hard.
+
+    甲方匹配因素:
+      * 技能 / 学历 / 证书 → 硬条件 (必须满足, 但不淘汰)
+      * 薪资 / 城市 / 工作时间 / 到岗 / 意愿 → 高优先级打分
+      * 工作 / 行业经历 → 不使用
+    """
+    supabase = get_supabase_admin()
+    engine = MatchingEngine(supabase)
+    results = await engine.run_hard_filter_matching(role_id, top_k=top_k)
+    return {
+        "role_id": str(role_id),
+        "total": len(results),
+        "passed_hard": sum(1 for r in results if r.passed_hard),
+        "items": [r.to_dict() for r in results],
+    }
+
