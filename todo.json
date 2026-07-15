@@ -1,237 +1,138 @@
 {
   "meta": {
     "project": "体育用品企业AI招聘助手",
-    "subtitle": "v11.0 — 补齐甲方合同缺失功能 (保留过度工程,聚焦做好甲方要的)",
-    "based_on": "甲方确认需求 (2026-07-15) + v10.0 企业化升级",
-    "version": "11.0.0",
+    "subtitle": "v11.1 — 验收准备 (修复测试 + 本地部署验证 + 端到端演示)",
+    "based_on": "v11.0 (合同交付, 26 项功能代码就位, 112 contract tests pass)",
+    "version": "11.1.0",
     "created": "2026-07-15",
-    "budget": "¥4,070",
     "deadline": "2026-09-15",
-    "deployment": "本地/演示环境 (响应式网页 PC+手机), LLM 不出甲方环境",
-    "product_vision": "招聘市场: 人才入库 → 企业入库 → 硬条件匹配 → 推送人才给企业 → 不淘汰只排序",
-    "principle": "过度工程保留(后期有新需求直接用),重点把甲方要求的 26 项做到位"
+    "budget": "¥4,070",
+    "product_vision": "招聘市场: 人才入库→企业入库→硬条件匹配→推送→不淘汰"
   },
-  "goal": "补齐 6 个甲方合同缺失的关键功能: (1) 本地 LLM/OCR (数据不出环境); (2) 招聘市场模型 (人才池+岗位池+推送); (3) 硬条件匹配引擎 (不淘汰只排序); (4) 匹配结果 4 元素展示; (5) 岗位卡; (6) 联系记录+面试安排。同时确保 26 项合同需求全部可演示。",
+  "goal": "把 v11.0 已有的 26 项功能从「代码就位」推进到「可演示验收」。6 件事: (1) 修复 38 个失败测试; (2) 本地 docker-compose + Ollama 实跑验证; (3) seed 1000 数据导入; (4) 前端 next build + marketplace 运行时验证; (5) 5 场景端到端演示走通; (6) 移动端响应式检查。",
   "phases": [
     {
       "id": "P0",
-      "title": "本地 LLM + OCR (数据不出环境)",
-      "priority": "P0",
-      "days": 2
+      "title": "修复失败测试",
+      "goal": "38 failed → 0 failed",
+      "priority": "P0"
     },
     {
       "id": "P1",
-      "title": "招聘市场模型 (人才池+岗位池+匹配+推送)",
-      "priority": "P0",
-      "days": 4
+      "title": "本地部署 + Ollama 验证",
+      "goal": "docker-compose up 跑通 + Ollama LLM 实际响应",
+      "priority": "P0"
     },
     {
       "id": "P2",
-      "title": "硬条件匹配 + 岗位卡 + 简历比较 + 联系记录",
-      "priority": "P0",
-      "days": 3
+      "title": "数据导入 + 前端验证",
+      "goal": "1000 简历入库 + next build + marketplace 页面运行时验证",
+      "priority": "P0"
     },
     {
       "id": "P3",
-      "title": "转人工规则 + 26 项验收清单 + 部署交付",
-      "priority": "P0",
-      "days": 1.8
+      "title": "端到端演示 + 验收文档",
+      "goal": "5 场景走通 + 移动端 + 26 项验收清单确认",
+      "priority": "P0"
     }
   ],
   "tasks": [
     {
-      "_section": "P0 — 本地 LLM (数据不出甲方环境)",
-      "id": "T6101",
+      "_section": "P0 — 修复失败测试",
+      "id": "T6201",
       "phase": "P0",
       "priority": "P0",
-      "title": "Ollama 本地 LLM Provider + docker-compose 集成",
-      "description": "新建 Ollama provider,替换所有外网 LLM 调用。docker-compose 集成 Ollama + Qwen2.5-7B。确保数据完全不出甲方环境。",
+      "title": "修复 38 个失败测试",
+      "description": "全量 pytest 有 38 failed / 9 errors。虽然大部分是 pre-existing 的集成问题,但验收时不能有红的。",
       "deliverables": [
-        "backend/providers/llm/ollama_provider.py: OllamaProvider (OpenAI 兼容, base_url=http://ollama:11434/v1)",
-        "模型: Qwen2.5-7B-Instruct (中文最好) 或 GLM-4-9B",
-        "docker-compose.local.yml 加 ollama 服务 + 模型自动拉取",
-        "LLM_PROVIDER=ollama 默认",
-        "scripts/setup_ollama.sh: 一键拉模型",
-        "tests/test_ollama_provider.py"
-      ],
-      "days": 1.5
-    },
-    {
-      "id": "T6102",
-      "phase": "P0",
-      "priority": "P0",
-      "title": "本地 OCR (PaddleOCR, 数据不出环境)",
-      "description": "简历和资质 OCR 必须本地。用 PaddleOCR 替换腾讯云/百度。",
-      "deliverables": [
-        "backend/providers/ocr/paddle_ocr.py: PaddleOCR 本地",
-        "docker-compose.local.yml 加 paddleocr 服务",
-        "OCR_PROVIDER=paddle 默认",
-        "tests/test_paddle_ocr.py"
-      ],
-      "days": 0.5
-    },
-    {
-      "_section": "P1 — 招聘市场模型",
-      "id": "T6103",
-      "phase": "P1",
-      "priority": "P0",
-      "title": "市场首页 + 人才池 + 岗位池",
-      "description": "招聘市场首页: 人才来了入库,企业来了入库,两边都可浏览。企业可见完整简历+联系方式。",
-      "deliverables": [
-        "frontend/app/marketplace/page.tsx: 市场首页 (人才池入口+岗位池入口+最新匹配)",
-        "frontend/app/marketplace/talents/page.tsx: 人才池 (浏览/搜索/筛选)",
-        "frontend/app/marketplace/jobs/page.tsx: 岗位池 (浏览/搜索/筛选)",
-        "backend/api/marketplace.py: 市场数据 API",
-        "lib/api-marketplace.ts"
-      ],
-      "days": 2
-    },
-    {
-      "id": "T6104",
-      "phase": "P1",
-      "priority": "P0",
-      "title": "推送人才给企业 (匹配成功 → 推荐记录)",
-      "description": "硬条件匹配通过后,创建推荐记录(完整简历+联系方式),推送给企业。企业可查看/下载。资料查看下载导出权限仅平台管理员。",
-      "status": "completed",
-      "deliverables": [
-        "supabase/migrations/061_recommendations.sql: recommendations 表 + RLS (org-scoped) + admin-only download",
-        "backend/services/matching/recommendation.py: 推荐服务 (快照+联系方式+站内通知 dispatch+状态机+下载文本)",
-        "backend/api/recommendation_records.py: list/detail/status/download (下载仅 admin) — 挂载 /api/recommendations",
-        "frontend/lib/api-recommendations.ts + components/marketplace/RecommendationCard.tsx + app/marketplace/recommendations/page.tsx+_client.tsx",
-        "站内推送通知 (复用 v6.0 notify dispatcher dispatch)",
-        "tests/test_recommendations.py (27 tests)"
-      ],
-      "days": 2
-    },
-    {
-      "_section": "P2 — 硬条件匹配",
-      "id": "T6105",
-      "phase": "P2",
-      "priority": "P0",
-      "title": "硬条件匹配引擎 (重写, 不淘汰只排序)",
-      "description": "按甲方匹配因素: 技能+岗位职责(硬) / 学历+证书(硬) / 薪资+城市+工作时间(高) / 到岗时间+求职意愿(高)。工作和行业经历暂不使用。不淘汰,只排序+标记。",
-      "deliverables": [
-        "backend/matching/hard_filter.py: 硬条件过滤器",
-        "权重: skill(硬) + education(硬) + salary_city(高) + availability(高)",
-        "不淘汰: 所有人保留,按匹配度排序",
-        "匹配结果 4 元素: score + reasons + gaps + risks",
-        "tests/test_hard_filter.py"
-      ],
-      "days": 1.5
-    },
-    {
-      "id": "T6106",
-      "phase": "P2",
-      "priority": "P0",
-      "title": "匹配结果展示 (分数+理由+缺口+风险)",
-      "description": "匹配卡 4 section: 匹配分数 / 匹配理由 / 能力缺口 / 风险提示。",
-      "deliverables": [
-        "frontend/components/marketplace/MatchResultCard.tsx",
-        "改造 match 页面用新卡",
-        "1. 分数 0-100 进度条",
-        "2. 理由: 技能匹配 5/5, 学历满足",
-        "3. 缺口: 缺 K8s 经验",
-        "4. 风险: 到岗不确定/薪资偏高"
-      ],
-      "days": 0.5
-    },
-    {
-      "id": "T6107",
-      "phase": "P2",
-      "priority": "P0",
-      "title": "岗位卡 (职责+硬条件+加分项+边界)",
-      "description": "明确岗位卡页面: 职责 / 硬条件 / 加分项 / 边界。",
-      "deliverables": [
-        "frontend/app/marketplace/jobs/[id]/page.tsx: 岗位卡",
-        "1. 职责列表",
-        "2. 硬条件 (技能/学历/证书 必须满足)",
-        "3. 加分项 (优先考虑)",
-        "4. 边界 (不做什么/工作时间/地点)"
-      ],
-      "days": 0.5
-    },
-    {
-      "id": "T6108",
-      "phase": "P2",
-      "priority": "P1",
-      "title": "HR 助手: 简历比较 + 报告导出 + 面试题模板",
-      "description": "多份简历并排比较 + 导出报告 + 面试题模板。",
-      "deliverables": [
-        "frontend/app/marketplace/compare/page.tsx (简历并排比较 UI)",
-        "导出 PDF/Word 比较报告 (复用 document_generator)",
-        "面试题模板: 按岗位生成 5-10 题 + 导出",
-        "backend/api/hr_assistant.py"
+        "跑 pytest --tb=short 定位每个失败",
+        "分类: (a) 测试隔离污染 (b) 缺依赖 import (c) 真实 bug",
+        "修复所有 (a)(b), 如果有 (c) 修代码",
+        "目标: 0 failed"
       ],
       "days": 1
     },
     {
-      "id": "T6109",
-      "phase": "P2",
-      "priority": "P1",
-      "title": "候选人联系记录 + 简单面试安排",
-      "description": "端到端招聘: HR 联系候选人记录 + 面试安排表。",
+      "_section": "P1 — 本地部署验证",
+      "id": "T6202",
+      "phase": "P1",
+      "priority": "P0",
+      "title": "docker-compose.local.yml 实跑 + Ollama 端到端",
+      "description": "从未实际 docker-compose up 过。需要验证: Ollama 拉模型 + PaddleOCR + backend 连 Ollama + frontend 连 backend。",
       "deliverables": [
-        "supabase/migrations/062_recruitment_flow.sql: contact_logs + interview_schedule 表",
-        "backend/api/recruitment_flow.py: 联系记录+面试安排 CRUD",
-        "frontend/app/marketplace/recruitment/page.tsx: 招聘流程看板"
+        "docker-compose -f docker-compose.local.yml up -d 实跑",
+        "验证 Ollama: curl http://ollama:11434/v1/chat/completions",
+        "验证 backend: curl http://localhost:8000/health",
+        "验证 frontend: curl http://localhost:3000",
+        "验证 Ollama chat: 发一条消息, 确认本地模型响应",
+        "修复任何连接问题",
+        "更新 LOCAL_DEPLOYMENT.md (记录实际验证步骤)"
+      ],
+      "days": 1.5
+    },
+    {
+      "_section": "P2 — 数据导入 + 前端",
+      "id": "T6203",
+      "phase": "P2",
+      "priority": "P0",
+      "title": "seed 1000 简历 + next build + marketplace 运行时",
+      "description": "seed 脚本从没跑过。前端 marketplace 页面从没 build 过。",
+      "deliverables": [
+        "python scripts/seed_test_data.py (1000 求职者 + 10 企业 + 5 岗位)",
+        "验证: 查询数据库确认数据入库",
+        "npx next build (验证 marketplace 页面编译通过)",
+        "浏览器打开 marketplace 页面验证运行时",
+        "修复任何前端运行时错误"
       ],
       "days": 1
     },
     {
-      "_section": "P3 — 验收交付",
-      "id": "T6110",
+      "_section": "P3 — 演示验收",
+      "id": "T6204",
       "phase": "P3",
       "priority": "P0",
-      "title": "转人工规则 (自伤风险 + 劳动争议)",
-      "description": "合同必须转人工: 自伤风险, 劳动争议。",
+      "title": "5 场景端到端演示走通",
+      "description": "从未走过完整演示流程。按 DEMO_SCRIPT.md 走 5 个场景。",
       "deliverables": [
-        "emotion_agent: 检测自伤 → 弹窗 '建议联系专业心理咨询' + 通知 HR",
-        "关键词检测劳动争议 → '建议联系 HR/法务' + 创建工单",
-        "frontend: EscalateToHumanDialog.tsx",
-        "管理员只看风险提醒,不看原始私人对话"
+        "场景 1: 求职者注册 → 上传简历 → AI 聊天 → 生成画像",
+        "场景 2: 企业注册 → 上传资质 → 创建岗位 → AI 细化",
+        "场景 3: 硬条件匹配 → 推送 → 企业查看 → 联系 → 面试",
+        "场景 4: 情绪低落 → 转人工 (自伤风险/劳动争议)",
+        "场景 5: 多方协作 (老板/HR/部门负责人)",
+        "记录任何不通的地方 → 修复",
+        "更新 DEMO_SCRIPT.md (记录实际验证结果)"
+      ],
+      "days": 1.5
+    },
+    {
+      "id": "T6205",
+      "phase": "P3",
+      "priority": "P0",
+      "title": "移动端响应式检查",
+      "description": "合同要求「响应式网页(电脑和手机)」。检查关键页面在手机尺寸下的布局。",
+      "deliverables": [
+        "Chrome DevTools 移动端模拟 (iPhone/Android)",
+        "检查: 市场首页 / 人才池 / 岗位池 / 聊天 / 画像 / 匹配结果",
+        "修复布局问题 (断点/字体/按钮/表格)",
+        "截图记录"
       ],
       "days": 0.5
     },
     {
-      "id": "T6111",
+      "id": "T6206",
       "phase": "P3",
       "priority": "P0",
-      "title": "一键本地部署 (docker-compose + Ollama)",
-      "description": "本地/演示环境运行说明。",
+      "title": "26 项验收清单逐项确认",
+      "description": "ACCEPTANCE_CHECKLIST.md 26 项逐项打勾。",
       "deliverables": [
-        "docker-compose.local.yml: 一键启动全部 (backend+frontend+postgres+redis+ollama+paddleocr)",
-        "scripts/start_local.sh + stop_local.sh",
-        "docs/LOCAL_DEPLOYMENT.md: 完整运行说明"
+        "逐项: 打开功能 → 演示步骤 → 截图/记录 → 通过/不通过",
+        "不通过的: 立即修复",
+        "最终: 26/26 全部通过",
+        "更新 ACCEPTANCE_CHECKLIST.md (签字栏)"
       ],
-      "days": 0.5
-    },
-    {
-      "id": "T6112",
-      "phase": "P3",
-      "priority": "P0",
-      "title": "测试数据导入 (1000 简历 + 10 企业 + 5 岗位)",
-      "description": "甲方提供脱敏简历样例。批量导入 + 假数据生成。",
-      "deliverables": [
-        "scripts/seed_test_data.py: 1000 求职者 + 10 企业 + 5 岗位",
-        "scripts/generate_fake_data.py: Faker 生成假简历",
-        "frontend/app/admin/data-import/page.tsx: 批量导入 UI"
-      ],
-      "days": 0.3
-    },
-    {
-      "id": "T6113",
-      "phase": "P3",
-      "priority": "P0",
-      "title": "26 项验收清单 + 演示流程 + 用户手册",
-      "description": "甲方验收依据: 逐项功能清单和演示流程。交付物: 运行/部署说明。",
-      "deliverables": [
-        "docs/ACCEPTANCE_CHECKLIST.md: 26 项逐项验收 (功能描述+演示步骤+通过标准)",
-        "docs/DEMO_SCRIPT.md: 5 角色演示脚本",
-        "docs/USER_MANUAL.md: 4 角色用户手册"
-      ],
-      "days": 0.5
+      "days": 1
     }
   ],
-  "total_days": "9.8 (合同要求)",
+  "total_days": "6.5 (含缓冲)",
   "deadline": "2026-09-15"
 }
