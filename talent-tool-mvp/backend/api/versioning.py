@@ -267,7 +267,37 @@ def _install_deprecation_middleware(app: FastAPI) -> None:
 
 
 def _install_legacy_redirect_middleware(app: FastAPI) -> None:
-    """Redirect ``/api/<x>`` -> ``/api/v1/<x>`` (308 = permanent, method preserved)."""
+    """Redirect ``/api/<x>`` -> ``/api/v1/<x>`` (308 = permanent, method preserved).
+
+    Only redirects paths that are NOT already served by a directly-mounted
+    (non-versioned) route. Without this guard, a real route such as
+    ``/api/candidates`` would be needlessly bounced to ``/api/v1/candidates``
+    where it collides with the v1 param route ``/api/v1/{candidate_id}``.
+    """
+
+    # Collect the concrete prefixes of routes mounted directly under /api/
+    # (i.e. NOT under a /api/vN namespace). These are served as-is and must
+    # never be redirected. FastAPI represents included routers as
+    # ``_IncludedRouter`` wrappers exposing ``include_context.prefix``.
+    _direct_prefixes: set[str] = set()
+    for route in getattr(app, "routes", []) or []:
+        # Direct APIRoute (rare, e.g. /api/health).
+        path = getattr(route, "path", None)
+        if isinstance(path, str) and path.startswith("/api/") and not re.match(
+            r"^/api/v\d+(/|$)", path
+        ):
+            parts = path.split("/")
+            if len(parts) >= 3:
+                _direct_prefixes.add("/" + "/".join(parts[:3]))
+        # Included router wrapper.
+        ctx = getattr(route, "include_context", None)
+        prefix = getattr(ctx, "prefix", None) if ctx is not None else None
+        if isinstance(prefix, str) and prefix.startswith("/api/") and not re.match(
+            r"^/api/v\d+(/|$)", prefix
+        ):
+            parts = prefix.split("/")
+            if len(parts) >= 3:
+                _direct_prefixes.add("/" + "/".join(parts[:3]))
 
     def _should_redirect(path: str) -> bool:
         if not path.startswith("/api/"):
@@ -277,6 +307,12 @@ def _install_legacy_redirect_middleware(app: FastAPI) -> None:
         # Skip nested versioned paths
         if re.match(r"^/api/v\d+(/|$)", path):
             return False
+        # Skip paths served by a directly-mounted route.
+        parts = path.split("/")
+        if len(parts) >= 3:
+            prefix = "/" + "/".join(parts[:3])
+            if prefix in _direct_prefixes:
+                return False
         return True
 
     @app.middleware("http")

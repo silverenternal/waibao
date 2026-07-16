@@ -169,11 +169,21 @@ def _setup():
 @pytest.fixture
 def mem_backend():
     backend = _MemoryBackend()
-    sys.modules["api.deps"] = type(sys)("api.deps")
-    sys.modules["api.deps"].get_supabase_admin = lambda: backend
+    # Save and restore the real api.deps to avoid polluting sys.modules for
+    # later tests (e.g. test_document_generator imports get_supabase from it).
+    _saved_deps = sys.modules.get("api.deps")
+    _fake_deps = type(sys)("api.deps")
+    _fake_deps.get_supabase_admin = lambda: backend
+    sys.modules["api.deps"] = _fake_deps
     if "services.platform.config_service" in sys.modules:
         importlib.reload(sys.modules["services.platform.config_service"])
-    return backend
+    yield backend
+    if _saved_deps is not None:
+        sys.modules["api.deps"] = _saved_deps
+    else:
+        sys.modules.pop("api.deps", None)
+    if "services.platform.config_service" in sys.modules:
+        importlib.reload(sys.modules["services.platform.config_service"])
 
 
 def _cs():
@@ -187,7 +197,13 @@ def _cs():
 class TestScopeAndValue:
     def test_valid_scopes(self, mem_backend):
         cs = _cs()
-        assert set(cs.VALID_SCOPES) == {"system", "org", "agent", "feature"}
+        assert set(cs.VALID_SCOPES) == {
+            "system",
+            "org",
+            "agent",
+            "feature",
+            "service_toggle",
+        }
 
     def test_valid_value_types(self, mem_backend):
         cs = _cs()

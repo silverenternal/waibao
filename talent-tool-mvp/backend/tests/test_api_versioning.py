@@ -52,15 +52,20 @@ def client(versioned_app):
 
 
 def test_legacy_path_redirects_to_v1(client):
-    r = client.get("/api/version-info", follow_redirects=False)
+    # A legacy path that is NOT directly mounted on the app is redirected to
+    # /api/v1/<path> (308, permanent, method-preserving).  Note: routes that
+    # ARE directly mounted under /api/<x> (like /api/version-info) are served
+    # as-is and deliberately not redirected (v8.1 fix avoids collisions with
+    # v1 parameter routes such as /api/v1/{candidate_id}).
+    r = client.get("/api/does-not-exist-legacy", follow_redirects=False)
     assert r.status_code == 308
-    assert r.headers["location"] == "/api/v1/version-info"
+    assert r.headers["location"] == "/api/v1/does-not-exist-legacy"
 
 
 def test_legacy_path_preserves_query_string(client):
-    r = client.get("/api/version-info?foo=bar&x=1", follow_redirects=False)
+    r = client.get("/api/does-not-exist-legacy?foo=bar&x=1", follow_redirects=False)
     assert r.status_code == 308
-    assert r.headers["location"].startswith("/api/v1/version-info?")
+    assert r.headers["location"].startswith("/api/v1/does-not-exist-legacy?")
     assert "foo=bar" in r.headers["location"]
     assert "x=1" in r.headers["location"]
 
@@ -236,8 +241,13 @@ def test_full_versioning_round_trip():
     install_versioning(app)
 
     with TestClient(app) as c:
-        # Direct call (no version prefix) — should 308 redirect
+        # A directly-mounted legacy route is served as-is (not redirected) —
+        # this is the v8.1 behaviour that prevents collisions with v1
+        # parameter routes such as /api/v1/{candidate_id}.
         direct = c.get("/api/candidates/foo?x=1", follow_redirects=False)
-        assert direct.status_code == 308
-        # Follow the redirect manually (TestClient follows by default; use no follow + status)
-        assert direct.headers["location"] == "/api/v1/candidates/foo?x=1"
+        assert direct.status_code == 200
+        assert direct.json() == {"id": "foo"}
+        # A genuinely unmounted legacy path still 308-redirects to v1.
+        redir = c.get("/api/something-else/legacy?x=1", follow_redirects=False)
+        assert redir.status_code == 308
+        assert redir.headers["location"] == "/api/v1/something-else/legacy?x=1"

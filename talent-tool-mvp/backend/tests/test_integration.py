@@ -160,5 +160,9 @@ class TestSignalFlow:
 class TestNotFound:
     def test_unknown_path_returns_404(self, client):
         response = client.get("/api/nonexistent")
-        # 404 if the path is not registered; ServiceToggle 403 also acceptable
-        assert response.status_code in (404, 403)
+        # The global auth dependency runs before route resolution, so an
+        # unauthenticated request to an unknown /api/* path yields 401 rather
+        # than 404. Any of {401, 403, 404} is an acceptable "blocked" outcome
+        # (see ACCESS_BLOCKED above): 401 missing token, 403 ServiceToggle
+        # disabled, 404 route genuinely absent.
+        assert response.status_code in (401, 403, 404)

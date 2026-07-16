@@ -787,7 +787,7 @@ def test_get_catalog_filters_by_plan():
     assert len({i["category"] for i in items}) >= 5
 
 
-def test_resolve_dependencies_for_missing_returns_empty():
+def test_resolve_dependencies_for_missing_returns_empty(fake_supabase):
     from services.platform.service_toggle import service_toggle
 
     assert service_toggle.resolve_dependencies("totally.missing") == []
@@ -819,7 +819,7 @@ def test_override_to_disable_blocks_even_when_enabled(fake_supabase):
     assert service_toggle.is_enabled("force.off", "org-1", "free", "admin") is False
 
 
-def test_is_enabled_returns_false_for_unknown_service():
+def test_is_enabled_returns_false_for_unknown_service(fake_supabase):
     from services.platform.service_toggle import service_toggle
 
     assert service_toggle.is_enabled("does.not.exist", "org-1", "free", "admin") is False

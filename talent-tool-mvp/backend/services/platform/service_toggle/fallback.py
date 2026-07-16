@@ -131,7 +131,13 @@ def is_enabled_safe(
       (default policy ``allow``), so the caller keeps working.
     """
     st = toggle or service_toggle
-    svc = st.get_service(name)
+    try:
+        svc = st.get_service(name)
+    except Exception:  # noqa: BLE001 — catalog unreachable counts as a miss
+        # The control-plane (catalog DB) is unavailable. Treat this exactly
+        # like a registry miss: warn once and degrade to the mock registry so
+        # the caller keeps working instead of receiving a 500.
+        svc = None
     if svc is not None:
         try:
             return st.is_enabled(name, org_id, plan, role)

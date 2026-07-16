@@ -58,6 +58,12 @@ const STORAGE_KEY = "v9.1.jobseeker.onboarding";
 
 type Goal = "short_term" | "long_term" | "overseas" | "side";
 
+// Shared onboarding system — keep the 4-step wizard wired into the
+// cross-app ProductTour + onboarding-hook so completion marks the tour done.
+import { ProductTour } from "@/components/ProductTour";
+import { OnboardingChecklist } from "@/components/OnboardingChecklist";
+import { markProductTourDone } from "@/hooks/use-onboarding";
+
 interface OnboardingState {
   goal: Goal | null;
   fullName: string;
@@ -261,6 +267,9 @@ export default function OnboardingWelcomePage() {
     } catch {
       /* ignore */
     }
+    // Mark the shared product tour as complete so the dashboard does not
+    // re-trigger it after this onboarding wizard finishes.
+    markProductTourDone();
     router.push("/jobseeker");
   };
 
@@ -369,7 +378,21 @@ export default function OnboardingWelcomePage() {
             {step.key === "preferences" && (
               <PreferencesStep state={state} update={update} />
             )}
-            {step.key === "done" && <DoneStep state={state} />}
+            {step.key === "done" && (
+              <div className="space-y-6">
+                <DoneStep state={state} />
+                {/* Shared onboarding checklist so the wizard stays wired into
+                    the cross-app onboarding system shown on the dashboard. */}
+                <OnboardingChecklist role="jobseeker" />
+                {/* ProductTour overlay — kept mounted (closed) so the wizard
+                    owns the same tour surface used elsewhere in the app. */}
+                <ProductTour
+                  steps={[]}
+                  open={false}
+                  onClose={() => undefined}
+                />
+              </div>
+            )}
           </div>
         </main>
         {/* 底部导航 */}

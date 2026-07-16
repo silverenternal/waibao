@@ -94,6 +94,16 @@ def init_telemetry(
 
 def instrument_app(app) -> None:
     """挂载 FastAPIInstrumentor + 常见客户端 instrumentation."""
+    # OTel's FastAPIInstrumentor (0.63b1) walks app.routes and crashes on the
+    # nested ``_IncludedRouter`` wrappers produced by FastAPI's include_router
+    # (no ``.path`` on a PARTIAL match — see OTel fastapi/__init__.py). That
+    # span-generation middleware then 500s every request it instruments.
+    # Allow opting out (e.g. in tests / local dev) without touching prod tracing.
+    import os
+
+    if os.environ.get("WAIBAO_DISABLE_OTEL") == "1":
+        logger.info("telemetry.fastapi_instrumentation_skipped (WAIBAO_DISABLE_OTEL=1)")
+        return
     try:
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 

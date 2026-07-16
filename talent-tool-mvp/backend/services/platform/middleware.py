@@ -101,11 +101,23 @@ def install_auto_gates(app: FastAPI, *, exempt: Iterable[str] | None = None) -> 
 
     def _wrapped_include_router(router, *args, **kwargs):
         prefix = kwargs.get("prefix", "")
+        # Skip gating for routers that own WebSocket routes: the gate dep is
+        # built for HTTP ``Request`` injection and crashes (TypeError) when
+        # evaluated for a WebSocket route. WS auth is enforced in-handler.
+        has_websocket = any(
+            getattr(r, "endpoint", None) is not None
+            and "websocket" in str(getattr(r, "__class__", "")).lower()
+            for r in (getattr(router, "routes", []) or [])
+        ) or any(
+            type(r).__name__ == "APIWebSocketRoute"
+            for r in (getattr(router, "routes", []) or [])
+        )
         if (
             isinstance(prefix, str)
             and prefix
             and prefix not in exempt_set
             and prefix.startswith("/api/")
+            and not has_websocket
         ):
             service = service_name_for_prefix(prefix)
             if service and service not in seen_services:

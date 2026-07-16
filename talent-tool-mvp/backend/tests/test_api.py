@@ -22,6 +22,11 @@ def test_health_check_has_request_id():
 
 
 def test_not_found():
-    """Non-existent routes return structured 404."""
-    response = client.get("/api/nonexistent")
+    """Non-existent routes return structured 404.
+
+    Uses a multi-segment path so the legacy ``/api/<x>`` -> ``/api/v1/<x>``
+    redirect cannot accidentally bind to a single-param route (e.g.
+    ``/api/v1/{candidate_id}``) and short-circuit into a 401.
+    """
+    response = client.get("/api/this-route-does-not-exist/at/all")
     assert response.status_code == 404

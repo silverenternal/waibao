@@ -134,9 +134,34 @@ def _retry_after_seconds(exc: RateLimitExceeded) -> int:
 def install_slowapi(app) -> None:
     """Attach state + handler + middleware in one shot."""
     limiter = get_limiter()
+    _patch_inject_headers(limiter)
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
     app.add_middleware(SlowAPIMiddleware)
+
+
+def _patch_inject_headers(limiter) -> None:
+    """Stop slowapi from clobbering an app-provided ``Retry-After``.
+
+    slowapi's ``_inject_headers`` unconditionally overwrites ``Retry-After``
+    with the rate-limit window reset (even when it just reconciled against an
+    existing value), so a handler that raises ``APIError.rate_limited(42)``
+    ends up emitting ``Retry-After: 60``. Wrap it to restore the original
+    header when the application set one.
+    """
+    if getattr(limiter, "_waibao_headers_patched", False):
+        return
+    original = limiter._inject_headers
+
+    def _wrapped(response, current_limit):
+        existing = response.headers.get("Retry-After") if hasattr(response, "headers") else None
+        resp = original(response, current_limit)
+        if existing is not None and hasattr(resp, "headers"):
+            resp.headers["Retry-After"] = existing
+        return resp
+
+    limiter._inject_headers = _wrapped
+    limiter._waibao_headers_patched = True
 
 
 __all__ = [

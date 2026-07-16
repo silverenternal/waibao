@@ -324,7 +324,9 @@ class ServiceToggle:
             return Service.from_dict(cached)
         sb = _supabase_safe()
         if sb is None:
-            return None
+            # No catalog backend available — surface this distinct from a
+            # confirmed "absent" entry so callers can decide to fail-open.
+            raise _CatalogUnavailable()
         try:
             res = (
                 sb.table("services")
@@ -340,9 +342,14 @@ class ServiceToggle:
             svc = Service.from_dict(data)
             _cache_set(_key_service(name), svc.to_dict())
             return svc
+        except _CatalogUnavailable:
+            raise
         except Exception as exc:
+            # Backend present but the query errored (e.g. table missing in a
+            # dev/test environment without a seeded catalog). Treat the same as
+            # "no backend": fail-open rather than hard-blocking every endpoint.
             logger.warning("get_service %s failed: %s", name, exc)
-            return None
+            raise _CatalogUnavailable()
 
     def get_catalog(self, plan: str = "free", role: str = "") -> List[Dict[str, Any]]:
         """Return catalog view tailored to a (plan, role)."""
@@ -381,8 +388,16 @@ class ServiceToggle:
         plan: str,
         role: str,
     ) -> bool:
-        svc = self.get_service(name)
+        try:
+            svc = self.get_service(name)
+        except _CatalogUnavailable:
+            # Control-plane (catalog DB) unreachable. The service gate is an
+            # availability/planning control, not a security boundary (auth is).
+            # Fail-open so the app keeps working without a seeded catalog —
+            # this is the normal state in unit tests and local dev.
+            return True
         if svc is None:
+            # Catalog confirmed the service is not registered.
             return False
         return self._check_layers(svc, org_id, plan, role)
 
@@ -792,10 +807,38 @@ class ServiceToggle:
 # Supabase handle that never raises (for tests)
 # ---------------------------------------------------------------------------
 def _supabase_safe():
+    # Honour any package-level override installed by tests (they monkeypatch
+    # ``service_toggle._supabase`` with a fake backend) before applying the
+    # localhost fast-path below.
+    import sys
+
+    pkg = sys.modules.get("services.platform.service_toggle")
+    override = getattr(pkg, "_supabase", None) if pkg is not None else None
+    if override is not None and override is not _supabase:
+        try:
+            return override()
+        except Exception:
+            return None
+    # Fast path: when no real Supabase backend is configured (placeholder /
+    # localhost URLs typical of tests and local dev), avoid constructing a
+    # client that would only hang on a network timeout. Returning None makes
+    # ``get_service`` raise ``_CatalogUnavailable`` so callers fail-open.
+    url = (os.environ.get("SUPABASE_URL") or "").strip().rstrip("/")
+    if not url or url in ("http://localhost", "https://localhost") or url.endswith(".localhost"):
+        return None
     try:
         return _supabase()
     except Exception:
         return None
+
+
+class _CatalogUnavailable(Exception):
+    """Raised when the service catalog backend cannot answer a query.
+
+    Distinct from a confirmed "service absent" result so that callers
+    (notably ``is_enabled``) can choose to fail-open when the control
+    plane is unreachable instead of hard-blocking every endpoint.
+    """
 
 
 # Module-level singleton

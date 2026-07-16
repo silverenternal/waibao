@@ -2,6 +2,12 @@
 import sys
 import os
 
+# Disable OpenTelemetry FastAPI instrumentation during tests. OTel 0.63b1's
+# route scanner crashes on FastAPI's nested ``_IncludedRouter`` wrappers
+# (no ``.path`` on a PARTIAL match), which 500s every instrumented request.
+# Tests don't need distributed tracing; flip this back on in real deployments.
+os.environ.setdefault("WAIBAO_DISABLE_OTEL", "1")
+
 # 把 backend 目录加入 sys.path,使得 `import agents` 等顶级导入可以工作
 backend_dir = os.path.dirname(os.path.abspath(__file__))
 if backend_dir not in sys.path:
