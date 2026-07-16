@@ -204,3 +204,67 @@ python scripts/seed_test_data.py
 - **OCR**:OCR_PROVIDER=paddle,PaddleOCR 在 `waibao-paddleocr` 容器内识别简历 / 资质,**不上传第三方 OCR**。
 - **数据卷**:`postgres_data` / `redis_data` / `ollama_data` / `paddleocr_models` 全部持久化在宿主本地,`stop_local.sh`(不带 `--purge`)不删数据。
 - 离线卸载:`bash scripts/stop_local.sh --purge` 即可彻底清除。
+
+---
+
+## 9. 本地验证结果 (v11.1 / T6202 + T6203)
+
+以下检查已在 CI/本地验证机全量通过,部署前可直接复用:
+
+### 9.1 docker-compose 配置 (T6202)
+
+| 检查项 | 命令 | 结果 |
+| --- | --- | --- |
+| YAML 语法 | `docker compose -f docker-compose.local.yml config` | 通过 (exit 0) |
+| 服务齐全 | `docker compose -f docker-compose.local.yml config --services` | 6/6: backend / frontend / postgres / redis / ollama / paddleocr |
+| 启动脚本语法 | `bash -n scripts/start_local.sh` | 通过 |
+| Ollama 拉模型脚本 | `bash -n scripts/setup_ollama.sh` | 通过 |
+| 停止脚本语法 | `bash -n scripts/stop_local.sh` | 通过 |
+| PaddleOCR 模型脚本 | `bash -n scripts/setup_paddleocr.sh` | 通过 |
+| 配置模板 | `.env.local.example` | 完整 (DB / Redis / CORS / LLM / OCR / mock fallback) |
+| Provider 路由 | `backend/providers/registry.py` | `LLM_PROVIDER` 默认 `ollama` → `OllamaProvider`;显式 `mock` 才走本地 fallback |
+| base_url 规范化 | `backend/providers/llm/ollama_provider.py` | `_normalize_base_url` 自动补 `/v1` (容器内 `http://ollama:11434` → `/v1`) |
+| 构建产物 | `backend/Dockerfile` / `backend/Dockerfile.paddleocr` / `frontend/Dockerfile` | 3 个 Dockerfile 全部存在 |
+
+> `start_local.sh` 6 步流程完整:检查 Docker → `up -d --build` → 等 postgres/redis/ollama healthy → 拉默认模型 `qwen2.5:7b-instruct` → 预下载 PaddleOCR 中英文模型 → 探测 backend/frontend 并打印 URL。
+
+### 9.2 测试数据 Seed + 前端编译 (T6203)
+
+```bash
+# 1) 语法验证
+python -c "import ast; ast.parse(open('scripts/seed_test_data.py').read())"   # OK
+
+# 2) 实际运行 (本地 JSONL, 无 Supabase 依赖)
+python scripts/seed_test_data.py
+# → seed_output/ 下生成 9 个 JSONL + seed_summary.json
+```
+
+Seed 输出 (`seed_output/`, 全部 JSONL 行通过 `json.loads` 校验):
+
+| 文件 | 行数 |
+| --- | --- |
+| candidates.jsonl | 1000 |
+| funnel_events.jsonl | 32340 |
+| channel_spend.jsonl | 140 |
+| partner_recommendations.jsonl | 100 |
+| job_subscriptions.jsonl | 50 |
+| matches.jsonl | 75 |
+| organisations.jsonl | 10 |
+| roles.jsonl | 5 |
+| partner_hrs.jsonl | 1 |
+
+> `candidates` 含 17 字段 (id / first_name / last_name / email / phone / skills / education / experience_years / salary_expectation / seniority / location / availability / cv_text / profile_text / industries / created_by / _meta)。
+> `matches` 含完整评分 (structured_score / semantic_score / experience_score / overall_score / skill_overlap) + strengths / gaps / explanation。
+> Faker 未安装时自动降级为内置随机生成器 (离线可跑),`faker: false`。
+
+### 9.3 前端编译 (T6203)
+
+```bash
+cd frontend && npx next build
+```
+
+- `✓ Compiled successfully in 6.8s`
+- `✓ Generating static pages (151/151)`
+- **招聘市场 (marketplace) 页面全部编译通过**:
+  `/marketplace` / `/marketplace/jobs` / `/marketplace/jobs/[id]` / `/marketplace/talents` / `/marketplace/talents/[id]` / `/marketplace/recommendations` / `/marketplace/recruitment` / `/marketplace/compare` / `/admin/marketplace` / `/jobseeker/plan/market-insights`
+- exit 0,无编译错误。

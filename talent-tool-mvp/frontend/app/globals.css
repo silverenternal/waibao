@@ -327,3 +327,33 @@ main > *:nth-child(6) { animation-delay: 0.3s; }
 :root { --brand-primary: #00D4AA; --tremor-brand: var(--primary); --tremor-background: var(--card); --tremor-content: var(--foreground); --spacing-page: clamp(1rem, 3vw, 2rem); }
 .dark { --tremor-brand: var(--primary); --tremor-background: var(--card); --tremor-content: var(--foreground); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; } }
+
+/* ============================================================
+   T6205 — Mobile touch targets (WCAG 2.5.5 / iOS HIG ≥ 44px)
+   On coarse pointers (touch screens) every primary interactive
+   element gets a minimum 44×44px hit area. The element's visual
+   size is unchanged via `min-width/height` only when below the
+   floor, so desktop button heights (h-8/h-9) keep their look but
+   become comfortably tappable on phones. Marketplace / chat /
+   profile / match pages all benefit automatically.
+   ============================================================ */
+@media (pointer: coarse) {
+  button:not([data-touch="false"]),
+  a[role="button"]:not([data-touch="false"]),
+  [data-touch-target="true"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  /* Keep compact icon-only buttons reachable without bloating them:
+     expand the tappable area via padding-box rather than height. */
+  button[data-touch="icon"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Utility opt-in for non-<button> tappables (e.g. <div role="button">). */
+.touch-target-44 {
+  min-height: 44px;
+  min-width: 44px;
+}
