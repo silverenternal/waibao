@@ -23,18 +23,21 @@ import logging
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import Response
 from pydantic import BaseModel, Field
 
-from api.auth import CurrentUser, get_current_user
+from api.auth import CurrentUser, require_client, require_role
 from api.deps import PaginatedResponse
 from contracts.shared import UserRole
 from services.marketplace.talent_market import (
+    CommunicationChannel,
     JobCard,
     JobDetail,
     MatchRecommendation,
     TalentCard,
     TalentDetail,
     TalentMarketService,
+    ViewerContext,
     get_service,
 )
 
@@ -76,6 +79,78 @@ def _is_seeker(user: Optional[CurrentUser]) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# v11.2 T6304 — viewer-context plumbing (employer roles / talent profile)
+# ---------------------------------------------------------------------------
+
+def _fetch_employer_roles(user: CurrentUser) -> list[dict]:
+    """Best-effort lookup of the employer's open roles for threshold scoring.
+
+    Returns ``[]`` when Supabase is unreachable or the org has no roles (the
+    service then surfaces a helpful empty-state message instead of erroring).
+    """
+    try:
+        from api.deps import get_supabase_admin
+
+        sb = get_supabase_admin()
+        # org membership: candidates table joins users → but roles carry
+        # org_id directly. We scope by the user id mapped to an org, falling
+        # back to all active roles owned by this user.
+        res = (
+            sb.table("roles")
+            .select("*")
+            .or_(f"owner_id.eq.{user.id},hr_id.eq.{user.id}")
+            .limit(50)
+            .execute()
+        )
+        return list(res.data or [])
+    except Exception:  # noqa: BLE001 — anonymous browse / dev fallback
+        logger.info("employer roles lookup failed for %s, treating as no roles", user.id)
+        return []
+
+
+def _fetch_talent_profile(user: CurrentUser) -> Optional[dict]:
+    """Best-effort lookup of the talent's candidate profile for job scoring."""
+    try:
+        from api.deps import get_supabase_admin
+
+        sb = get_supabase_admin()
+        res = (
+            sb.table("candidates")
+            .select("*")
+            .eq("user_id", str(user.id))
+            .limit(1)
+            .execute()
+        )
+        rows = res.data or []
+        return rows[0] if rows else None
+    except Exception:  # noqa: BLE001 — dev fallback
+        logger.info("talent profile lookup failed for %s", user.id)
+        return None
+
+
+def _viewer_from_user(
+    user: Optional[CurrentUser],
+) -> ViewerContext:
+    """Build a :class:`ViewerContext` from the authenticated user (or None)."""
+    if user is None:
+        return ViewerContext(kind="anonymous")
+    if user.role == UserRole.client:
+        return ViewerContext(
+            kind="employer",
+            employer_roles=_fetch_employer_roles(user),
+            user_id=str(user.id),
+        )
+    if user.role == UserRole.talent_partner:
+        return ViewerContext(
+            kind="talent",
+            talent_profile=_fetch_talent_profile(user),
+            user_id=str(user.id),
+        )
+    # admin: treat as employer-style browse (full access) with no scoring gate.
+    return ViewerContext(kind="employer", employer_roles=[], user_id=str(user.id))
+
+
+# ---------------------------------------------------------------------------
 # Response schemas
 # ---------------------------------------------------------------------------
 
@@ -102,6 +177,10 @@ class TalentCardOut(BaseModel):
     match_score: int
     online: bool
     avatar_color: str
+    # v11.2 T6304 — threshold-visibility flags
+    can_contact: bool = False
+    best_role_id: Optional[str] = None
+    comm_channel_open: bool = False
 
 
 class TalentDetailOut(TalentCardOut):
@@ -130,6 +209,10 @@ class JobCardOut(BaseModel):
     match_score: int
     posted_at: str
     certificates_required: list[str] = Field(default_factory=list)
+    # v11.2 T6304 — threshold-visibility flags
+    can_contact: bool = False
+    best_role_id: Optional[str] = None
+    comm_channel_open: bool = False
 
 
 class JobDetailOut(JobCardOut):
@@ -157,6 +240,27 @@ class MatchRecommendationOut(BaseModel):
     reasons: list[str]
 
 
+class CommunicationChannelOut(BaseModel):
+    """A two-way contact channel between a candidate and a role's org."""
+
+    id: str
+    candidate_id: str
+    role_id: str
+    org_id: str
+    initiated_by: str
+    match_score: int = 0
+    status: str = "open"
+    created_at: str = ""
+    updated_at: str = ""
+
+
+class InitiateContactRequest(BaseModel):
+    """Body for POST /talent-market/initiate-contact (employer only)."""
+
+    talent_id: str
+    role_id: str
+
+
 def _talent_card_out(t: TalentCard) -> TalentCardOut:
     return TalentCardOut(
         id=t.id, name=t.name, title=t.title, city=t.city, skills=t.skills,
@@ -164,6 +268,9 @@ def _talent_card_out(t: TalentCard) -> TalentCardOut:
         salary_min_k=t.salary_min_k, salary_max_k=t.salary_max_k,
         experience_years=t.experience_years, availability=t.availability,
         match_score=t.match_score, online=t.online, avatar_color=t.avatar_color,
+        can_contact=bool(getattr(t, "can_contact", False)),
+        best_role_id=getattr(t, "best_role_id", None),
+        comm_channel_open=bool(getattr(t, "comm_channel_open", False)),
     )
 
 
@@ -188,6 +295,9 @@ def _job_card_out(j: JobCard) -> JobCardOut:
         remote_policy=j.remote_policy, match_score=j.match_score,
         posted_at=j.posted_at,
         certificates_required=getattr(j, "certificates_required", []),
+        can_contact=bool(getattr(j, "can_contact", False)),
+        best_role_id=getattr(j, "best_role_id", None),
+        comm_channel_open=bool(getattr(j, "comm_channel_open", False)),
     )
 
 
@@ -248,14 +358,25 @@ async def list_talents(
     salary_min: Optional[int] = Query(default=None, ge=0),
     salary_max: Optional[int] = Query(default=None, ge=0),
     education: Optional[str] = Query(default=None),
+    user: Optional[CurrentUser] = Depends(_optional_user),
+    response: Response = None,
     svc: TalentMarketService = Depends(get_service),
 ) -> PaginatedResponse:
-    """Talent pool — paginated + filtered. Returns anonymous cards."""
-    cards, total = svc.list_talents(
+    """Talent pool — paginated + filtered, viewer-aware.
+
+    Employers only see talents scoring at/above the match threshold against
+    their open roles; anonymous/talent viewers get masked cards
+    (no contact, no real score). When an employer has no open roles an
+    ``X-Empty-Hint`` header carries a helpful message (no error).
+    """
+    viewer = _viewer_from_user(user)
+    cards, total, meta = svc.list_talents(
         page=page, page_size=page_size, keyword=keyword, position=position,
         skill=skill, city=city, salary_min=salary_min, salary_max=salary_max,
-        education=education,
+        education=education, viewer=viewer,
     )
+    if meta.get("empty_hint") and response is not None:
+        response.headers["X-Empty-Hint"] = meta["empty_hint"]
     return PaginatedResponse(
         data=[_talent_card_out(c).model_dump(mode="json") for c in cards],
         total=total, page=page, page_size=page_size,
@@ -273,13 +394,16 @@ async def get_talent(
     user: Optional[CurrentUser] = Depends(_optional_user),
     svc: TalentMarketService = Depends(get_service),
 ) -> TalentDetailOut:
-    """Talent detail.
+    """Talent detail — viewer-aware threshold visibility.
 
     Anonymous/seeker callers receive a masked summary; authenticated
-    employer/admin callers receive the full resume + contact info.
+    employer callers receive the full resume **only if** the match score
+    against their roles reaches the threshold (otherwise 404 — the parties
+    cannot know each other exists).
     """
+    viewer = _viewer_from_user(user)
     full = _can_see_full_resume(user)
-    talent = svc.get_talent(talent_id, full=full)
+    talent = svc.get_talent(talent_id, full=full, viewer=viewer)
     if talent is None:
         raise HTTPException(status_code=404, detail="Talent not found")
     return _talent_detail_out(talent)
@@ -294,13 +418,22 @@ async def list_jobs(
     city: Optional[str] = Query(default=None),
     salary_min: Optional[int] = Query(default=None, ge=0),
     salary_max: Optional[int] = Query(default=None, ge=0),
+    user: Optional[CurrentUser] = Depends(_optional_user),
+    response: Response = None,
     svc: TalentMarketService = Depends(get_service),
 ) -> PaginatedResponse:
-    """Job pool — paginated + filtered."""
-    cards, total = svc.list_jobs(
+    """Job pool — paginated + filtered, viewer-aware.
+
+    Talent viewers only see jobs scoring at/above the threshold against
+    their profile; anonymous/employer viewers get masked cards.
+    """
+    viewer = _viewer_from_user(user)
+    cards, total, meta = svc.list_jobs(
         page=page, page_size=page_size, keyword=keyword, position=position,
-        city=city, salary_min=salary_min, salary_max=salary_max,
+        city=city, salary_min=salary_min, salary_max=salary_max, viewer=viewer,
     )
+    if meta.get("empty_hint") and response is not None:
+        response.headers["X-Empty-Hint"] = meta["empty_hint"]
     return PaginatedResponse(
         data=[_job_card_out(c).model_dump(mode="json") for c in cards],
         total=total, page=page, page_size=page_size,
@@ -315,10 +448,94 @@ async def list_jobs(
 )
 async def get_job(
     job_id: str,
+    user: Optional[CurrentUser] = Depends(_optional_user),
     svc: TalentMarketService = Depends(get_service),
 ) -> JobDetailOut:
-    """Job card detail (responsibilities + requirements + boundaries)."""
-    job = svc.get_job(job_id)
+    """Job card detail — viewer-aware threshold visibility."""
+    viewer = _viewer_from_user(user)
+    job = svc.get_job(job_id, viewer=viewer)
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
     return _job_detail_out(job)
+
+
+# ---------------------------------------------------------------------------
+# v11.2 T6304 — 发起沟通 / 沟通渠道 (employer side)
+# ---------------------------------------------------------------------------
+
+_BELOW_THRESHOLD_MSG = "匹配度未达阀值(70%)，暂无法发起沟通"
+
+
+def _channel_out(ch: CommunicationChannel) -> CommunicationChannelOut:
+    return CommunicationChannelOut(
+        id=ch.id, candidate_id=ch.candidate_id, role_id=ch.role_id,
+        org_id=ch.org_id, initiated_by=ch.initiated_by,
+        match_score=ch.match_score, status=ch.status,
+        created_at=ch.created_at, updated_at=ch.updated_at,
+    )
+
+
+@router.post(
+    "/initiate-contact",
+    response_model=CommunicationChannelOut,
+    tags=["talent-market"],
+)
+async def initiate_contact(
+    body: InitiateContactRequest,
+    user: CurrentUser = Depends(require_client),
+    svc: TalentMarketService = Depends(get_service),
+) -> CommunicationChannelOut:
+    """发起沟通 (employer only).
+
+    Creates a communication channel between ``talent_id`` and ``role_id``.
+    Requires the real match score to be at/above the threshold, otherwise
+    403 (the parties cannot know each other exists).
+    """
+    roles = _fetch_employer_roles(user)
+    role = next((r for r in roles if str(r.get("id")) == str(body.role_id)), None)
+    org_id = str((role or {}).get("org_id") or (role or {}).get("organisation_id") or "")
+    try:
+        channel = svc.initiate_contact(
+            candidate_id=body.talent_id,
+            role_id=body.role_id,
+            org_id=org_id,
+            initiated_by="employer",
+            employer_roles=roles,
+        )
+    except ValueError:
+        raise HTTPException(status_code=403, detail=_BELOW_THRESHOLD_MSG)
+    return _channel_out(channel)
+
+
+@router.get(
+    "/channels",
+    response_model=list[CommunicationChannelOut],
+    tags=["talent-market"],
+)
+async def list_channels(
+    user: CurrentUser = Depends(
+        require_role(UserRole.client, UserRole.talent_partner, UserRole.admin)
+    ),
+    svc: TalentMarketService = Depends(get_service),
+) -> list[CommunicationChannelOut]:
+    """沟通渠道列表 — employer sees their org's channels; talent sees own."""
+    if user.role == UserRole.talent_partner:
+        profile = _fetch_talent_profile(user) or {}
+        channels = svc.list_channels(candidate_id=str(profile.get("id") or user.id))
+    else:
+        # employer / admin: scope to their org's roles.
+        roles = _fetch_employer_roles(user)
+        org_ids = {
+            str(r.get("org_id") or r.get("organisation_id") or "")
+            for r in roles
+        }
+        if len(org_ids) == 1:
+            (org_id,) = org_ids
+            channels = svc.list_channels(org_id=org_id)
+        else:
+            # multiple/no orgs — return channels for any owned org.
+            out = []
+            for oid in org_ids:
+                out.extend(svc.list_channels(org_id=oid))
+            channels = out
+    return [_channel_out(c) for c in channels]

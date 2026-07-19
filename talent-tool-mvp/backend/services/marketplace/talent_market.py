@@ -17,8 +17,18 @@ import hashlib
 import logging
 import random
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any, Optional
 from uuid import UUID
+
+from matching.threshold import (
+    MATCH_THRESHOLD,
+    VisibilityGate,
+    best_score_against_roles,
+    best_score_against_talents,
+    compute_pair_score,
+    is_above_threshold,
+)
 
 logger = logging.getLogger("recruittech.services.talent_market")
 
@@ -39,6 +49,23 @@ POSITIONS = [
     "架构师", "安全工程师", "移动端工程师", "技术经理", "SRE",
 ]
 EDUCATIONS = ["大专", "本科", "硕士", "博士"]
+
+# v11.2 T6302 — identity verification display map (shared with the migration)
+#     pending   -> 待上传 (not verified yet)
+#     submitted -> 待审核 (documents uploaded, awaiting review)
+#     verified  -> 已认证 (all documents verified)
+_IDENTITY_DISPLAY = {
+    "pending": "待上传",
+    "submitted": "待审核",
+    "verified": "已认证",
+}
+
+# v11.2 T6302 — travel tolerance / requirement human-readable labels
+_TRAVEL_REQUIRED_LABEL = {
+    "none": "无需出差",
+    "occasional": "偶有出差 (季度 1-2 次, 国内为主)",
+    "frequent": "频繁出差 (每月多次, 含国内/海外)",
+}
 COMPANIES = [
     ("字节跳动", "互联网"), ("阿里巴巴", "互联网"), ("腾讯", "互联网"),
     ("美团", "互联网"), ("百度", "互联网"), ("华为", "通信"),
@@ -65,6 +92,10 @@ class TalentCard:
     match_score: int  # 0-100, synthetic relevance signal
     online: bool
     avatar_color: str
+    # v11.2 T6302 — identity + 五险一金/出差 soft dimensions
+    identity_status: str = "pending"  # pending=待上传, submitted=待审核, verified=已认证
+    social_insurance_expectation: Optional[bool] = None  # expects 五险一金
+    travel_tolerance: Optional[str] = None  # willing | occasional | unwilling
 
 
 @dataclass
@@ -98,6 +129,10 @@ class JobCard:
     remote_policy: str
     match_score: int  # 0-100, synthetic relevance for seekers
     posted_at: str
+    # v11.2 T6302 — benefits/travel soft dimensions (never eliminate)
+    offers_social_insurance: bool = True  # 五险一金
+    offers_housing_fund: bool = False  # 住房公积金
+    travel_required: str = "occasional"  # none | occasional | frequent
 
 
 @dataclass
@@ -132,10 +167,102 @@ class MatchRecommendation:
     reasons: list[str]
 
 
+# v11.2 T6304 — viewer context for threshold-visibility.
+
+#: the kind of viewer asking the market for cards.
+VIEWER_EMPLOYER = "employer"
+VIEWER_TALENT = "talent"
+VIEWER_ANONYMOUS = "anonymous"
+
+
+@dataclass
+class ViewerContext:
+    """Who is browsing the market.
+
+    ``kind`` is one of employer / talent / anonymous. ``employer_roles`` is the
+    list of role-dicts the employer's org has open (used to score talents).
+    ``talent_profile`` is the browsing talent's candidate dict (used to score
+    jobs). ``org_id`` / ``candidate_id`` / ``user_id`` identify the viewer for
+    channel ownership checks.
+    """
+
+    kind: str = VIEWER_ANONYMOUS
+    employer_roles: list[dict[str, Any]] = field(default_factory=list)
+    talent_profile: Optional[dict[str, Any]] = None
+    org_id: Optional[str] = None
+    candidate_id: Optional[str] = None
+    user_id: Optional[str] = None
+
+    @property
+    def is_employer(self) -> bool:
+        return self.kind == VIEWER_EMPLOYER
+
+    @property
+    def is_talent(self) -> bool:
+        return self.kind == VIEWER_TALENT
+
+    @property
+    def is_anonymous(self) -> bool:
+        return self.kind == VIEWER_ANONYMOUS
+
+
+@dataclass
+class CommunicationChannel:
+    """A two-way contact opened between a candidate and a role's org.
+
+    Created only after the match score reaches the threshold. Once open both
+    parties are mutually visible.
+    """
+
+    id: str
+    candidate_id: str
+    role_id: str
+    org_id: str
+    initiated_by: str  # candidate | employer
+    match_score: int = 0
+    status: str = "open"  # open | closed
+    created_at: str = ""
+    updated_at: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "candidate_id": self.candidate_id,
+            "role_id": self.role_id,
+            "org_id": self.org_id,
+            "initiated_by": self.initiated_by,
+            "match_score": self.match_score,
+            "status": self.status,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+        }
+
+
+# Helpful empty-state copy (甲方口径) when an employer has no open roles yet.
+EMPTY_ROLES_HINT = (
+    "您的企业暂未发布在招岗位。发布岗位后, 平台将自动按匹配阀值"
+    f"({MATCH_THRESHOLD}%)为双方匹配, 并只展示达标的求职者。"
+)
+
+
 def _stable_id(prefix: str, *parts: Any) -> str:
     raw = "|".join(str(p) for p in parts)
     h = hashlib.md5(raw.encode("utf-8")).hexdigest()[:12]
     return f"{prefix}_{h}"
+
+
+def _role_key(role: Any) -> Optional[str]:
+    """Best-effort id extraction for a role dict/object (id/role_id/uuid)."""
+    if role is None:
+        return None
+    for k in ("id", "role_id", "uuid"):
+        if isinstance(role, dict):
+            v = role.get(k)
+        else:
+            v = getattr(role, k, None)
+        if v is not None and v != "":
+            return str(v)
+    return None
 
 
 def _salary_range(rng: random.Random) -> tuple[Optional[int], Optional[int]]:
@@ -174,6 +301,12 @@ def _build_fallback_talents(n: int = 24) -> list[TalentCard]:
                 match_score=rng.randint(62, 99),
                 online=online,
                 avatar_color=f"hsl({(i * 37) % 360} 65% 55%)",
+                # v11.2 T6302 — identity + 五险一金/出差 soft dimensions
+                identity_status=rng.choice(["pending", "submitted", "verified"]),
+                social_insurance_expectation=rng.random() < 0.8,  # mostly True
+                travel_tolerance=rng.choice(
+                    ["willing", "occasional", "unwilling", None]
+                ),
             )
         )
     talents.sort(key=lambda t: t.match_score, reverse=True)
@@ -209,6 +342,10 @@ def _build_fallback_jobs(n: int = 24) -> list[JobCard]:
                 remote_policy=rng.choice(["onsite", "hybrid", "remote"]),
                 match_score=rng.randint(60, 98),
                 posted_at=f"2026-07-{(i % 15) + 1:02d}",
+                # v11.2 T6302 — benefits/travel soft dimensions
+                offers_social_insurance=rng.random() < 0.85,  # mostly True
+                offers_housing_fund=rng.random() < 0.4,  # ~40% True
+                travel_required=rng.choice(["none", "occasional", "frequent"]),
             )
         )
     jobs.sort(key=lambda j: j.match_score, reverse=True)
@@ -256,6 +393,10 @@ def _candidate_to_card(row: dict[str, Any], idx: int) -> TalentCard:
         match_score=min(99, 60 + (idx % 10) * 4),
         online=(idx % 5 == 0),
         avatar_color=f"hsl({(idx * 37) % 360} 65% 55%)",
+        # v11.2 T6302 — identity + 五险一金/出差 soft dimensions
+        identity_status=row.get("identity_status") or "pending",
+        social_insurance_expectation=row.get("social_insurance_expectation"),
+        travel_tolerance=row.get("travel_tolerance"),
     )
 
 
@@ -282,7 +423,10 @@ def _role_to_card(row: dict[str, Any], idx: int) -> JobCard:
         remote_policy=row.get("remote_policy") or "onsite",
         match_score=min(98, 58 + (idx % 10) * 4),
         posted_at=created or "2026-07-01",
-        certificates_required=_skill_names(row.get("certificates_required")),
+        # v11.2 T6302 — benefits/travel soft dimensions
+        offers_social_insurance=row.get("offers_social_insurance", True),
+        offers_housing_fund=row.get("offers_housing_fund", False),
+        travel_required=row.get("travel_required") or "occasional",
     )
 
 
@@ -312,9 +456,19 @@ def _try_query(table: str, columns: str, limit: int, order: str = "created_at"):
 class TalentMarketService:
     """Read-only aggregation over the candidates/roles tables + fallback."""
 
+    CHANNELS_TABLE = "communication_channels"
+
     def __init__(self) -> None:
         self._talents: Optional[list[TalentCard]] = None
         self._jobs: Optional[list[JobCard]] = None
+        # v11.2 T6304 — in-memory communication-channel store (resilience
+        # fallback when Supabase is unreachable). Keyed by channel id; also
+        # indexed by (candidate_id, role_id) via _channel_index.
+        self._channels: dict[str, CommunicationChannel] = {}
+        self._channel_index: dict[tuple[str, str], str] = {}
+        self._channel_seq = 0
+        self._channels_probed = False
+        self._sb_channels = None
 
     # -- talent pool -------------------------------------------------------
 
@@ -340,7 +494,14 @@ class TalentMarketService:
         salary_min: Optional[int] = None,
         salary_max: Optional[int] = None,
         education: Optional[str] = None,
-    ) -> tuple[list[TalentCard], int]:
+        viewer: Optional[ViewerContext] = None,
+    ) -> tuple[list[TalentCard], int, dict[str, Any]]:
+        """Talent pool listing with viewer-aware threshold visibility.
+
+        Returns ``(cards, total, meta)``. ``meta`` carries an optional
+        ``empty_hint`` (甲方口径文案) for the employer-no-roles empty state.
+        """
+        meta: dict[str, Any] = {}
         talents = list(self._all_talents())
         if keyword:
             kw = keyword.lower()
@@ -369,22 +530,133 @@ class TalentMarketService:
                 if t.salary_min_k is None or t.salary_min_k <= salary_max
             ]
 
+        # --- viewer-aware scoring / masking -------------------------------
+        viewer = viewer or ViewerContext()
+        if viewer.is_employer:
+            roles = viewer.employer_roles or []
+            if not roles:
+                # 甲方合同: 企业没有在招岗位 → 无法匹配任何人 → 空列表 + 提示.
+                return [], 0, {"empty_hint": EMPTY_ROLES_HINT}
+            scored: list[tuple[int, TalentCard, Optional[str]]] = []
+            for t in talents:
+                best_score, best_role_id, _ = best_score_against_roles(t, roles)
+                if is_above_threshold(best_score):
+                    scored.append((best_score, t, best_role_id))
+            # 排序/增量: 不淘汰整体池, 但雇主视图只保留过线人才并按分降序.
+            scored.sort(key=lambda x: x[0], reverse=True)
+            talents = [
+                self._annotate_card(t, score, role_id) for score, t, role_id in scored
+            ]
+        elif viewer.is_talent:
+            # 求职者浏览人才池: 保留浏览体验, 不展示真实匹配分.
+            talents = [self._mask_card_for_browse(t) for t in talents]
+        else:
+            # 匿名: 可浏览 (市场感), 但隐藏真实分 + 不可联系 + 无身份/联系.
+            talents = [self._mask_card_for_anonymous(t) for t in talents]
+
         total = len(talents)
         start = (page - 1) * page_size
-        return talents[start : start + page_size], total
+        return talents[start : start + page_size], total, meta
 
-    def get_talent(self, talent_id: str, *, full: bool = False) -> Optional[TalentCard]:
+    def get_talent(
+        self,
+        talent_id: str,
+        *,
+        full: bool = False,
+        viewer: Optional[ViewerContext] = None,
+    ) -> Optional[TalentCard]:
+        viewer = viewer or ViewerContext()
+        card: Optional[TalentCard] = None
         for t in self._all_talents():
             if t.id == talent_id:
-                if full:
-                    return self._enrich_talent(t)
-                return t
-        return None
+                card = t
+                break
+        if card is None:
+            return None
+
+        if viewer.is_employer:
+            roles = viewer.employer_roles or []
+            if not roles:
+                # 没有在招岗位 → 对雇主而言此人不存在.
+                return None
+            best_score, best_role_id, _ = best_score_against_roles(card, roles)
+            if not is_above_threshold(best_score):
+                # 甲方合同: 低于阀值 → 对方根本无法知道彼此存在 (404).
+                return None
+            annotated = self._annotate_card(card, best_score, best_role_id)
+            return self._enrich_talent(annotated) if full else annotated
+
+        if viewer.is_anonymous:
+            # 匿名: 只返回脱敏摘要, 不返回 full.
+            return self._mask_card_for_anonymous(card)
+
+        # talent viewer or legacy None caller: respect `full` (admin) else masked.
+        if full:
+            return self._enrich_talent(card)
+        return self._mask_card_for_browse(card)
+
+    # -- viewer-aware annotation / masking --------------------------------
+
+    def _annotate_card(
+        self,
+        card: TalentCard,
+        score: int,
+        best_role_id: Optional[str],
+    ) -> TalentCard:
+        """Attach the real best match score + best_role_id to an employer card.
+
+        Overrides the synthetic ``match_score`` with the real threshold score.
+        """
+        card.match_score = int(score)
+        # best_role_id is surfaced via the API layer (TalentCardOut) — store
+        # it on the card instance so the API mapper can read it back.
+        setattr(card, "best_role_id", best_role_id)
+        setattr(card, "can_contact", True)
+        setattr(card, "comm_channel_open", self._channel_exists_for(card.id, best_role_id))
+        return card
+
+    def _mask_card_for_browse(self, card: TalentCard) -> TalentCard:
+        """Talent viewer browsing the pool — keep the marketplace feel.
+
+        Contact disabled; the real match score is hidden because a talent
+        browsing other talents has no role to score against.
+        """
+        setattr(card, "can_contact", False)
+        setattr(card, "best_role_id", None)
+        setattr(card, "comm_channel_open", False)
+        return card
+
+    def _mask_card_for_anonymous(self, card: TalentCard) -> TalentCard:
+        """Anonymous browse — marketplace feel but no score / no contact.
+
+        甲方合同: 匿名可浏览 (市场感), 但隐藏真实匹配度 (登录查看), 不可联系,
+        无身份/联系信息.
+        """
+        card.match_score = 0  # hide real score; frontend shows 登录查看匹配度
+        setattr(card, "can_contact", False)
+        setattr(card, "best_role_id", None)
+        setattr(card, "comm_channel_open", False)
+        return card
+
+    def _channel_exists_for(
+        self, candidate_id: Optional[str], role_id: Optional[str]
+    ) -> bool:
+        """True if an open communication channel already links the pair."""
+        if not candidate_id or not role_id:
+            return False
+        return (candidate_id, role_id) in self._channel_index
 
     def _enrich_talent(self, card: TalentCard) -> TalentDetail:
         rng = random.Random(hash(card.id) & 0xFFFFFFFF)
         surnames = ["张", "李", "王", "刘", "陈", "杨"]
-        detail = TalentDetail(**card.__dict__)
+        # Drop viewer-annotation extras (can_contact/best_role_id/
+        # comm_channel_open) — they are not TalentDetail fields, but the API
+        # mapper reads them back off the returned object via getattr.
+        base = {
+            k: v for k, v in card.__dict__.items()
+            if k in TalentCard.__dataclass_fields__
+        }
+        detail = TalentDetail(**base)
         detail.full_name = f"{rng.choice(surnames)}{card.name[-1] if card.name else '某'}"
         detail.email = f"talent{abs(hash(card.id)) % 10000:04d}@example.com"
         detail.phone = f"1{rng.choice([3,5,7,8,9])}{rng.randint(100000000,999999999)}"
@@ -394,6 +666,14 @@ class TalentMarketService:
             f"{card.title}经验，专注 {', '.join(card.skills[:3])}。"
         )
         detail.industries = [card.city, "互联网"]
+        # v11.2 T6302 — surface identity verification state using the display
+        # map. Never eliminates; just informs the employer. Only note it when
+        # the candidate is NOT fully verified.
+        if getattr(card, "identity_status", "verified") != "verified":
+            identity_label = _IDENTITY_DISPLAY.get(
+                getattr(card, "identity_status", "pending"), "待上传"
+            )
+            detail.summary += f" (身份: {identity_label})"
         return detail
 
     # -- job pool ----------------------------------------------------------
@@ -418,7 +698,13 @@ class TalentMarketService:
         city: Optional[str] = None,
         salary_min: Optional[int] = None,
         salary_max: Optional[int] = None,
-    ) -> tuple[list[JobCard], int]:
+        viewer: Optional[ViewerContext] = None,
+    ) -> tuple[list[JobCard], int, dict[str, Any]]:
+        """Job pool listing with viewer-aware threshold visibility.
+
+        Returns ``(cards, total, meta)``.
+        """
+        meta: dict[str, Any] = {}
         jobs = list(self._all_jobs())
         if keyword:
             kw = keyword.lower()
@@ -443,18 +729,80 @@ class TalentMarketService:
                 if j.salary_min_k is None or j.salary_min_k <= salary_max
             ]
 
+        # --- viewer-aware scoring ------------------------------------------
+        viewer = viewer or ViewerContext()
+        if viewer.is_talent and viewer.talent_profile:
+            talent = viewer.talent_profile
+            scored: list[tuple[int, JobCard]] = []
+            for j in jobs:
+                # candidate-first contract: filter(talent, role).
+                res = compute_pair_score(talent, j)
+                if is_above_threshold(res.match_score):
+                    j.match_score = int(res.match_score)
+                    setattr(j, "can_contact", True)
+                    setattr(
+                        j,
+                        "comm_channel_open",
+                        self._channel_exists_for(
+                            viewer.candidate_id, j.id
+                        ),
+                    )
+                    scored.append((res.match_score, j))
+            scored.sort(key=lambda x: x[0], reverse=True)
+            jobs = [j for _, j in scored]
+        elif viewer.is_talent:
+            # logged-in talent with no profile yet → browse, no real score.
+            jobs = [self._mask_job_for_browse(j) for j in jobs]
+        else:
+            # anonymous / employer browsing jobs: marketplace feel, masked.
+            jobs = [self._mask_job_for_browse(j) for j in jobs]
+
         total = len(jobs)
         start = (page - 1) * page_size
-        return jobs[start : start + page_size], total
+        return jobs[start : start + page_size], total, meta
 
-    def get_job(self, job_id: str) -> Optional[JobCard]:
+    def _mask_job_for_browse(self, card: JobCard) -> JobCard:
+        setattr(card, "can_contact", False)
+        setattr(card, "comm_channel_open", False)
+        return card
+
+    def get_job(
+        self,
+        job_id: str,
+        *,
+        viewer: Optional[ViewerContext] = None,
+    ) -> Optional[JobCard]:
+        viewer = viewer or ViewerContext()
+        card: Optional[JobCard] = None
         for j in self._all_jobs():
             if j.id == job_id:
-                return self._enrich_job(j)
-        return None
+                card = j
+                break
+        if card is None:
+            return None
+        # talent viewer: below threshold → job invisible (甲方合同, 对称).
+        if viewer.is_talent and viewer.talent_profile:
+            res = compute_pair_score(viewer.talent_profile, card)
+            if not is_above_threshold(res.match_score):
+                return None
+            card.match_score = int(res.match_score)
+            setattr(card, "can_contact", True)
+            setattr(
+                card,
+                "comm_channel_open",
+                self._channel_exists_for(viewer.candidate_id, card.id),
+            )
+        else:
+            setattr(card, "can_contact", False)
+            setattr(card, "comm_channel_open", False)
+        return self._enrich_job(card)
 
     def _enrich_job(self, card: JobCard) -> JobDetail:
-        detail = JobDetail(**card.__dict__)
+        base = {
+            k: v for k, v in card.__dict__.items()
+            if k in JobCard.__dataclass_fields__
+        }
+        detail = JobDetail(**base)
         detail.description = (
             f"{card.company} 正在招聘 {card.title}，工作地点 {card.city}。"
         )
@@ -474,20 +822,248 @@ class TalentMarketService:
             "有高并发 / 大流量系统经验",
             "有技术团队带教经验",
         ][:4]
-        # T6107: 边界 — 不做什么 / 工作时间 / 地点 / 出差
+        # v11.2 T6302 — derive benefits/travel lines from the card's soft
+        # fields (offers_social_insurance / offers_housing_fund /
+        # travel_required) instead of hardcoding them.
+        benefits_line = "五险一金" if card.offers_social_insurance else "无五险一金"
+        if card.offers_housing_fund:
+            benefits_line += ", 含公积金"
+        detail.travel_required = _TRAVEL_REQUIRED_LABEL.get(
+            card.travel_required, _TRAVEL_REQUIRED_LABEL["occasional"]
+        )
+        # T6107: 边界 — 不做什么 / 工作时间 / 地点 / 出差 / 福利
         detail.work_schedule = (
             "弹性工作制, 标准工时 9:30-18:30, 双休"
         )
-        detail.travel_required = "偶有出差 (季度 1-2 次, 国内为主)"
         detail.boundaries = [
             f"工作时间: {detail.work_schedule}",
             f"工作地点: {card.city} ({'远程可' if card.remote_policy == 'remote' else '需到岗'})",
             f"出差要求: {detail.travel_required}",
+            f"福利保障: {benefits_line}",
             "不参与: 与本岗位职责无关的外包接单 / 私活",
         ]
-        detail.benefits = ["六险一金", "弹性工作", "年度体检", "股权激励"]
+        # benefits list mirrors the derived compensation offering
+        detail.benefits = [
+            "六险一金" if card.offers_social_insurance else "商保",
+            "公积金" if card.offers_housing_fund else "弹性工作",
+            "弹性工作",
+            "年度体检",
+            "股权激励",
+        ]
         detail.headcount = 2
         return detail
+
+    # -- communication channels (T6304) -----------------------------------
+
+    @staticmethod
+    def _now_iso() -> str:
+        return datetime.now(timezone.utc).isoformat()
+
+    def _channels_client(self):
+        """Lazily resolve + probe the Supabase client for the channels table.
+
+        A misconfigured/unreachable client is cached as None so the service
+        degrades to the in-memory store (mirrors the recommendation service
+        fallback pattern).
+        """
+        if self._channels_probed:
+            return self._sb_channels
+        self._channels_probed = True
+        try:
+            from api.deps import get_supabase_admin
+
+            client = get_supabase_admin()
+            client.table(self.CHANNELS_TABLE).select("id").limit(1).execute()
+            self._sb_channels = client
+        except Exception as exc:  # pragma: no cover - dev fallback
+            logger.info(
+                "talent_market channels: Supabase unavailable, using memory store: %s",
+                exc,
+            )
+            self._sb_channels = None
+        return self._sb_channels
+
+    def initiate_contact(
+        self,
+        *,
+        candidate_id: str,
+        role_id: str,
+        org_id: str,
+        initiated_by: str = "employer",
+        employer_roles: Optional[list[dict[str, Any]]] = None,
+        talent_profile: Optional[dict[str, Any]] = None,
+    ) -> CommunicationChannel:
+        """Open a communication channel between a candidate and a role.
+
+        甲方合同: 只有当匹配度 ≥ 阀值才允许发起沟通; 低于阀值 → ValueError.
+        Creates a ``communication_channels`` row (or in-memory fallback). Once
+        created both parties are mutually visible.
+
+        ``employer_roles`` (employer-initiated) or ``talent_profile``
+        (candidate-initiated) feeds the real score check. Falls back to a
+        direct ``compute_pair_score`` if neither context is supplied.
+        """
+        # --- (a) verify match >= threshold -------------------------------
+        score = 0
+        try:
+            if initiated_by == "employer":
+                roles = employer_roles or []
+                role = next((r for r in roles if str(_role_key(r)) == str(role_id)), None)
+                if role is not None:
+                    score, _, _ = best_score_against_roles(
+                        self._talent_dict(candidate_id), roles
+                    )
+                else:
+                    score = compute_pair_score(
+                        self._talent_dict(candidate_id), {"id": role_id}
+                    ).match_score
+            else:
+                talent = talent_profile or self._talent_dict(candidate_id)
+                score = compute_pair_score(talent, {"id": role_id}).match_score
+        except Exception:  # noqa: BLE001 — never crash on scoring
+            score = 0
+
+        if not is_above_threshold(score):
+            raise ValueError("below threshold")
+
+        # --- (b) persist (or in-memory) ----------------------------------
+        return self._upsert_channel(
+            candidate_id=candidate_id,
+            role_id=role_id,
+            org_id=org_id,
+            initiated_by=initiated_by,
+            score=score,
+        )
+
+    def _upsert_channel(
+        self,
+        *,
+        candidate_id: str,
+        role_id: str,
+        org_id: str,
+        initiated_by: str,
+        score: int,
+    ) -> CommunicationChannel:
+        sb = self._channels_client()
+        payload = {
+            "candidate_id": str(candidate_id),
+            "role_id": str(role_id),
+            "org_id": str(org_id),
+            "initiated_by": initiated_by,
+            "match_score": int(score),
+            "status": "open",
+        }
+        if sb is not None:
+            try:
+                res = sb.table(self.CHANNELS_TABLE).upsert(
+                    payload, on_conflict="candidate_id,role_id"
+                ).execute()
+                row = (res.data or [{}])[0]
+                return self._row_to_channel(row)
+            except Exception as exc:  # pragma: no cover - DB fallback
+                logger.warning(
+                    "talent_market channel upsert failed, using memory: %s", exc
+                )
+        return self._upsert_channel_memory(
+            candidate_id=candidate_id,
+            role_id=role_id,
+            org_id=org_id,
+            initiated_by=initiated_by,
+            score=score,
+        )
+
+    def _upsert_channel_memory(
+        self,
+        *,
+        candidate_id: str,
+        role_id: str,
+        org_id: str,
+        initiated_by: str,
+        score: int,
+    ) -> CommunicationChannel:
+        key = (str(candidate_id), str(role_id))
+        existing_id = self._channel_index.get(key)
+        now = self._now_iso()
+        if existing_id and existing_id in self._channels:
+            ch = self._channels[existing_id]
+            ch.match_score = int(score)
+            ch.status = "open"
+            ch.updated_at = now
+            return ch
+        self._channel_seq += 1
+        ch_id = f"ch_{self._channel_seq}"
+        ch = CommunicationChannel(
+            id=ch_id,
+            candidate_id=str(candidate_id),
+            role_id=str(role_id),
+            org_id=str(org_id),
+            initiated_by=initiated_by,
+            match_score=int(score),
+            status="open",
+            created_at=now,
+            updated_at=now,
+        )
+        self._channels[ch_id] = ch
+        self._channel_index[key] = ch_id
+        return ch
+
+    @staticmethod
+    def _row_to_channel(row: dict[str, Any]) -> CommunicationChannel:
+        return CommunicationChannel(
+            id=str(row.get("id")),
+            candidate_id=str(row.get("candidate_id", "")),
+            role_id=str(row.get("role_id", "")),
+            org_id=str(row.get("org_id", "")),
+            initiated_by=str(row.get("initiated_by", "employer")),
+            match_score=int(row.get("match_score") or 0),
+            status=str(row.get("status", "open")),
+            created_at=str(row.get("created_at") or ""),
+            updated_at=str(row.get("updated_at") or ""),
+        )
+
+    def _talent_dict(self, candidate_id: str) -> dict[str, Any]:
+        """Best-effort dict view of a talent card for scoring."""
+        for t in self._all_talents():
+            if t.id == candidate_id:
+                return {
+                    "id": t.id,
+                    "skills": t.skills,
+                    "education": t.education,
+                    "salary_min_k": t.salary_min_k,
+                    "salary_max_k": t.salary_max_k,
+                    "city": t.city,
+                    "availability": t.availability,
+                    "social_insurance_expectation": getattr(
+                        t, "social_insurance_expectation", None
+                    ),
+                    "travel_tolerance": getattr(t, "travel_tolerance", None),
+                }
+        return {"id": candidate_id}
+
+    def list_channels(
+        self, *, org_id: Optional[str] = None, candidate_id: Optional[str] = None
+    ) -> list[CommunicationChannel]:
+        """Channels for the caller — employer (org) or talent (candidate)."""
+        sb = self._channels_client()
+        if sb is not None:
+            try:
+                q = sb.table(self.CHANNELS_TABLE).select("*").eq("status", "open")
+                if org_id:
+                    q = q.eq("org_id", org_id)
+                if candidate_id:
+                    q = q.eq("candidate_id", candidate_id)
+                res = q.order("created_at", desc=True).execute()
+                return [self._row_to_channel(r) for r in (res.data or [])]
+            except Exception as exc:  # pragma: no cover - DB fallback
+                logger.warning("talent_market channel list failed: %s", exc)
+        # in-memory fallback
+        out = list(self._channels.values())
+        if org_id:
+            out = [c for c in out if c.org_id == org_id]
+        if candidate_id:
+            out = [c for c in out if c.candidate_id == candidate_id]
+        out.sort(key=lambda c: c.created_at, reverse=True)
+        return out
 
     # -- stats + recommendations ------------------------------------------
 

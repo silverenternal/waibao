@@ -1,6 +1,6 @@
 # 甲方验收清单 (ACCEPTANCE_CHECKLIST)
 
-> v11.1 / T6206 — 逐项功能验收依据。共 **26 项**,级别 **A**(必须通过)/ **B**(建议通过)。
+> v11.2 / T6307 — 逐项功能验收依据。共 **26 项**(原验收)+ **5 项 v11.2 客户端新增需求**,级别 **A**(必须通过)/ **B**(建议通过)。
 > 每项含:编号 / 需求描述 / 级别 / 演示步骤 / 通过标准 / 验收人签字栏。
 > 级别 A 项全部通过方视为整体验收通过。
 
@@ -228,6 +228,62 @@
 - **演示步骤**:选 2-3 候选人 → 对比 → 生成报告 → 生成面试题。
 - **通过标准**:对比表/报告/面试题内容合理可用。
 - **验收人签字**:__________ 日期:______
+
+---
+
+---
+
+## 八、v11.2 新增客户端需求 (5 项 / T6301–T6307)
+
+> v11.2 / T6307 — 甲方在 26 项原验收基础上提出的 5 项客户端更新。逐项给出代码级证据(文件 + 端点)。
+> 评审细节见 `docs/CONTRACT-REVIEW-v12.md`。
+
+### AC-N1 身份验证 (身份证 / 学历 / 简历 上传 + AI 提取 + 待上传 + 画像版本化) ⭐A ✅
+- **代码级验证**:`POST /api/identity/upload`(doc_type=id_card|education|resume → AI 提取 + 结构化,返回含中文标签的 IdentityStatus);`GET /api/identity/status`;`GET|PUT /api/identity/profile`;`GET /api/identity/profile/versions[/{n}]`。后端 `backend/api/identity.py` + `backend/services/identity/verification.py`(`_ocr_text` 走 `resume_parser.extract_text_from_url` + `_extract_id_card_fields` / `_extract_education_fields`);前端 `frontend/app/jobseeker/identity/` + `frontend/components/identity/` + `frontend/lib/api-identity.ts`。DB migration `supabase/migrations/064_identity_compensation.sql`(candidates 四状态列 + `profile_versions` append-only 表)。
+- **需求**:三类证件上传 + AI 提取;状态以「待上传/待审核/已认证」展示;画像版本化(雇主看到推送时刻快照)。
+- **通过标准**:上传后 AI 提取出字段,三证件汇总状态可查;画像每次编辑写新版本,历史版本可回看。
+- **映射 AC**:扩展 AC-05 / AC-06 / AC-08(原 A 级)。
+- **验收人签字**:__________ 日期:______
+
+### AC-N2 阀值可见性 (匹配 ≥ 70% 才可见 / 可沟通, 低于互不可见) ⭐A ✅
+- **代码级验证**:`backend/matching/threshold.py`(`MATCH_THRESHOLD = int(os.environ.get("MATCH_THRESHOLD", "70"))`,`is_above_threshold` 用 `>=`,默认 70 可由 env 覆盖);`backend/services/marketplace/talent_market.py` 列表/详情 viewer-aware 过滤(`is_above_threshold`),伪造分被真实 threshold 分覆盖;`backend/api/talent_market.py::initiate_contact` 过线失败 → **403**(双方互不可知)。
+- **需求**:任一匹配分 ≥ 阀值(默认 70%)双方才互相可见、可沟通;低于阀值双向不可见。
+- **通过标准**:雇主列表只见过线人才;未过线发起沟通被拒;候选人侧对称(未过线岗位不可见)。
+- **映射 AC**:强化 AC-15 / AC-23(原 A 级)。
+- **验收人签字**:__________ 日期:______
+
+### AC-N3 五险一金 + 出差 高优先级匹配 ⭐A ✅
+- **代码级验证**:`backend/matching/hard_filter.py::_score_benefits_travel`(第 3 个软维度 `benefits_travel` = 社保子分 + 出差子分均值,缺失字段中性 1.0 不扣分 → 永不淘汰);字段 `candidates.social_insurance_expectation` / `travel_tolerance`、`roles.offers_social_insurance` / `offers_housing_fund` / `travel_required`(migration 063);前端 `frontend/components/marketplace/CompensationBadges.tsx` 渲染徽标;测试 `backend/tests/test_hard_filter.py`。
+- **需求**:五险一金 / 出差为高优先级软评分(排序),永不淘汰;工作 / 行业经历不参与过滤。
+- **通过标准**:岗位提供五险一金且候选人期望 → 加分(reasons「五险一金齐全」);未提供 → risks 标注但不淘汰;出差匹配按 willing/occasional/unwilling × none/occasional/frequent 软打分。
+- **映射 AC**:强化 AC-11 / AC-15(原 A 级)。
+- **验收人签字**:__________ 日期:______
+
+### AC-N4 AI 不淘汰只增量 (确认) ⭐A ✅
+- **代码级验证**:`backend/matching/threshold.py` 顶部明确「**不淘汰, 只排序**...低于阀值 → 双方暂不可见」(可见性门,非淘汰);`backend/services/marketplace/talent_market.py`「排序/增量:不淘汰整体池,但雇主视图只保留过线人才并按分降序」;所有 v11.2 新增软维度缺失字段中性兜底。测试 `backend/tests/test_threshold.py` + `backend/tests/test_hard_filter.py` 断言不淘汰语义。
+- **需求**(确认):全链路匹配结果不淘汰、只增量 / 排序;阀值只控制「可见 / 可沟通」。
+- **通过标准**:无论哪个维度未达标,候选人都不会被永久剔除,仅在雇主视图按分排序后用阀值过滤可见性。
+- **映射 AC**:贯穿 AC-15 / AC-16 / AC-23 / AC-24 的语义基线。
+- **验收人签字**:__________ 日期:______
+
+### AC-N5 记录账号存续期保存 (确认) ⭐B ✅
+- **代码级验证**:`supabase/migrations/064_identity_compensation.sql` 新增 `communication_channels`(1:1 候选人×岗位线程,`UNIQUE(candidate_id, role_id)`,`match_score` 快照,RLS 候选人本人 OR 所属 org)+ `profile_versions`(append-only,RLS 仅本人);`backend/services/marketplace/talent_market.py::initiate_contact` 写入 + `GET /api/talent-market/channels` 列出;雇主侧经 `recommendations.resume_snapshot`(061)锁定推送时刻简历。数据卷 `postgres_data` 持久化(`stop_local.sh` 不带 `--purge` 不删)。
+- **需求**(确认):沟通记录 + 画像版本在账号存续期内持久保存,雇主侧推送快照不因候选人后续编辑而丢失。
+- **通过标准**:发起联系后渠道记录可查;候选人编辑画像后,雇主侧推荐快照仍为推送时刻版本;重启容器(不 purge)数据仍在。
+- **映射 AC**:强化 AC-17 / AC-25(AC-17 原 A 级 / AC-25 原 B 级)。
+- **验收人签字**:__________ 日期:______
+
+### v11.2 汇总
+
+| 客户端更新 | 级别 | 状态 | 关键证据 |
+| --- | --- | --- | --- |
+| 身份验证 + AI 提取 + 画像版本化 | A | ✅ | `/api/identity/upload` + migration 063 |
+| 阀值可见性 (≥70%) | A | ✅ | `matching/threshold.py` + `initiate_contact`→403 |
+| 五险一金 + 出差 高优先级 | A | ✅ | `hard_filter._score_benefits_travel` |
+| AI 不淘汰只增量 (确认) | A | ✅ | threshold.py 语义 + 测试断言 |
+| 记录账号存续期保存 (确认) | B | ✅ | `communication_channels` + `profile_versions` 表 + RLS |
+
+> 阀值默认 `MATCH_THRESHOLD=70`,可由环境变量覆盖(env override)。身份状态映射(单一来源 `services/identity/verification.py::DISPLAY_MAP`,前端镜像 `lib/api-identity.ts::IDENTITY_DISPLAY_MAP`):`pending→待上传` / `submitted→待审核` / `verified→已认证`;汇总 `identity_status=verified` 仅当三证件均 verified(DB trigger 强约束)。
 
 ---
 

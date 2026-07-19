@@ -118,6 +118,9 @@ from api.career_plan import router as career_plan_router
 from api.clarification import router as clarification_router
 from api.uploads import get_current_user as uploads_get_current_user  # noqa: F401
 from api.uploads import router as uploads_router  # noqa: F401  (OCR 文件上传)
+# v11.2 T6303: identity verification (上传 → AI 提取 → 待上传/已认证 + 画像版本化)
+from api.identity import get_current_user as identity_get_current_user  # noqa: F401
+from api.identity import router as identity_router  # noqa: F401
 
 app.include_router(candidates_router, prefix="/api/candidates", tags=["candidates"])
 app.include_router(roles_router, prefix="/api/roles", tags=["roles"])
@@ -155,6 +158,8 @@ app.include_router(learning_router, prefix="/api/learning", tags=["agents-learni
 app.include_router(plan_tracker_router, prefix="/api/plan", tags=["agents-plan-tracker"])
 app.include_router(clarification_router, prefix="/api/clarification", tags=["agents-clarify"])
 app.include_router(uploads_router, prefix="/api/uploads", tags=["uploads"])
+# v11.2 T6303: identity verification lifecycle + profile versioning
+app.include_router(identity_router, prefix="/api/identity", tags=["identity"])
 
 # T2204: LiveKit video interview provider (self-hosted)
 from api.livekit import router as livekit_router
@@ -164,6 +169,8 @@ app.include_router(livekit_router, prefix="/api/livekit", tags=["livekit"])
 from api.auth import get_current_user as _auth_get_current_user
 
 app.dependency_overrides[uploads_get_current_user] = _auth_get_current_user
+# v11.2 T6303: wire identity router's placeholder auth dep to the real one
+app.dependency_overrides[identity_get_current_user] = _auth_get_current_user
 app.include_router(two_way_match_router, prefix="/api/two-way-match", tags=["matching"])
 app.include_router(evaluation_router, prefix="/api/evaluation", tags=["matching"])
 

@@ -146,6 +146,13 @@ QUALIFICATION_POOL = [
 ]
 AVAILABILITY_POOL = ["immediate", "1_month", "3_months", "not_looking"]
 
+# v11.2 T6302 — identity verification + 五险一金/出差 dimension pools.
+# identity lifecycle per document + rolled-up identity_status.
+IDENTITY_STATUS_POOL = ["pending", "submitted", "verified"]
+DOC_STATUS_POOL = ["pending", "submitted", "verified"]
+TRAVEL_TOLERANCE_POOL = ["willing", "occasional", "unwilling", None]
+TRAVEL_REQUIRED_POOL = ["none", "occasional", "frequent"]
+
 
 # ----------------------------------------------------------------- 生成器
 def _zh_name() -> tuple[str, str]:
@@ -199,6 +206,21 @@ def gen_candidate(idx: int, created_by: str) -> dict:
         f"期望薪资:{expectation['min']}-{expectation['max']} 元/月",
         "求职意向:体育用品行业相关岗位,期望稳定发展与专业成长。",
     ]
+    # v11.2 T6302 — identity verification lifecycle. The rolled-up
+    # identity_status is derived to honour the invariant: 'verified' ONLY
+    # when id_card_status AND education_doc_status AND resume_status are all
+    # 'verified' (the DB trigger also enforces this).
+    id_card_status = random.choice(DOC_STATUS_POOL)
+    education_doc_status = random.choice(DOC_STATUS_POOL)
+    resume_status = random.choice(DOC_STATUS_POOL)
+    if id_card_status == "verified" and education_doc_status == "verified" and resume_status == "verified":
+        identity_status = "verified"
+    else:
+        # any document pending → overall pending; else submitted
+        if "pending" in (id_card_status, education_doc_status, resume_status):
+            identity_status = random.choice(["pending", "submitted"])
+        else:
+            identity_status = "submitted"
     return {
         "id": str(uuid.uuid4()),
         "first_name": first,
@@ -216,6 +238,16 @@ def gen_candidate(idx: int, created_by: str) -> dict:
         "cv_text": "\n".join(cv_lines),
         "profile_text": None,
         "created_by": created_by,
+        # v11.2 T6302 — identity verification + 五险一金/出差 expectations
+        "identity_status": identity_status,
+        "id_card_status": id_card_status,
+        "education_doc_status": education_doc_status,
+        "resume_status": resume_status,
+        "identity_verified_at": (
+            datetime.now(timezone.utc).isoformat() if identity_status == "verified" else None
+        ),
+        "social_insurance_expectation": random.random() < 0.8,  # 五险一金 (mostly True)
+        "travel_tolerance": random.choice(TRAVEL_TOLERANCE_POOL),  # willing|occasional|unwilling|None
         # 标记:测试数据,便于验收后清理
         "_meta": {"source": "seed_test_data", "seq": idx},
     }
@@ -255,6 +287,10 @@ def gen_role(defn: dict, org_id: str, created_by: str) -> dict:
         "remote_policy": random.choice(["onsite", "hybrid", "remote"]),
         "industry": defn["industry"],
         "status": "active",
+        # v11.2 T6302 — benefits/travel offerings (soft scoring dimensions)
+        "offers_social_insurance": random.random() < 0.85,  # 五险一金 (mostly True)
+        "offers_housing_fund": random.random() < 0.4,  # 住房公积金 (~40%)
+        "travel_required": random.choice(TRAVEL_REQUIRED_POOL),  # none|occasional|frequent
         "created_by": created_by,
         "_meta": {"source": "seed_test_data"},
     }

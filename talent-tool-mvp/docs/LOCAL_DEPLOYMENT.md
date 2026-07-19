@@ -1,7 +1,9 @@
 # 本地一键部署指南 (LOCAL_DEPLOYMENT)
 
-> v11.0 / T6111 — 面向甲方验收环境的**一键全离线**本地部署。
+> v11.2 / T6307 — 面向甲方验收环境的**一键全离线**本地部署。
 > 所有简历 / 资质 / 对话数据**不出甲方环境**:大模型走本地 Ollama,OCR 走本地 PaddleOCR,无任何外部 LLM / OCR API。
+>
+> **v11.2 新增**:身份验证流程(三证件上传 + AI 提取)、匹配阀值门(`MATCH_THRESHOLD` env)、新增 DB 迁移 `064_identity_compensation.sql`。详见下方 [§10 v11.2 变更](#10-v112-新增变更)。
 
 ---
 
@@ -165,6 +167,8 @@ bash scripts/stop_local.sh --purge   # 清卷
 bash scripts/start_local.sh          # 重新初始化
 ```
 
+> **v11.2 新增迁移**:`supabase/migrations/064_identity_compensation.sql`(身份验证四状态列 + `profile_versions` + `communication_channels` 表 + RLS + rollup trigger)。若从旧版升级且未 purge 卷,063 不会自动执行 —— 需按上面命令 `--purge` 重跑,或手动在 psql 里执行该 SQL。
+
 ### 5.8 查看 / 跟踪日志
 
 ```bash
@@ -268,3 +272,57 @@ cd frontend && npx next build
 - **招聘市场 (marketplace) 页面全部编译通过**:
   `/marketplace` / `/marketplace/jobs` / `/marketplace/jobs/[id]` / `/marketplace/talents` / `/marketplace/talents/[id]` / `/marketplace/recommendations` / `/marketplace/recruitment` / `/marketplace/compare` / `/admin/marketplace` / `/jobseeker/plan/market-insights`
 - exit 0,无编译错误。
+
+---
+
+## 10. v11.2 新增变更 (T6301–T6307)
+
+> v11.2 引入身份验证流程、匹配阀值门、五险一金/出差软匹配维度与画像版本化。详见 `docs/CONTRACT-REVIEW-v12.md` 与 `docs/ACCEPTANCE_CHECKLIST.md` 第八节。
+
+### 10.1 匹配阀值环境变量 `MATCH_THRESHOLD`
+
+双方仅当任一匹配分 ≥ 阀值时才互相可见、可沟通(低于阀值双向不可见)。阀值是**可见性门,非淘汰**(甲方口径:不淘汰、只排序)。
+
+- **默认值**:`70`(百分比)。来源:`backend/matching/threshold.py` → `MATCH_THRESHOLD = int(os.environ.get("MATCH_THRESHOLD", "70"))`。
+- **环境变量覆盖**:设置 backend 服务的 `MATCH_THRESHOLD=<int>` 即可。在 `.env.local` 或 `docker-compose.local.yml` 的 backend `environment` 段加:
+  ```bash
+  MATCH_THRESHOLD=60   # 例:放宽阀值到 60%
+  ```
+  改后重启 backend(`bash scripts/stop_local.sh && bash scripts/start_local.sh`)生效。
+- **门控位置**:`is_above_threshold(score)` 用 `>=`(等于即过线);`GET /api/talent-market/talents` 与 `/jobs` 列表 viewer-aware 过滤;`/talents/{id}`、`/jobs/{id}` 详情未过线 → 404;`POST /api/talent-market/initiate-contact` 与 `/api/recommendations/initiate-contact` 未过线 → **403**。
+
+### 10.2 新增数据库迁移 `064_identity_compensation.sql`
+
+迁移脚本:`supabase/migrations/064_identity_compensation.sql`(经 `docker-entrypoint-initdb.d` 仅在**首次初始化(postgres_data 卷为空)**时执行 —— 见 [§5.7](#57-数据库迁移未生效))。
+
+新增 / 变更:
+
+- **candidates 表**:+ `identity_status` / `id_card_status` / `education_doc_status` / `resume_status`(各 pending|submitted|verified)+ `identity_verified_at` + `social_insurance_expectation`(bool)+ `travel_tolerance`(willing|occasional|unwilling)。
+- **roles 表**:+ `offers_social_insurance`(默认 true)+ `offers_housing_fund` + `travel_required`(none|occasional|frequent)。
+- **新表 `communication_channels`**:1:1 候选人×岗位沟通线程(`UNIQUE(candidate_id, role_id)`,`initiated_by`,`match_score` 快照,`status`)。RLS:候选人本人 OR 所属 org 可见。
+- **新表 `profile_versions`**:append-only 画像快照(`candidate_id + version_no` 升序,`snapshot JSONB`)。RLS:仅候选人本人可见;雇主侧经 `recommendations.resume_snapshot`(061)读推送时刻锁定版本。
+- **rollup trigger**:`enforce_candidate_identity_rollup` 保证 `identity_status=verified` 仅当三证件均 verified。
+
+> 从 v11.1(及更早)升级且未 purge 卷时,063 **不会**自动执行。请在 psql 里手动执行该 SQL,或 `bash scripts/stop_local.sh --purge && bash scripts/start_local.sh` 重跑(会清空业务数据)。
+
+### 10.3 身份验证流程 (Identity Flow)
+
+求职者 → 求职者空间 → **身份验证** 页(`/jobseeker/identity`):
+
+1. 上传三类证件:**身份证** / **学历** / **简历**(逐项上传);
+2. 后端 `POST /api/identity/upload`(doc_type=id_card|education|resume)→ AI 提取(`services/identity/verification.py` 走 `resume_parser.extract_text_from_url` + 字段抽取);
+3. 每个证件状态在「**待上传**(pending) → **待审核**(submitted) → **已认证**(verified)」间流转;前端 `IdentityStatusBadge` 按 `IDENTITY_DISPLAY_MAP` 渲染中文标签;
+4. 三证件全部 verified → 汇总 `identity_status` 自动翻为「**已认证**」(DB trigger 强约束);
+5. 画像版本化:`GET|PUT /api/identity/profile`(PUT 写新版本)+ `GET /api/identity/profile/versions[/{n}]`(回看历史快照)。
+
+> OCR / 文本提取仍走本地(PaddleOCR / 本地 resume_parser),证件数据**不出甲方环境**(同 AC-02 数据安全前提)。
+
+### 10.4 前端编译(v11.2 实测)
+
+```bash
+cd frontend && npx tsc --noEmit   # exit 0,0 类型错误
+cd frontend && npx next build     # ✓ Generating static pages (152/152)
+```
+
+- v11.2 较 v11.1 新增 1 个静态页:`/jobseeker/identity`(身份验证),总页数 151 → **152**。
+- 1 个构建警告为既有的可选 `livekit-client` 依赖 `@ts-expect-error`(非本版引入,非错误)。

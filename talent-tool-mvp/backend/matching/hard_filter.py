@@ -42,10 +42,11 @@ W_EDUCATION = 0.15
 W_CERTIFICATE = 0.10
 HARD_TOTAL = W_SKILL + W_EDUCATION + W_CERTIFICATE  # 0.65
 
-# 高优先级 (软评分)
-W_SALARY_CITY = 0.20
-W_AVAILABILITY = 0.15
-SOFT_TOTAL = W_SALARY_CITY + W_AVAILABILITY  # 0.35
+# 高优先级 (软评分) — v11.2: 三个软维度, 五险一金 + 出差 成为独立维度
+W_SALARY_CITY = 0.14
+W_AVAILABILITY = 0.10
+W_BENEFITS_TRAVEL = 0.11
+SOFT_TOTAL = W_SALARY_CITY + W_AVAILABILITY + W_BENEFITS_TRAVEL  # 0.35
 
 assert abs(HARD_TOTAL + SOFT_TOTAL - 1.0) < 1e-9, "权重必须归一"
 
@@ -253,9 +254,15 @@ class HardConditionFilter:
         reasons.extend(av_reasons)
         risks.extend(av_risks)
 
+        # --- 高优先级: 五险一金 + 出差 (v11.2 新增维度) -------------------
+        bt_score, bt_reasons, bt_risks = self._score_benefits_travel(c, r)
+        reasons.extend(bt_reasons)
+        risks.extend(bt_risks)
+
         high_priority = {
             "salary_city": sc_score,
             "availability": av_score,
+            "benefits_travel": bt_score,
         }
 
         # --- 综合分 (不淘汰: 即便有缺口也给分, 只是更低) -------------------
@@ -265,7 +272,11 @@ class HardConditionFilter:
             + (1.0 if edu_res.satisfied else 0.0) * W_EDUCATION
             + (1.0 if cert_res.satisfied else 0.0) * W_CERTIFICATE
         )
-        soft_contrib = sc_score * W_SALARY_CITY + av_score * W_AVAILABILITY
+        soft_contrib = (
+            sc_score * W_SALARY_CITY
+            + av_score * W_AVAILABILITY
+            + bt_score * W_BENEFITS_TRAVEL
+        )
         overall_01 = hard_contrib + soft_contrib
         overall_01 = max(0.0, min(1.0, overall_01))
         match_score = round(overall_01 * 100)
@@ -573,6 +584,80 @@ class HardConditionFilter:
 
         score = (avail_score + intent_score) / 2.0
         return round(score, 4), reasons, risks
+
+    def _score_benefits_travel(
+        self, c: "_DictView", r: "_DictView"
+    ) -> tuple[float, list[str], list[str]]:
+        """高优先级维度 3 (v11.2): 五险一金 + 出差.
+
+        甲方要求: 五险一金 / 出差 是 **高优先级** (软评分, 永不淘汰).
+        缺失字段 → 中性 1.0, 不得因此扣分. 分数 = 社保 / 出差 两个子分均值.
+        """
+        reasons: list[str] = []
+        risks: list[str] = []
+
+        # ---- 五险一金 ----
+        # 岗位: offers_social_insurance (bool, 默认 True)
+        offers_social = r.get("offers_social_insurance")
+        if offers_social is None:
+            offers_social = True  # 默认提供
+        offers_social = bool(offers_social)
+        # 候选人: social_insurance_expectation (bool, 默认 None)
+        expects_social = c.get("social_insurance_expectation")
+
+        if expects_social is None:
+            # 候选人未表态 → 中性, 不扣分
+            social_score = 1.0
+        elif expects_social:
+            # 候选人期望五险一金
+            if offers_social:
+                social_score = 1.0
+                reasons.append("五险一金齐全")
+            else:
+                social_score = 0.2
+                risks.append("岗位未提供五险一金")
+        else:
+            # 候选人不期望 (社会保険期望 False) → 不缺, 中性偏满
+            social_score = 1.0
+
+        # 公积金 (bonus 信息, 不实质改变分数)
+        offers_housing = r.get("offers_housing_fund")
+        if offers_housing:
+            reasons.append("含住房公积金")
+
+        # ---- 出差 ----
+        travel_level_map = {"none": 1, "occasional": 2, "frequent": 3}
+        travel_tol_map = {"willing": 3, "occasional": 2, "unwilling": 1}
+
+        r_travel = r.get("travel_required")
+        if r_travel is None:
+            r_travel = "occasional"  # 默认 occasional = 2
+        role_level = travel_level_map.get(
+            str(r_travel).strip().lower(), 2
+        )
+
+        c_tol = c.get("travel_tolerance")
+        if c_tol is None:
+            travel_score = 1.0  # 候选人未表态 → 中性
+        else:
+            tol_level = travel_tol_map.get(
+                str(c_tol).strip().lower(), 0
+            )
+            if tol_level == 0:
+                # 无法识别的取值 → 中性
+                travel_score = 1.0
+            elif role_level <= tol_level:
+                travel_score = 1.0
+                reasons.append("出差要求可接受")
+            elif role_level == tol_level + 1:
+                travel_score = 0.6
+                risks.append("出差频率略高于预期")
+            else:
+                travel_score = 0.3
+                risks.append("出差频繁超出预期")
+
+        score = round((social_score + travel_score) / 2.0, 4)
+        return score, reasons, risks
 
 
 # ---------------------------------------------------------------------------

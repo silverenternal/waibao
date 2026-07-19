@@ -30,10 +30,13 @@ import {
 import {
   fetchTalents,
   formatSalary,
+  MATCH_THRESHOLD,
   type TalentCard as TalentCardT,
   type TalentFilters,
 } from "@/lib/api-talent-market";
 import type { PaginatedResponse } from "@/lib/api";
+import { CompensationBadges } from "@/components/marketplace/CompensationBadges";
+import { InitiateContactButton } from "@/components/marketplace/InitiateContactButton";
 
 const PAGE_SIZE = 12;
 
@@ -142,6 +145,19 @@ export function TalentsPoolClient() {
           共 {data?.total ?? "—"} 位人才 · 企业可查看完整简历与联系方式
         </p>
       </header>
+
+      {/* v11.2 阈值规则提示条 */}
+      <div
+        className="mb-6 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800"
+        role="note"
+      >
+        <span aria-hidden className="mt-0.5">
+          🔒
+        </span>
+        <p>
+          仅展示匹配度≥{MATCH_THRESHOLD}%的人才；低于阈值双方互不可见，避免无效沟通。
+        </p>
+      </div>
 
       {/* Filters */}
       <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
@@ -295,15 +311,17 @@ export function TalentsPoolClient() {
 }
 
 function TalentCardItem({ talent }: { talent: TalentCardT }) {
+  // v11.2: can_contact is false/absent for anonymous viewers -> mask to initials.
+  const isMasked = talent.can_contact !== true;
+  // Real name for authenticated employers; initials only when masked.
+  const displayName = isMasked ? `${talent.name.slice(0, 1)}**` : talent.name;
   const initials = talent.name.slice(0, 1);
   const score = talent.match_score;
-  // T6106: 匹配度标签 (绿 ≥75 / 黄 50-74 / 红 <50)
+  // T6106: 匹配度标签 (绿 ≥75 / 黄 50-74 / 红 <50). Score is now REAL (server
+  // threshold-filtered); anonymous viewers get no meaningful score.
+  const showScore = !isMasked;
   const matchVariant =
-    score >= 75
-      ? "outline"
-      : score >= 50
-        ? "secondary"
-        : "destructive";
+    score >= 75 ? "outline" : score >= 50 ? "secondary" : "destructive";
   const matchClass =
     score >= 75
       ? "text-emerald-600 border-emerald-300"
@@ -312,9 +330,13 @@ function TalentCardItem({ talent }: { talent: TalentCardT }) {
         : "";
   const matchLabel =
     score >= 75 ? "高匹配" : score >= 50 ? "中匹配" : "低匹配";
+
   return (
-    <Link href={`/marketplace/talents/${talent.id}`} className="block">
-      <Card className="h-full transition hover:border-emerald-300 hover:shadow-md">
+    <Card className="flex h-full flex-col transition hover:border-emerald-300 hover:shadow-md">
+      <Link
+        href={`/marketplace/talents/${talent.id}`}
+        className="flex flex-1 flex-col"
+      >
         <CardHeader className="pb-3">
           <div className="flex items-center gap-3">
             <div
@@ -326,7 +348,7 @@ function TalentCardItem({ talent }: { talent: TalentCardT }) {
             </div>
             <div className="min-w-0 flex-1">
               <CardTitle className="flex items-center gap-2 text-base">
-                <span className="truncate">{talent.name}</span>
+                <span className="truncate">{displayName}</span>
                 {talent.online && (
                   <span
                     className="inline-flex items-center gap-1 text-xs font-normal text-emerald-600"
@@ -342,25 +364,31 @@ function TalentCardItem({ talent }: { talent: TalentCardT }) {
                 {talent.seniority ? ` · ${talent.seniority}` : ""}
               </p>
             </div>
-            <div className="flex shrink-0 flex-col items-end gap-1">
-              <Badge variant={matchVariant} className={matchClass}>
-                {score}%
+            {showScore ? (
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                <Badge variant={matchVariant} className={matchClass}>
+                  {score}%
+                </Badge>
+                <span
+                  className={`text-[10px] font-medium ${
+                    score >= 75
+                      ? "text-emerald-600"
+                      : score >= 50
+                        ? "text-amber-600"
+                        : "text-rose-600"
+                  }`}
+                >
+                  {matchLabel}
+                </span>
+              </div>
+            ) : (
+              <Badge variant="secondary" className="shrink-0">
+                待登录
               </Badge>
-              <span
-                className={`text-[10px] font-medium ${
-                  score >= 75
-                    ? "text-emerald-600"
-                    : score >= 50
-                      ? "text-amber-600"
-                      : "text-rose-600"
-                }`}
-              >
-                {matchLabel}
-              </span>
-            </div>
+            )}
           </div>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="flex-1 space-y-2">
           <div className="flex flex-wrap gap-1.5">
             {talent.skills.slice(0, 5).map((s) => (
               <Badge key={s} variant="outline" className="font-normal">
@@ -379,9 +407,26 @@ function TalentCardItem({ talent }: { talent: TalentCardT }) {
               <span className="text-emerald-600">● {talent.availability}</span>
             )}
           </div>
+          {/* v11.2: 五险一金 / 出差 (高优先级匹配因素) */}
+          <CompensationBadges
+            variant="talent"
+            socialInsuranceExpectation={talent.social_insurance_expectation}
+            travelTolerance={talent.travel_tolerance}
+          />
         </CardContent>
-      </Card>
-    </Link>
+      </Link>
+
+      {/* v11.2: 发起沟通 — placed outside the Link so clicks don't navigate. */}
+      <div className="px-6 pb-6 pt-1" onClick={(e) => e.stopPropagation()}>
+        <InitiateContactButton
+          initiator="employer"
+          talentId={talent.id}
+          roleId={talent.best_role_id}
+          canContact={talent.can_contact}
+          commChannelOpen={talent.comm_channel_open}
+        />
+      </div>
+    </Card>
   );
 }
 

@@ -30,11 +30,14 @@ import {
 import {
   fetchJobs,
   formatSalary,
+  MATCH_THRESHOLD,
   remotePolicyLabel,
   type JobCard as JobCardT,
   type JobFilters,
 } from "@/lib/api-talent-market";
 import type { PaginatedResponse } from "@/lib/api";
+import { CompensationBadges } from "@/components/marketplace/CompensationBadges";
+import { InitiateContactButton } from "@/components/marketplace/InitiateContactButton";
 
 const PAGE_SIZE = 12;
 
@@ -133,6 +136,19 @@ export function JobsPoolClient() {
           共 {data?.total ?? "—"} 个在招岗位 · 求职者可见完整岗位卡
         </p>
       </header>
+
+      {/* v11.2 阈值规则提示条 */}
+      <div
+        className="mb-6 flex items-start gap-2 rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm text-sky-800"
+        role="note"
+      >
+        <span aria-hidden className="mt-0.5">
+          🔒
+        </span>
+        <p>
+          仅展示匹配度≥{MATCH_THRESHOLD}%的岗位；低于阈值双方互不可见，避免无效沟通。
+        </p>
+      </div>
 
       {/* Filters */}
       <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
@@ -258,9 +274,24 @@ export function JobsPoolClient() {
 }
 
 function JobCardItem({ job }: { job: JobCardT }) {
+  // v11.2: can_contact false/absent => anonymous seeker, no real score shown.
+  const isMasked = job.can_contact !== true;
+  const showScore = !isMasked;
+  const score = job.match_score;
+  const matchVariant =
+    score >= 75 ? "outline" : score >= 50 ? "secondary" : "destructive";
+  const matchClass =
+    score >= 75
+      ? "text-emerald-600 border-emerald-300"
+      : score >= 50
+        ? "text-amber-600 border-amber-300"
+        : "";
+  const matchLabel =
+    score >= 75 ? "高匹配" : score >= 50 ? "中匹配" : "低匹配";
+
   return (
-    <Link href={`/marketplace/jobs/${job.id}`} className="block">
-      <Card className="h-full transition hover:border-blue-300 hover:shadow-md">
+    <Card className="flex h-full flex-col transition hover:border-blue-300 hover:shadow-md">
+      <Link href={`/marketplace/jobs/${job.id}`} className="flex flex-1 flex-col">
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
@@ -270,10 +301,31 @@ function JobCardItem({ job }: { job: JobCardT }) {
                 <span className="text-slate-400"> · {job.company_industry}</span>
               </p>
             </div>
-            <Badge variant="secondary">{job.match_score}%</Badge>
+            {showScore ? (
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                <Badge variant={matchVariant} className={matchClass}>
+                  {score}%
+                </Badge>
+                <span
+                  className={`text-[10px] font-medium ${
+                    score >= 75
+                      ? "text-emerald-600"
+                      : score >= 50
+                        ? "text-amber-600"
+                        : "text-rose-600"
+                  }`}
+                >
+                  {matchLabel}
+                </span>
+              </div>
+            ) : (
+              <Badge variant="secondary" className="shrink-0">
+                待登录
+              </Badge>
+            )}
           </div>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="flex-1 space-y-2">
           <div className="flex flex-wrap gap-1.5">
             {job.skills_required.slice(0, 5).map((s) => (
               <Badge key={s} variant="outline" className="font-normal">
@@ -288,9 +340,26 @@ function JobCardItem({ job }: { job: JobCardT }) {
             {job.experience_years && <span>⏳ {job.experience_years}</span>}
             {job.education && <span>🎓 {job.education}</span>}
           </div>
+          {/* v11.2: 五险一金 / 含公积金 / 出差 (高优先级匹配因素) */}
+          <CompensationBadges
+            variant="job"
+            offersSocialInsurance={job.offers_social_insurance}
+            offersHousingFund={job.offers_housing_fund}
+            travelRequired={job.travel_required}
+          />
         </CardContent>
-      </Card>
-    </Link>
+      </Link>
+
+      {/* v11.2: 求职者发起沟通 — outside the Link so clicks don't navigate. */}
+      <div className="px-6 pb-6 pt-1" onClick={(e) => e.stopPropagation()}>
+        <InitiateContactButton
+          initiator="candidate"
+          roleId={job.best_role_id}
+          canContact={job.can_contact}
+          commChannelOpen={job.comm_channel_open}
+        />
+      </div>
+    </Card>
   );
 }
 

@@ -485,6 +485,106 @@ class RecommendationService:
             lines.append("联系方式: " + " | ".join(contact_bits))
         return "\n".join(lines)
 
+    # -- communication channels (T6304) -----------------------------------
+
+    CHANNELS_TABLE = "communication_channels"
+
+    async def initiate_contact(
+        self,
+        *,
+        candidate_id: str,
+        role_id: str,
+        org_id: str,
+        match_score: Optional[int] = None,
+        initiated_by: str = "employer",
+    ) -> dict[str, Any]:
+        """Open a communication channel for a recommended candidate↔role pair.
+
+        Reuses the ``communication_channels`` table (T6302 migration). The
+        threshold gate itself is enforced upstream by the talent-market
+        service (:func:`initiate_contact`), which calls this helper to persist
+        the channel once the score check passes. Returns the channel row as a
+        dict. Falls back to an in-memory dict when Supabase is unreachable so
+        tests/UI never break.
+        """
+        score = int(match_score) if match_score is not None else 0
+        payload = {
+            "candidate_id": str(candidate_id),
+            "role_id": str(role_id),
+            "org_id": str(org_id),
+            "initiated_by": initiated_by,
+            "match_score": score,
+            "status": "open",
+        }
+        sb = self._sb()
+        if sb is not None:
+            try:
+                res = sb.table(self.CHANNELS_TABLE).upsert(
+                    payload, on_conflict="candidate_id,role_id"
+                ).execute()
+                row = (res.data or [{}])[0]
+                return dict(row)
+            except Exception as exc:  # pragma: no cover - DB fallback
+                logger.warning("recommendation channel upsert failed: %s", exc)
+        # in-memory fallback
+        return await self._channel_memory(payload)
+
+    async def _channel_memory(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """In-memory channel store (dev/test resilience)."""
+        store: dict[tuple[str, str], dict[str, Any]] = self.__dict__.setdefault(
+            "_channels_mem", {}
+        )
+        key = (payload["candidate_id"], payload["role_id"])
+        now = _now_iso()
+        existing = store.get(key)
+        if existing:
+            existing.update(payload)
+            existing["updated_at"] = now
+            return existing
+        self._seq += 1
+        row = {
+            "id": f"rec_ch_{self._seq}",
+            **payload,
+            "created_at": now,
+            "updated_at": now,
+        }
+        store[key] = row
+        return row
+
+    async def list_channels(
+        self,
+        *,
+        org_id: Optional[str] = None,
+        candidate_id: Optional[str] = None,
+    ) -> list[dict[str, Any]]:
+        """List communication channels for an org or candidate."""
+        sb = self._sb()
+        if sb is not None:
+            try:
+                q = (
+                    sb.table(self.CHANNELS_TABLE)
+                    .select("*")
+                    .eq("status", "open")
+                )
+                if org_id:
+                    q = q.eq("org_id", org_id)
+                if candidate_id:
+                    q = q.eq("candidate_id", candidate_id)
+                res = q.order("created_at", desc=True).execute()
+                return [dict(r) for r in (res.data or [])]
+            except Exception as exc:  # pragma: no cover - DB fallback
+                logger.warning("recommendation channel list failed: %s", exc)
+        store: dict[tuple[str, str], dict[str, Any]] = self.__dict__.get(
+            "_channels_mem", {}
+        )
+        rows = list(store.values())
+        if org_id:
+            rows = [r for r in rows if r.get("org_id") == org_id]
+        if candidate_id:
+            rows = [r for r in rows if r.get("candidate_id") == candidate_id]
+        rows.sort(key=lambda r: r.get("created_at", ""), reverse=True)
+        return rows
+
     # -- push notification -------------------------------------------------
 
     async def _push_hr_notification(

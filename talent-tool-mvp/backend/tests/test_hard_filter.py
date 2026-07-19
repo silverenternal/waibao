@@ -18,8 +18,11 @@ from matching.hard_filter import (
     HardConditionFilter,
     HardConditionResult,
     MatchResult,
+    W_AVAILABILITY,
+    W_BENEFITS_TRAVEL,
     W_CERTIFICATE,
     W_EDUCATION,
+    W_SALARY_CITY,
     W_SKILL,
 )
 
@@ -87,6 +90,7 @@ class TestOutputShape:
         assert "certificate" in res.hard_conditions
         assert "salary_city" in res.high_priority
         assert "availability" in res.high_priority
+        assert "benefits_travel" in res.high_priority
 
     def test_to_dict_serializable(self, flt):
         res = flt.filter(_candidate(), _role())
@@ -312,6 +316,141 @@ class TestAvailability:
 
 
 # ===========================================================================
+# 6b. 高优先级 — 五险一金 + 出差 (v11.2 新增维度)
+# ===========================================================================
+
+class TestBenefitsTravel:
+    """五险一金 + 出差 高优先级维度 (软评分, 永不淘汰)."""
+
+    def test_social_insurance_match(self, flt):
+        # 期望五险一金 + 岗位提供 → 满
+        res = flt.filter(
+            _candidate(social_insurance_expectation=True),
+            _role(offers_social_insurance=True),
+        )
+        assert res.high_priority["benefits_travel"] >= 0.5
+        assert any("五险一金齐全" in r for r in res.match_reasons)
+
+    def test_social_insurance_mismatch_risk(self, flt):
+        # 期望五险一金 但岗位不提供 → 低分 + 风险
+        res = flt.filter(
+            _candidate(social_insurance_expectation=True),
+            _role(offers_social_insurance=False),
+        )
+        assert res.high_priority["benefits_travel"] <= 0.6
+        assert any("岗位未提供五险一金" in r for r in res.risks)
+
+    def test_social_insurance_expectation_none_neutral(self, flt):
+        # 候选人未表态 → 中性 1.0, 不扣分
+        res = flt.filter(
+            _candidate(social_insurance_expectation=None),
+            _role(offers_social_insurance=False),
+        )
+        # 社保子分 = 1.0, 出差默认中性 1.0 → 0.5*... 整体该维度 1.0
+        # 注意: offers_social_insurance=False 但候选人不期望 → 不惩罚
+        sc = self._social_subscore(res)
+        assert sc >= 0.9
+        assert not any("岗位未提供五险一金" in r for r in res.risks)
+
+    def test_housing_fund_bonus_reason(self, flt):
+        res = flt.filter(
+            _candidate(),
+            _role(offers_housing_fund=True),
+        )
+        assert any("含住房公积金" in r for r in res.match_reasons)
+
+    def test_travel_tolerant(self, flt):
+        # 频繁出差 + 候选人 willing → 可接受
+        res = flt.filter(
+            _candidate(travel_tolerance="willing"),
+            _role(travel_required="frequent"),
+        )
+        assert res.high_priority["benefits_travel"] >= 0.9
+        assert any("出差要求可接受" in r for r in res.match_reasons)
+
+    def test_travel_intolerant_risk(self, flt):
+        # 频繁出差 + 候选人 unwilling → 低分 + 风险
+        res = flt.filter(
+            _candidate(travel_tolerance="unwilling"),
+            _role(travel_required="frequent"),
+        )
+        assert res.high_priority["benefits_travel"] <= 0.7
+        assert any("出差频繁超出预期" in r for r in res.risks)
+
+    def test_travel_slightly_higher_risk(self, flt):
+        # role_level == tol_level + 1 → 0.6 + 略高风险
+        res = flt.filter(
+            _candidate(travel_tolerance="occasional"),  # tol=2
+            _role(travel_required="frequent"),          # role=3 == tol+1
+        )
+        assert any("出差频率略高于预期" in r for r in res.risks)
+
+    def test_travel_tolerance_none_neutral(self, flt):
+        # 候选人出差容忍度未填 → 中性, 不扣分
+        res = flt.filter(
+            _candidate(travel_tolerance=None),
+            _role(travel_required="frequent"),
+        )
+        # 出差子分 = 1.0, 社保默认 → 维度 ≈ 1.0
+        assert res.high_priority["benefits_travel"] >= 0.9
+        assert not any("出差" in r for r in res.risks)
+
+    def test_combined_benefits_travel_in_overall(self, flt):
+        # benefits_travel 维度应纳入综合分
+        good = flt.filter(
+            _candidate(social_insurance_expectation=True, travel_tolerance="willing"),
+            _role(offers_social_insurance=True, travel_required="occasional"),
+        )
+        bad = flt.filter(
+            _candidate(social_insurance_expectation=True, travel_tolerance="unwilling"),
+            _role(offers_social_insurance=False, travel_required="frequent"),
+        )
+        assert good.high_priority["benefits_travel"] > bad.high_priority["benefits_travel"]
+        assert good.match_score > bad.match_score
+
+    def test_default_role_offers_social_insurance_true(self, flt):
+        # role 未填 offers_social_insurance → 默认 True
+        res = flt.filter(
+            _candidate(social_insurance_expectation=True),
+            _role(),  # 不显式提供 offers_social_insurance
+        )
+        assert any("五险一金齐全" in r for r in res.match_reasons)
+
+    def test_no_elimination_low_benefits_still_scored(self, flt):
+        # 即使五险一金/出差全不匹配, 仍是软评分, 综合分不会被清零
+        res = flt.filter(
+            _candidate(social_insurance_expectation=True, travel_tolerance="unwilling"),
+            _role(offers_social_insurance=False, travel_required="frequent"),
+        )
+        assert res.match_score > 0  # 不淘汰
+        assert res.high_priority["benefits_travel"] > 0  # 软评分仍 > 0
+
+    def test_threshold_not_eliminating_low_salary_stays_positive(self, flt):
+        # 薪资期望极高 + 城市不符 + 出差不接受 → 分数低但仍 > 0 (不淘汰)
+        res = flt.filter(
+            _candidate(
+                salary_min_k=500, city="广州",
+                travel_tolerance="unwilling",
+                social_insurance_expectation=True,
+            ),
+            _role(
+                salary_min_k=10, salary_max_k=20, city="北京",
+                travel_required="frequent", offers_social_insurance=False,
+            ),
+        )
+        assert res.match_score > 0
+        assert res.high_priority["benefits_travel"] > 0
+
+    # -- 辅助: 从 risks/reasons 推断五险一金子分 (黑盒) --
+    @staticmethod
+    def _social_subscore(res) -> float:
+        # 当无 "岗位未提供五险一金" risk 时, 社保子分 = 1.0
+        if any("岗位未提供五险一金" in r for r in res.risks):
+            return 0.2
+        return 1.0
+
+
+# ===========================================================================
 # 7. 不淘汰, 只排序 (核心甲方要求)
 # ===========================================================================
 
@@ -480,6 +619,23 @@ class TestWeights:
         assert W_SKILL > W_EDUCATION
         assert W_SKILL > W_CERTIFICATE
 
+    def test_soft_total_three_dims(self):
+        # v11.2: 三个软维度总和仍为 0.35
+        soft = W_SALARY_CITY + W_AVAILABILITY + W_BENEFITS_TRAVEL
+        assert abs(soft - 0.35) < 1e-9
+
+    def test_all_four_weights_sum_to_one(self):
+        total = (
+            W_SKILL + W_EDUCATION + W_CERTIFICATE
+            + W_SALARY_CITY + W_AVAILABILITY + W_BENEFITS_TRAVEL
+        )
+        assert abs(total - 1.0) < 1e-9
+
+    def test_benefits_travel_weight_value(self):
+        assert W_BENEFITS_TRAVEL == 0.11
+        assert W_SALARY_CITY == 0.14
+        assert W_AVAILABILITY == 0.10
+
 
 # ===========================================================================
 # 12. 空输入健壮性
@@ -535,7 +691,7 @@ class TestJobCardFourParts:
     def test_enriched_job_populates_boundaries(self):
         from services.marketplace.talent_market import get_service
         svc = get_service()
-        jobs, _ = svc.list_jobs(page=1, page_size=1)
+        jobs, _, _ = svc.list_jobs(page=1, page_size=1)
         job = svc.get_job(jobs[0].id)
         # 边界 4 类: 工作时间 / 工作地点 / 出差 / 不做什么
         assert len(job.boundaries) >= 3
@@ -558,7 +714,7 @@ class TestJobCardFourParts:
         from api.talent_market import _job_detail_out
         from services.marketplace.talent_market import get_service
         svc = get_service()
-        jobs, _ = svc.list_jobs(page=1, page_size=1)
+        jobs, _, _ = svc.list_jobs(page=1, page_size=1)
         out = _job_detail_out(svc.get_job(jobs[0].id))
         d = out.model_dump()
         # 甲方 4 部分: 职责 / 硬条件 / 加分项 / 边界 全可序列化
