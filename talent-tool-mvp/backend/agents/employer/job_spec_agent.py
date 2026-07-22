@@ -14,6 +14,21 @@ from eventbus import emit
 
 logger = logging.getLogger("recruittech.agents.employer.job_spec")
 
+
+def _as_dict(raw: str | bytes) -> dict:
+    """Defensively parse an LLM JSON payload into a dict.
+
+    Local LLMs occasionally return a JSON array / scalar; the downstream
+    ``result.get(...)`` calls would otherwise raise AttributeError. Non-dict
+    payloads fall back to ``{}``.
+    """
+    try:
+        parsed = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
 JOB_SPEC_PROMPT = """你是部门负责人的需求细化助手。
 
 口语化描述:
@@ -57,9 +72,11 @@ class JobSpecAgent(BaseAgent):
                 system="你是有 15 年经验的招聘专家,熟悉各行业 JD 套路。",
                 json_mode=True,
             )
-            result = json.loads(raw)
+            result = _as_dict(raw)
         except Exception as e:
             logger.warning(f"job_spec LLM failed: {e}")
+            result = {}
+        if not result:
             result = {
                 "responsibilities": [text[:200]],
                 "hard_requirements": [],

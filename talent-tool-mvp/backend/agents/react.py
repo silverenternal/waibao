@@ -96,6 +96,10 @@ class ReActAgent(BaseAgent):
         reasoning_steps: list[ReasoningStep] = []
         step_num = 0
         final_answer: Optional[str] = None
+        # v11.5 R1 — track the underlying LLM/transport failure so the
+        # final output can be flagged degraded instead of pretending a
+        # synthesized fallback is a real answer.
+        llm_error: Optional[str] = None
 
         for iteration in range(self.max_iterations):
             step_num += 1
@@ -115,6 +119,7 @@ class ReActAgent(BaseAgent):
                 )
             except Exception as e:
                 logger.exception(f"ReAct iteration {iteration} failed: {e}")
+                llm_error = str(e)
                 break
 
             # 2. 解析 LLM 输出: Thought / Action / Final Answer
@@ -153,23 +158,35 @@ class ReActAgent(BaseAgent):
         if final_answer is None:
             final_answer = self._synthesize_fallback(reasoning_steps)
 
+        artifacts = {
+            "reasoning_steps": [
+                {
+                    "step": s.step_num,
+                    "thought": s.thought,
+                    "action": s.action,
+                    "observation": s.observation,
+                }
+                for s in reasoning_steps
+            ],
+            "iterations": len(reasoning_steps),
+        }
+        # v11.5 R1 — when the LLM transport failed mid-loop we still
+        # synthesize *something* so the UI keeps working, but we MUST mark
+        # the output as degraded + carry the error so upstream (gateway /
+        # caller / demo) can tell this is a fallback, not a real answer.
+        degraded = llm_error is not None
+        if degraded:
+            artifacts["_degraded_reason"] = llm_error
+            artifacts["degraded"] = True
+
         return AgentOutput(
             agent_name=self.name,
             text=final_answer,
-            artifacts={
-                "reasoning_steps": [
-                    {
-                        "step": s.step_num,
-                        "thought": s.thought,
-                        "action": s.action,
-                        "observation": s.observation,
-                    }
-                    for s in reasoning_steps
-                ],
-                "iterations": len(reasoning_steps),
-            },
+            artifacts=artifacts,
             memory_writes=[],
             signals=[],
+            degraded=degraded,
+            error=llm_error,
         )
 
     def _build_react_prompt(self, agent_input: AgentInput,

@@ -19,6 +19,20 @@ from eventbus import emit
 logger = logging.getLogger("recruittech.agents.jobseeker.profile")
 
 
+def _as_dict(raw: str | bytes) -> dict:
+    """Defensively parse an LLM JSON payload into a dict.
+
+    Local LLMs occasionally return a JSON array / scalar; the downstream
+    ``result.get(...)`` calls would otherwise raise AttributeError and crash
+    the agent.  Non-dict payloads fall back to ``{}``.
+    """
+    try:
+        parsed = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
 PROFILE_INTAKE_PROMPT = """你是求职者画像采集助手。
 
 任务: 基于用户最新的输入,提取/更新画像字段,生成温和的追问(最多 2 个)。
@@ -280,9 +294,10 @@ class ProfileAgent(BaseAgent):
 
         raw = await llm_call(self.llm or LLMClient(), user_msg, system=system, json_mode=True)
 
-        try:
-            result = json.loads(raw)
-        except json.JSONDecodeError:
+        result = _as_dict(raw)
+        if not result:
+            # empty / non-JSON / non-dict payload — fall back to a safe shape so
+            # the subsequent merge never touches an unparseable value.
             result = {"warm_response": raw, "next_questions": [], "updated_profile": {}, "completion": 0.5}
 
         # 合并画像

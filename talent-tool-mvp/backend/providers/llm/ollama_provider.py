@@ -142,13 +142,17 @@ class OllamaProvider(LLMProvider):
     @staticmethod
     def _safe_json(s: str | None) -> dict[str, Any]:
         import json
+        import logging
 
         if not s:
             return {}
         try:
             result = json.loads(s)
             return result if isinstance(result, dict) else {"value": result}
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001 — keep agent alive, but surface it
+            logging.getLogger("recruittech.providers.llm.ollama").warning(
+                "tool-call arguments not valid JSON (%s); preserving raw", exc
+            )
             return {"_raw": s}
 
     def _parse_completion(self, resp: Any) -> LLMResponse:

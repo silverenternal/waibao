@@ -445,7 +445,16 @@ class IdentityVerificationService:
             result = _run_async(parse_resume_from_url(url))
         except Exception as e:  # noqa: BLE001
             return {}, False, f"简历解析异常: {e} (待上传)"
-        extracted = (result or {}).get("extracted") or {}
+        result = result or {}
+        extracted = result.get("extracted") or {}
+        # v11.5: resume_parser 现在返回权威 ok/status/errors (R2 silent-failure 加固).
+        # 若显式标记提取失败 (ok=False) → 直接判 pending(待上传), 不再被字段校验
+        # 放过 (合同: 证件无法求证 → 待上传). ok=True 时仍做字段一致性二次校验
+        # (defense in depth), 不会因单一信号误判 verified.
+        if result.get("ok") is False:
+            errs = result.get("errors") or []
+            reason = (str(errs[0]) if errs else "简历字段提取失败") + " (待上传)"
+            return extracted, False, reason
         ok, reason = _resume_extracted_is_ok(extracted)
         return extracted, ok, reason
 

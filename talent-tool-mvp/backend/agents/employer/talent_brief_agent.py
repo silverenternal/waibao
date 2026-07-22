@@ -11,6 +11,20 @@ from agents.prompts import get_prompt as _get_prompt
 logger = logging.getLogger("recruittech.agents.employer.talent_brief")
 
 
+def _as_dict(raw: str | bytes) -> dict:
+    """Defensively parse an LLM JSON payload into a dict.
+
+    Local LLMs occasionally return a JSON array / scalar; the downstream
+    ``result.get(...)`` calls would otherwise raise AttributeError. Non-dict
+    payloads fall back to ``{}``.
+    """
+    try:
+        parsed = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
 SYSTEM = """你是企业人才需求顾问。
 
 你的职责:
@@ -73,9 +87,11 @@ class TalentBriefAgent(BaseAgent):
                 system=_get_prompt("talent_brief_agent", "system", default=SYSTEM),
                 json_mode=True,
             )
-            result = json.loads(raw)
+            result = _as_dict(raw)
         except Exception as e:
             logger.warning(f"brief failed: {e}")
+            result = {}
+        if not result:
             result = {"hard_constraints": [], "soft_preferences": [], "talent_image_draft": {}}
 
         # 3. 合并偏见分析

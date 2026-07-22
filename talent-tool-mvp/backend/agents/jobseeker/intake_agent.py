@@ -15,6 +15,21 @@ from eventbus import emit
 
 logger = logging.getLogger("recruittech.agents.jobseeker.intake")
 
+
+def _as_dict(raw: str | bytes) -> dict:
+    """Defensively parse an LLM JSON payload into a dict.
+
+    Local LLMs occasionally return a JSON array / scalar; the downstream
+    ``result.get(...)`` calls would otherwise raise AttributeError. Non-dict
+    payloads fall back to ``{}``.
+    """
+    try:
+        parsed = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
 INTAKE_PROMPT = """你是建档引导助手。
 
 根据当前"建档完成度"决定下一步:
@@ -68,9 +83,8 @@ class IntakeAgent(BaseAgent):
         system = _get_prompt("intake_agent", "system", default=INTAKE_PROMPT)
         user_msg = f"建档完成度: {completion:.0%}\n已抽取: {json.dumps(extracted, ensure_ascii=False)[:500]}"
         raw = await llm_call(self.llm or LLMClient(), user_msg, system=system, json_mode=True)
-        try:
-            result = json.loads(raw)
-        except json.JSONDecodeError:
+        result = _as_dict(raw)
+        if not result:
             result = {"stage": "education", "prompt": raw, "expected_input": ""}
 
         # v6.0 EventBus — publish profile.created on first intake

@@ -413,7 +413,11 @@ export default function EmotionTimelinePage() {
                   <EmotionEventDetail
                     event={selected}
                     onClose={() => setSelected(null)}
-                    onOpenJournal={(id) => router.push(`/jobseeker/journal/${id}`)}
+                    // v11.5 R5: there is no /jobseeker/journal/[id] detail
+                    // route (only /journal + /journal/analytics + /journal/voice),
+                    // so a per-id push would 404. Route to the journal list,
+                    // which is the closest existing landing surface.
+                    onOpenJournal={() => router.push("/jobseeker/journal")}
                   />
                 </div>
 

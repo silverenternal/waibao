@@ -102,11 +102,18 @@ def _best(
     candidate: Any,
     candidate_others: list[Any],
     id_getter,
+    *,
+    early_threshold: Optional[int] = None,
 ) -> tuple[int, Optional[str], Optional[MatchResult]]:
     """对 ``candidate_others`` (一组岗位) 逐一评分, 取最大分.
 
     恒以 ``filter(candidate, role)`` 顺序调用 (候选人在前, 岗位在后).
     ``id_getter(role)`` 从岗位对象里取 id. 空列表 → ``(0, None, None)``.
+
+    性能优化 (v11.5 R4): 当调用方只需要 "是否过线" (如 ``initiate_contact`` /
+    ``get_talent`` 的阀值门) 时, 可传 ``early_threshold``. 一旦某岗位评分
+    ≥ 该阀值即 **提前返回** (语义: 任一过线即足够, 不必继续算更高分). 默认
+    ``None`` → 完整取最大分 (雇主列表需要精确排序, 必须用默认值).
     """
     if not candidate_others:
         return 0, None, None
@@ -125,6 +132,12 @@ def _best(
             best_score = res.match_score
             best_id = id_getter(obj)
             best_res = res
+            # 早停: 已找到一个过线岗位 → 调用方只要 "是否可见", 无需更高分.
+            if (
+                early_threshold is not None
+                and best_score >= early_threshold
+            ):
+                return best_score, best_id, best_res
 
     if best_score < 0:
         # 全部异常 → 安全兜底
@@ -133,24 +146,31 @@ def _best(
 
 
 def best_score_against_roles(
-    talent: Any, roles: list[Any]
+    talent: Any, roles: list[Any], *, early_threshold: Optional[int] = None
 ) -> tuple[int, Optional[str], Optional[MatchResult]]:
     """候选人对一组岗位的最佳匹配分.
 
     甲方语义: 候选人只要命中 **任意一个** 岗位过线, 即对雇主可见.
     返回 ``(best_score, best_role_id, MatchResult)``. 空列表 → ``(0, None, None)``.
+
+    ``early_threshold`` (v11.5 R4 性能): 当只需判定 "是否过线" 时传入阀值,
+    任一岗位达标即提前返回, 避免对全部 R 个岗位评分. 雇主列表需要精确排序
+    (取最大分), **不得** 传该参数.
     """
-    return _best(talent, roles, _role_id_getter)
+    return _best(talent, roles, _role_id_getter, early_threshold=early_threshold)
 
 
 def best_score_against_talents(
-    role: Any, talents: list[Any]
+    role: Any, talents: list[Any], *, early_threshold: Optional[int] = None
 ) -> tuple[int, Optional[str], Optional[MatchResult]]:
     """岗位对一组人才的最佳匹配分 (对称).
 
     ``filter(candidate, role)`` 始终候选人在前 —— 这里把每个 talent 当 candidate,
     固定的 role 当岗位, 取最大分.
     返回 ``(best_score, best_talent_id, MatchResult)``. 空列表 → ``(0, None, None)``.
+
+    ``early_threshold`` (v11.5 R4 性能): 同 :func:`best_score_against_roles`,
+    任一人才达标即提前返回. 排序场景 **不得** 传该参数.
     """
     if not talents:
         return 0, None, None
@@ -169,6 +189,12 @@ def best_score_against_talents(
             best_score = res.match_score
             best_id = _candidate_id_getter(talent)
             best_res = res
+            # 早停: 已找到一个过线人才 → 调用方只要 "是否可见", 无需更高分.
+            if (
+                early_threshold is not None
+                and best_score >= early_threshold
+            ):
+                return best_score, best_id, best_res
 
     if best_score < 0:
         return 0, None, None

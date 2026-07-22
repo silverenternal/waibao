@@ -16,6 +16,21 @@ from eventbus import emit
 
 logger = logging.getLogger("recruittech.agents.employer.policy")
 
+
+def _as_dict(raw: str | bytes) -> dict:
+    """Defensively parse an LLM JSON payload into a dict.
+
+    Local LLMs occasionally return a JSON array / scalar; the downstream
+    ``result.get(...)`` calls would otherwise raise AttributeError. Non-dict
+    payloads fall back to ``{}``.
+    """
+    try:
+        parsed = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
 POLICY_PROMPT = """你是企业制度管家。
 
 上传/查询内容:
@@ -55,8 +70,10 @@ class PolicyAgent(BaseAgent):
                     system="你是 HR 制度专家。",
                     json_mode=True,
                 )
-                result = json.loads(raw)
+                result = _as_dict(raw)
             except Exception:
+                result = {}
+            if not result:
                 result = {"items": [{"category": "other", "title": "制度", "content": text[:500]}], "legal_risks": [], "faq_version": []}
 
             # 写入 company_policies
@@ -102,14 +119,28 @@ class PolicyAgent(BaseAgent):
         except Exception:
             candidates = []
 
-        # LLM 生成回答
+        # 契约 (2.6 制度 = 存文档 + AI引用): 若库里没有匹配制度,直接告知
+        # 用户"暂无相关制度",而不是让 AI 在零引用下凭空编造答案 (silent-failure:
+        # AI 看起来答了,实则无据可依).  上传后才有内容.
+        if not candidates:
+            return AgentOutput(
+                agent_name=self.name,
+                text=(
+                    "暂未在制度库中找到与该问题匹配的条款。\n"
+                    "如需查询,请先由管理部门上传相关制度文档;已有文档可换个关键词重试。"
+                ),
+                artifacts={"matched_policies": [], "query": text[:100]},
+            )
+
+        # LLM 生成回答 (只在有真实制度片段引用时才调用)
         raw = await llm_call(
             self.llm or LLMClient(),
             f"用户问题: {text}\n制度片段:\n" + "\n".join(
-                f"- [{c.get('category')}] {c.get('title')}: {c.get('content')[:200]}"
+                f"- [{c.get('category') or '其他'}] {c.get('title') or ''}: "
+                f"{str(c.get('content') or '')[:200]}"
                 for c in candidates
             ),
-            system="你是企业制度助手,回答要引用具体制度条款。",
+            system="你是企业制度助手,回答必须引用上面的具体制度条款;无依据时请明确说明。",
         )
 
         # v6.0 EventBus — best-effort audit trail

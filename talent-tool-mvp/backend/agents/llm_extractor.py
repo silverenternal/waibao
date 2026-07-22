@@ -13,15 +13,112 @@ import json
 import logging
 from typing import Any, Optional
 
+import re
+
 from agents.runtime import LLMClient
 from agents.toolkit import llm_call
 
 logger = logging.getLogger("recruittech.agents.llm_extractor")
 
+# v11.5 R1 — error marker key returned by every extractor on failure.
+# Callers MUST treat a dict containing this key as "extraction failed /
+# degraded" rather than a real, empty result. This is the single contract
+# that turns a silent {} into an observable failure.
+EXTRACTION_ERROR_KEY = "_error"
+
 
 # ============================================================
 # 通用抽取工具: LLM-based structured extraction
 # ============================================================
+_FENCE_RE = re.compile(r"^\s*```(?:json|JSON)?\s*\n", re.MULTILINE)
+_TRAILING_FENCE_RE = re.compile(r"\n\s*```\s*$")
+
+
+def _extract_json_block(raw: str) -> str:
+    """Robustly isolate the JSON payload from an LLM completion.
+
+    Local LLMs (qwen2.5 via Ollama, llama, glm) routinely wrap JSON in a
+    ```` ```json ```` fence and/or emit leading/trailing chatter despite
+    ``json_mode``.  Before giving up on ``json.loads`` we:
+
+      1. strip a single markdown code fence (```json ... ```);
+      2. if the whole thing still is not valid JSON, grab the first
+         balanced ``{ ... }`` substring (the actual object) and try that.
+
+    Returns the candidate substring; the caller runs ``json.loads`` and
+    decides whether it actually parses.
+    """
+    if raw is None:
+        return ""
+    text = raw.strip()
+    # 1. strip one surrounding fence (start ```json / ``` ... end ```)
+    if text.startswith("```"):
+        text = _FENCE_RE.sub("", text, count=1)
+        text = _TRAILING_FENCE_RE.sub("", text)
+        text = text.strip()
+    # quick win: already valid-looking
+    if text.startswith("{") or text.startswith("["):
+        return text
+    # 2. fall back to the first balanced { ... } block
+    start = text.find("{")
+    if start == -1:
+        # maybe a JSON array instead
+        start = text.find("[")
+        if start == -1:
+            return text  # let json.loads raise with the original
+    opener = text[start]
+    closer = "}" if opener == "{" else "]"
+    depth = 0
+    in_str = False
+    escape = False
+    for i in range(start, len(text)):
+        ch = text[i]
+        if in_str:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch == opener:
+            depth += 1
+        elif ch == closer:
+            depth -= 1
+            if depth == 0:
+                return text[start : i + 1]
+    return text  # unbalanced — let json.loads fail loudly
+
+
+def parse_llm_json(raw: str) -> dict:
+    """Parse an LLM JSON completion robustly; raise on real failure.
+
+    Unlike the previous ``json.loads(raw)`` this survives markdown fences
+    and surrounding prose.  Raises ``ValueError`` (with the offending
+    snippet) when no valid JSON object can be recovered, so callers can
+    convert the failure into a clearly-marked ``_error`` result instead of
+    silently treating the output as an empty dict.
+    """
+    candidate = _extract_json_block(raw or "")
+    try:
+        parsed = json.loads(candidate)
+    except json.JSONDecodeError:
+        # last resort: try the literal raw (some models emit valid JSON
+        # that our balancer mishandled, e.g. nested stringified JSON)
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                f"LLM did not return valid JSON: {exc.msg}; head={raw[:120]!r}"
+            ) from exc
+    if not isinstance(parsed, dict):
+        # A bare scalar / list is not a valid structured extraction here.
+        raise ValueError(
+            f"LLM JSON parsed to {type(parsed).__name__}, expected object"
+        )
+    return parsed
 
 async def extract_json_with_reasoning(
     llm: LLMClient,
@@ -67,10 +164,17 @@ async def extract_json_with_reasoning(
             system=system,
             json_mode=True,
         )
-        return json.loads(raw)
+        result = parse_llm_json(raw)
+        # detect empty / no-op results so callers don't mistake them for
+        # a genuine "nothing found" — if the model returned an object but
+        # every field was dropped, surface that too.
+        if not result:
+            logger.warning("LLM extraction returned empty object")
+            return {EXTRACTION_ERROR_KEY: "empty extraction result", "degraded": True}
+        return result
     except Exception as e:
         logger.warning(f"LLM extraction failed: {e}")
-        return {"_error": str(e)}
+        return {EXTRACTION_ERROR_KEY: str(e), "degraded": True}
 
 
 # ============================================================
@@ -151,10 +255,22 @@ async def detect_emotion(llm: LLMClient, text: str, conversation_context: Option
     content = f"{ctx}\n用户最新输入: {text}"
     try:
         raw = await llm_call(llm, content, system=system, json_mode=True)
-        return json.loads(raw)
+        return parse_llm_json(raw)
     except Exception as e:
         logger.warning(f"detect_emotion failed: {e}")
-        return {"_error": str(e), "primary_emotion": "neutral", "risk_level": "none", "response": "我在听。"}
+        # Safe-but-marked fallback: the caller (emotion_agent) still needs
+        # a usable response for the user, but the result now carries the
+        # error marker + degraded flag so it is never mistaken for a real
+        # LLM analysis.
+        return {
+            EXTRACTION_ERROR_KEY: str(e),
+            "degraded": True,
+            "primary_emotion": "neutral",
+            "risk_level": "none",
+            "response": "我在听。",
+            "emotions": [],
+            "complexity": "simple",
+        }
 
 
 # ============================================================

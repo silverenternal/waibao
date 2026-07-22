@@ -16,6 +16,21 @@ from eventbus import emit
 
 logger = logging.getLogger("recruittech.agents.employer.vision")
 
+
+def _as_dict(raw: str | bytes) -> dict:
+    """Defensively parse an LLM JSON payload into a dict.
+
+    Local LLMs occasionally return a JSON array / scalar; the downstream
+    ``result.get(...)`` calls would otherwise raise AttributeError. Non-dict
+    payloads fall back to ``{}``.
+    """
+    try:
+        parsed = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
 VISION_PROMPT = """你是企业战略解码专家。
 
 老板输入:
@@ -51,9 +66,8 @@ class VisionAgent(BaseAgent):
             system="你是顶级战略顾问,擅长把老板的口述结构化为可落地的 4 层战略。",
             json_mode=True,
         )
-        try:
-            result = json.loads(raw)
-        except json.JSONDecodeError:
+        result = _as_dict(raw)
+        if not result:
             result = {
                 "vision": {"statement": text[:100], "horizon": "3年"},
                 "planning": {}, "strategy": {}, "tactic": [],
@@ -107,7 +121,7 @@ class VisionAgent(BaseAgent):
             emit("strategy.updated", {
                 "employer_id": agent_input.user_id,
                 "vision_id": parent_id,
-                "themes": [t.get("statement") for t in result.get("strategy", {}).get("themes", [])][:5],
+                "themes": [t.get("title") for t in (result.get("tactic") or []) if isinstance(t, dict)][:5],
                 "horizon_months": 12,
             }, source="agent.vision")
         except Exception as _e:

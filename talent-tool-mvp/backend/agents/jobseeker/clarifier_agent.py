@@ -17,6 +17,29 @@ from eventbus import emit
 logger = logging.getLogger("recruittech.agents.jobseeker.clarifier")
 
 
+def _as_dict(raw: str | bytes, *, default: dict | None = None) -> dict:
+    """Parse an LLM JSON string defensively into a dict.
+
+    Local LLMs (Ollama) with ``response_format=json_object`` are not 100%
+    reliable: they sometimes return a JSON array, a bare scalar, or prose.
+    Without this guard the subsequent ``draft.get(...)`` calls raise
+    ``AttributeError: list object has no attribute 'get'`` and crash the
+    agent mid-run — the worst kind of demo failure.  Anything that is not a
+    JSON object falls back to *default* (an empty dict), which keeps every
+    downstream ``.get()`` safe and produces an explicit "信息不足" result
+    instead of a traceback.
+    """
+    if default is None:
+        default = {}
+    if not raw:
+        return default
+    try:
+        parsed = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return default
+    return parsed if isinstance(parsed, dict) else default
+
+
 def _load_reflective_system() -> str:
     """Load reflective system prompt. Falls back to default if config is absent."""
     from services.platform.config_service import get_prompt
@@ -155,7 +178,11 @@ class ClarifierAgent(BaseAgent):
         # 2. 第一步: 综合
         try:
             raw = await _llm_synthesize(self.llm or LLMClient(), all_data)
-            draft = json.loads(raw)
+            draft = _as_dict(raw)
+            if not draft:
+                # json_mode returned nothing usable — surface as an explicit
+                # error instead of silently producing an empty profile.
+                draft = {"_error": "empty_llm_response"}
         except Exception as e:
             logger.warning(f"synthesize failed: {e}")
             draft = {"_error": str(e)}
@@ -165,7 +192,7 @@ class ClarifierAgent(BaseAgent):
         if self.enable_reflection and "_error" not in draft:
             try:
                 reflect_raw = await _llm_reflect(self.llm or LLMClient(), draft, all_data)
-                reflection = json.loads(reflect_raw)
+                reflection = _as_dict(reflect_raw)
                 # 把反思结果合并
                 if reflection.get("corrections"):
                     for k, v in reflection["corrections"].items():

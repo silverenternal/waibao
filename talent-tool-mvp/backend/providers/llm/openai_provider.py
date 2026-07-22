@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from abc import abstractmethod
 from collections.abc import AsyncIterator
@@ -44,12 +45,23 @@ def _dump_json(obj: Any) -> str:
 
 
 def _safe_json(s: str | None) -> dict[str, Any]:
+    """Parse a model-emitted tool-call arguments string.
+
+    Local / smaller models sometimes emit arguments that are not valid
+    JSON (truncated, prose-wrapped, or empty).  Returning a bare ``{}``
+    would silently drop the args and let the agent run with an empty
+    payload — a classic silent-failure.  We instead preserve the raw text
+    under ``_raw`` (so callers can detect + log it) and warn once.
+    """
     if not s:
         return {}
     try:
         result = json.loads(s)
         return result if isinstance(result, dict) else {"value": result}
-    except Exception:
+    except Exception as exc:  # noqa: BLE001 — keep agent alive, but surface it
+        logging.getLogger("recruittech.providers.llm").warning(
+            "tool-call arguments not valid JSON (%s); preserving raw", exc
+        )
         return {"_raw": s}
 
 

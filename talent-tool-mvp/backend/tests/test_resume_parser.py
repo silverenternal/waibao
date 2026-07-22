@@ -180,6 +180,89 @@ async def test_parse_resume_from_url_full(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_parse_resume_llm_failure_marks_extract_failed(monkeypatch):
+    """silent-failure 防护: LLM 抽取失败 (_error) → status=extract_failed / ok=False,
+    而非假装成功返回空画像."""
+    from services.jobseeker import resume_parser as rp
+
+    async def fake_extract(url, *, language="auto"):
+        return "张三 zhang.san@example.com"
+
+    monkeypatch.setattr(rp, "extract_text_from_url", fake_extract)
+
+    class _FakeLLM:
+        provider_name = "mock"
+        provider = MagicMock()
+
+        async def call(self, messages, **kw):
+            # 模拟本地 LLM 返回非 JSON 垃圾 → extract_resume 走 _error 路径
+            return "I cannot parse this", 1, 1
+
+    out = await rp.parse_resume_from_url("https://example.com/cv.txt", llm=_FakeLLM())
+    assert out["status"] == "extract_failed"
+    assert out["ok"] is False
+    assert any("llm_extract_failed" in e for e in out["errors"])
+    # extracted 仍保留 (含 _error) 供 debug, 但调用方应看 ok=False
+    assert "_error" in out["extracted"]
+
+
+@pytest.mark.asyncio
+async def test_parse_resume_llm_empty_structure_marks_failed(monkeypatch):
+    """silent-failure 防护: LLM 返回合法但全空 JSON {} → 标记 extract_failed."""
+    from services.jobseeker import resume_parser as rp
+
+    async def fake_extract(url, *, language="auto"):
+        return "张三"
+
+    monkeypatch.setattr(rp, "extract_text_from_url", fake_extract)
+
+    class _FakeLLM:
+        provider_name = "mock"
+        provider = MagicMock()
+
+        async def call(self, messages, **kw):
+            import json as _json
+            # 合法 JSON 但无任何可用字段
+            return _json.dumps({"basic": {}, "skills": [], "experience": []}), 1, 1
+
+    out = await rp.parse_resume_from_url("https://example.com/cv.txt", llm=_FakeLLM())
+    assert out["status"] == "extract_failed"
+    assert out["ok"] is False
+    assert any("llm_extract_empty" in e for e in out["errors"])
+
+
+@pytest.mark.asyncio
+async def test_parse_resume_success_ok_true(monkeypatch):
+    """正常成功路径 → status=ok / ok=True."""
+    from services.jobseeker import resume_parser as rp
+
+    async def fake_extract(url, *, language="auto"):
+        return "张三 zhang.san@example.com 13800138000"
+
+    monkeypatch.setattr(rp, "extract_text_from_url", fake_extract)
+
+    extracted = {
+        "basic": {"name": "张三", "email": "zhang.san@example.com", "phone": "13800138000", "location": ""},
+        "skills": [],
+        "experience": [],
+    }
+
+    class _FakeLLM:
+        provider_name = "mock"
+        provider = MagicMock()
+
+        async def call(self, messages, **kw):
+            import json as _json
+            return _json.dumps(extracted, ensure_ascii=False), 1, 1
+
+    out = await rp.parse_resume_from_url("https://example.com/cv.txt", llm=_FakeLLM())
+    assert out["status"] == "ok"
+    assert out["ok"] is True
+    # ok=True 不应出现 llm_extract 错误 (mock 占位提示可存在于 errors 但不影响 ok)
+    assert not any("llm_extract" in e or "post_process" in e for e in out["errors"])
+
+
+@pytest.mark.asyncio
 async def test_post_process_extracts_email_phone(monkeypatch):
     """post_process 应该能补回 email 和 phone 当 LLM 没识别全。"""
     from services.resume_parser import _post_process

@@ -18,6 +18,26 @@ from eventbus import emit
 logger = logging.getLogger("recruittech.agents.jobseeker.emotion")
 
 
+def _coerce_emotions(raw) -> list[dict]:
+    """Normalise the ``emotions`` field from the LLM detector into a list of dicts.
+
+    Local LLMs occasionally return ``{"emotions": ["sad"]}`` (strings) or a
+    non-list value; the downstream ``e.get("intensity")`` / ``e.get("name")``
+    calls would raise AttributeError on a string and crash the agent.
+    Strings are wrapped into ``{"name": <str>}`` so the sentiment/escalation
+    logic keeps working; anything non-iterable becomes ``[]``.
+    """
+    if not isinstance(raw, list):
+        return []
+    out: list[dict] = []
+    for e in raw:
+        if isinstance(e, dict):
+            out.append(e)
+        elif isinstance(e, str):
+            out.append({"name": e, "intensity": 0.5})
+    return out
+
+
 SYSTEM_PROMPT = """你是用户的情感智能助手。
 
 回应风格:
@@ -59,6 +79,9 @@ class EmotionAgent(BaseAgent):
 
         # 1. LLM 情绪分析(一次调用同时拿分析+回应)
         result = await detect_emotion(self.llm or LLMClient(), text, history)
+        # 本地 LLM 可能返回 emotions: ["sad"] (字符串) 或非 list; 归一化成 dict 列表,
+        # 防止后续 e.get("intensity") / e.get("name") 在字符串上 AttributeError 崩溃.
+        result["emotions"] = _coerce_emotions(result.get("emotions"))
 
         # 2. 写情绪时间线(只有有意义的情绪才记)
         risk = result.get("risk_level", "none")

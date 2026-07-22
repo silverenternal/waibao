@@ -595,6 +595,8 @@ class TalentMarketService:
             if not roles:
                 # 没有在招岗位 → 对雇主而言此人不存在.
                 return None
+            # 详情页展示真实最高匹配分 (须与 list_talents 一致, 否则同一候选人
+            # 列表/详情分数对不上). 单 talent × R 岗位评分很轻量, 不用 early-stop.
             best_score, best_role_id, _ = best_score_against_roles(card, roles)
             if not is_above_threshold(best_score):
                 # 甲方合同: 低于阀值 → 对方根本无法知道彼此存在 (404).
@@ -956,7 +958,9 @@ class TalentMarketService:
                     # 雇主不拥有该岗位 → 拒绝 (防止越权开渠道).
                     raise ValueError("role not owned by employer")
                 score, _, _ = best_score_against_roles(
-                    self._talent_dict(candidate_id), roles
+                    self._talent_dict(candidate_id),
+                    roles,
+                    early_threshold=MATCH_THRESHOLD,
                 )
             else:
                 talent = talent_profile or self._talent_dict(candidate_id)

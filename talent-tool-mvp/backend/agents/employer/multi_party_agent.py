@@ -14,6 +14,21 @@ from eventbus import emit
 
 logger = logging.getLogger("recruittech.agents.employer.multi_party")
 
+
+def _as_dict(raw: str | bytes) -> dict:
+    """Defensively parse an LLM JSON payload into a dict.
+
+    Local LLMs occasionally return a JSON array / scalar; the downstream
+    ``result.get(...)`` calls would otherwise raise AttributeError. Non-dict
+    payloads fall back to ``{}``.
+    """
+    try:
+        parsed = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
 MULTIPARTY_PROMPT = """你是企业多方对话协调员。
 
 各方最新输入:
@@ -49,9 +64,11 @@ class MultiPartyAgent(BaseAgent):
                 system="你擅长多方意见汇总和冲突调解。",
                 json_mode=True,
             )
-            result = json.loads(raw)
+            result = _as_dict(raw)
         except Exception as e:
             logger.warning(f"multi_party LLM failed: {e}")
+            result = {}
+        if not result:
             result = {
                 "stakeholders": [],
                 "conflicts": [],

@@ -30,6 +30,21 @@ from eventbus import emit
 
 logger = logging.getLogger("recruittech.agents.employer.compliance")
 
+
+def _as_dict(raw: str | bytes) -> dict:
+    """Defensively parse an LLM JSON payload into a dict.
+
+    Local LLMs occasionally return a JSON array / scalar; the downstream
+    ``verdict.get(...)`` calls would otherwise raise AttributeError. Non-dict
+    payloads fall back to ``{}``.
+    """
+    try:
+        parsed = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
 COMPLIANCE_PROMPT = """你是企业资质审核专家。
 
 OCR 提取:
@@ -131,8 +146,10 @@ class ComplianceAgent(BaseAgent):
                 ),
                 json_mode=True,
             )
-            verdict = json.loads(raw)
+            verdict = _as_dict(raw)
         except Exception:
+            verdict = {}
+        if not verdict:
             verdict = {
                 "trust_score": service_trust if cc_valid else 0.3,
                 "verified_fields": {

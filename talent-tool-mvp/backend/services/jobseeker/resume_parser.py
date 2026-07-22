@@ -195,6 +195,28 @@ async def _post_process(structured: dict) -> dict:
 
 # ---------- 4. 主入口 ----------
 
+def _has_meaningful_fields(extracted: Any) -> bool:
+    """判断 LLM 抽取结果里是否至少有一个可用字段 (非空 basic/skills/experience/...).
+
+    用于区分"真成功"与"LLM 返回空结构 / {} / 全 null" — 后者是 silent-failure
+    的最坏情况: 本地 LLM JSON 解析脆弱,空 {} 看起来像成功但实际没提取到任何东西.
+    """
+    if not isinstance(extracted, dict):
+        return False
+    basic = extracted.get("basic")
+    if isinstance(basic, dict) and any(
+        str(v).strip() for v in basic.values() if not isinstance(v, (dict, list))
+    ):
+        return True
+    for k in ("skills", "experience", "education", "highlights", "red_flags"):
+        items = extracted.get(k)
+        if isinstance(items, list) and items:
+            return True
+    if extracted.get("overall_impression"):
+        return True
+    return False
+
+
 async def parse_resume_from_url(
     url: str,
     *,
@@ -212,42 +234,66 @@ async def parse_resume_from_url(
             "extracted": {...},       # LLM 结构化结果
             "provider_chain": ["ocr", "llm"],   # 实际触发的链路
             "ocr_provider": "tencent",          # OCR_PROVIDER env
+            "status": "ok" | "extract_failed",  # 提取是否真成功 (silent-failure 防护)
+            "ok": bool,                         # status == "ok" 的便捷布尔
+            "errors": [str, ...],               # 任何降级/失败原因 (空列表=全成功)
         }
+
+    失败语义 (合同要求: 证件/字段无法求证 → 标记而非假装成功):
+        - OCR/文本提取失败 → 直接 raise ProviderError (上游决定"待上传").
+        - LLM 抽取失败/返回空结构 → status="extract_failed", errors 记录原因,
+          extracted 仍返回 (可能含 _error) 供 debug, 但 ok=False 让调用方
+          (profile_agent / 身份验证) 走"待上传/人工补录"分支, 而非当成有效画像.
     """
     chain: list[str] = []
+    errors: list[str] = []
 
     raw_text = await extract_text_from_url(url, language=language)
     chain.append("ocr")
 
-    # 记录第一个非空 provider name
+    # 记录实际触发的 provider name (无副作用; mock 仅 dev, 合同要求本地 Paddle)
     ocr_provider_name = (os.getenv("OCR_PROVIDER") or "mock").lower()
     if ocr_provider_name == "mock":
-        try:
-            chain.append("ocr:mock")
-        except Exception:  # noqa: BLE001
-            pass
+        chain.append("ocr:mock")
+        errors.append("ocr_provider=mock — 返回占位文字, 非真实 OCR (仅 dev)")
 
     # 跑到这里说明 OCR 成功(主路径或 vision fallback)
-    if "vision" not in chain:
+    if "ocr:mock" not in chain:
         try:
             from providers.registry import get_ocr_provider
 
             prov = get_ocr_provider()
             if getattr(prov, "provider_name", "") == "gpt4v":
                 chain.append("vision:gpt4v")
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as e:  # noqa: BLE001 — provider 探测失败不影响主链路
+            logger.warning(f"ocr provider introspection failed: {e}")
 
     # LLM 抽取
     _llm = llm or LLMClient()
     extracted = await extract_resume(_llm, raw_text)
     chain.append("llm")
 
-    if "_error" not in (extracted or {}):
+    # ---- silent-failure 防护: 区分真成功 vs 空/垃圾 ----
+    llm_failed = not isinstance(extracted, dict) or "_error" in (extracted or {})
+    if llm_failed:
+        reason = (extracted or {}).get("_error") if isinstance(extracted, dict) else "non-dict"
+        errors.append(f"llm_extract_failed: {reason}")
+        logger.warning("resume LLM extraction failed (kept extracted for debug): %s", reason)
+    else:
+        if not _has_meaningful_fields(extracted):
+            errors.append("llm_extract_empty: LLM 返回空结构 (无可用字段)")
+            logger.warning("resume LLM extraction returned empty structure for %s", url)
         try:
             extracted = await _post_process(extracted)
         except Exception as e:  # noqa: BLE001
             logger.warning(f"post_process failed: {e}")
+            errors.append(f"post_process_failed: {e}")
+
+    ok = not errors or all("ocr_provider=mock" in e for e in errors)
+    # mock-only 是预期的 dev 降级, 不算 extract 失败; 但任何 llm/空结构错误都 = 失败
+    has_real_error = any(
+        ("llm_extract" in e or "post_process" in e) for e in errors
+    )
 
     return {
         "source_url": url,
@@ -257,6 +303,10 @@ async def parse_resume_from_url(
         "provider_chain": chain,
         "ocr_provider": os.getenv("OCR_PROVIDER") or "mock",
         "llm_provider": _llm.provider.provider_name if hasattr(_llm, "provider") else "unknown",
+        # 新增 (向后兼容): 显式状态, 杜绝"空 {} 当成功"
+        "status": "ok" if not has_real_error else "extract_failed",
+        "ok": not has_real_error,
+        "errors": errors,
     }
 
 

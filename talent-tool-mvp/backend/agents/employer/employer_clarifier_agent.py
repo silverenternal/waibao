@@ -16,6 +16,21 @@ from eventbus import emit
 
 logger = logging.getLogger("recruittech.agents.employer.clarifier")
 
+
+def _as_dict(raw: str | bytes) -> dict:
+    """Defensively parse an LLM JSON payload into a dict.
+
+    Local LLMs occasionally return a JSON array / scalar; the downstream
+    ``result.get(...)`` calls would otherwise raise AttributeError. Non-dict
+    payloads fall back to ``{}``.
+    """
+    try:
+        parsed = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
 EMPLOYER_CLARIFIER_PROMPT = """你是用人方信息整合专家。
 
 来自各角色的输入:
@@ -71,9 +86,11 @@ class EmployerClarifierAgent(BaseAgent):
                 system="你是高级猎头顾问,擅长透过表象看真实需求。",
                 json_mode=True,
             )
-            result = json.loads(raw)
+            result = _as_dict(raw)
         except Exception as e:
             logger.warning(f"employer_clarifier LLM failed: {e}")
+            result = {}
+        if not result:
             result = {
                 "talent_image": {"summary": "信息不足"},
                 "real_needs": {"explicit_requirements": [], "implicit_requirements": [],

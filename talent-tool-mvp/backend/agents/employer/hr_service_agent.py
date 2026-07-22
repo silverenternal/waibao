@@ -20,6 +20,21 @@ from eventbus import emit
 
 logger = logging.getLogger("recruittech.agents.employer.hr_service")
 
+
+def _as_dict(raw: str | bytes) -> dict:
+    """Defensively parse an LLM JSON payload into a dict.
+
+    Local LLMs occasionally return a JSON array / scalar; the downstream
+    ``result.get(...)`` calls would otherwise raise AttributeError. Non-dict
+    payloads fall back to ``{}``.
+    """
+    try:
+        parsed = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
 HR_SERVICE_PROMPT = """你是企业 HR 全生命周期助手。
 
 员工问题: "{text}"
@@ -195,9 +210,11 @@ class HRServiceAgent(BaseAgent):
                 system="你是温情专业的 HR 助手。",
                 json_mode=True,
             )
-            result = json.loads(raw)
+            result = _as_dict(raw)
         except Exception as exc:  # noqa: BLE001
             logger.warning(f"hr_service_agent LLM 调用失败: {exc}")
+            result = {}
+        if not result:
             result = {
                 "stage": stage,
                 "answer": text[:200] or "我在,有什么需要帮助?",

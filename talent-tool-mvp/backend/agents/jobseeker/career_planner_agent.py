@@ -22,6 +22,21 @@ from eventbus import emit
 
 logger = logging.getLogger("recruittech.agents.jobseeker.career_planner")
 
+
+def _as_dict(raw: str | bytes) -> dict:
+    """Defensively parse an LLM JSON payload into a dict.
+
+    Local LLMs occasionally return a JSON array or a bare scalar; without this
+    guard the downstream ``plan.get(...)`` calls raise AttributeError and crash
+    the agent.  Non-dict payloads fall back to ``{}`` so ``.get()`` stays safe.
+    """
+    try:
+        parsed = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
 PLANNER_PROMPT = """你是求职者的高级职业规划顾问。
 
 用户画像:
@@ -258,7 +273,7 @@ class CareerPlannerAgent(BaseAgent):
         )
         try:
             raw = await llm_call(self.llm or LLMClient(), "请生成", system=system, json_mode=True)
-            plan = json.loads(raw)
+            plan = _as_dict(raw)
         except Exception as e:
             logger.warning(f"planner LLM failed: {e}")
             plan = {
@@ -317,10 +332,11 @@ class CareerPlannerAgent(BaseAgent):
                 "horizon_months": 12,
             }, source="agent.career_planner")
             emit("market.updated", {
-                "region": ctx.get("region", "global"),
-                "jobs_count": market.get("jobs_count", 0),
-                "delta_pct": market.get("delta_pct", 0),
-                "top_skills": market.get("top_skills", [])[:5],
+                "region": ctx.get("city", "上海"),
+                "provider": market.get("provider", "unknown"),
+                "jobs_count": len(market.get("sample_jobs", [])),
+                "hot_skills": [s.get("skill") for s in market.get("hot_skills", [])][:5] if isinstance(market.get("hot_skills"), list) else [],
+                "top_skills": [s.get("skill") for s in market.get("hot_skills", [])][:5] if isinstance(market.get("hot_skills"), list) else [],
             }, source="agent.career_planner")
         except Exception as _e:
             logger.debug("eventbus publish failed: %s", _e)

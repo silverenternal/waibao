@@ -70,7 +70,8 @@ class MutualEvaluatorAgent(BaseAgent):
                 ),
                 json_mode=True,
             )
-            result = json.loads(raw)
+            from agents.llm_extractor import parse_llm_json
+            result = parse_llm_json(raw)  # v11.5: robust (剥 markdown fence), garbage 抛 ValueError
         except Exception as e:
             logger.warning(f"mutual eval LLM failed: {e}")
             c_avg = sum(s(cand, k) for k in ("skill", "communication", "culture", "potential")) / 4
@@ -82,6 +83,7 @@ class MutualEvaluatorAgent(BaseAgent):
                 "concerns": [],
                 "recommendation": "proceed" if mutual >= 0.7 else "hold" if mutual >= 0.5 else "reject",
                 "next_steps": [],
+                "degraded": True,  # v11.5: 标记降级 — 启发式分数非真实 AI 评估 (可观测)
             }
 
         # 持久化到 two_way_matches.feedback_loop
@@ -98,6 +100,7 @@ class MutualEvaluatorAgent(BaseAgent):
                         "strengths": result.get("strengths"),
                         "concerns": result.get("concerns"),
                         "recommendation": result.get("recommendation"),
+                        "degraded": result.get("degraded", False),
                     },
                 }).eq("candidate_id", str(candidate_id)).eq("role_id", str(role_id)).execute()
             except Exception as e:

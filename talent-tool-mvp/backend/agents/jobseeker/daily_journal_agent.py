@@ -17,6 +17,20 @@ from eventbus import emit
 logger = logging.getLogger("recruittech.agents.jobseeker.journal")
 
 
+def _as_dict(raw: str | bytes) -> dict:
+    """Defensively parse an LLM JSON payload into a dict.
+
+    Local LLMs occasionally return a JSON array / scalar; the downstream
+    ``result.get(...)`` calls would otherwise raise AttributeError. Non-dict
+    payloads fall back to ``{}``.
+    """
+    try:
+        parsed = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
 JOURNAL_PROMPT = """你是求职者的工作教练。
 
 用户描述了今天的工作内容/困惑/心得:
@@ -62,9 +76,8 @@ class DailyJournalAgent(BaseAgent):
             self.llm or LLMClient(), user_msg, system=system_prompt, json_mode=True
         )
 
-        try:
-            result = json.loads(raw)
-        except json.JSONDecodeError:
+        result = _as_dict(raw)
+        if not result:
             result = {
                 "rating": "good",
                 "advice": text[:100],
