@@ -166,7 +166,16 @@ async def test_parse_resume_from_url_full(monkeypatch):
     assert out["raw_text"] == raw_text
     assert "ocr" in out["provider_chain"]
     assert "llm" in out["provider_chain"]
-    assert out["extracted"]["basic"]["name"] == "张三"
+    # PII fields (name/email/phone) must be encrypted — Fernet ciphertext starts
+    # with "gAAAA". Asserting plaintext here would re-introduce the leak where
+    # the candidate name was stored unencrypted (the "name" dict key was never
+    # matched by the old `fields=["full_name", ...]` call).
+    basic_out = out["extracted"]["basic"]
+    assert basic_out["name"].startswith("gAAAA"), "candidate name must be encrypted"
+    assert basic_out["email"].startswith("gAAAA"), "email must be encrypted"
+    assert basic_out["phone"].startswith("gAAAA"), "phone must be encrypted"
+    # location is not a L2 PII field and stays plaintext
+    assert basic_out["location"] == "北京"
     assert out["ocr_provider"] == "mock"
 
 

@@ -499,8 +499,8 @@ class HardConditionFilter:
             risks.append(f"薪资期望偏高 (期望 {c_min}K, 岗位上限 {r_max}K)")
 
         # 城市
-        r_city = (r.get("city") or r.get("location") or "").strip().lower()
-        c_city = (c.get("city") or c.get("location") or "").strip().lower()
+        r_city = str(r.get("city") or r.get("location") or "").strip().lower()
+        c_city = str(c.get("city") or c.get("location") or "").strip().lower()
         city_score = 1.0
         if r_city and c_city:
             if r_city == c_city:
@@ -514,8 +514,8 @@ class HardConditionFilter:
                 risks.append(f"城市不符 (候选人 {c.get('city')}, 岗位 {r.get('city')})")
 
         # 工作时间 / 远程政策
-        r_remote = (r.get("remote_policy") or r.get("work_time") or "").strip().lower()
-        c_remote = (c.get("remote_policy") or c.get("work_time") or "").strip().lower()
+        r_remote = str(r.get("remote_policy") or r.get("work_time") or "").strip().lower()
+        c_remote = str(c.get("remote_policy") or c.get("work_time") or "").strip().lower()
         work_score = 1.0
         if r_remote and c_remote and r_remote != c_remote:
             # 简单: 完全一致满, 否则 0.6
@@ -532,7 +532,7 @@ class HardConditionFilter:
         risks: list[str] = []
 
         # 到岗时间
-        r_avail = (r.get("availability_required") or "").strip().lower()
+        r_avail = str(r.get("availability_required") or "").strip().lower()
         c_avail = (
             c.get("availability")
             or c.get("availability_status")
@@ -569,7 +569,7 @@ class HardConditionFilter:
                 avail_score = 0.8
 
         # 求职意愿
-        intent = (c.get("job_intent") or c.get("intent") or "").strip().lower()
+        intent = str(c.get("job_intent") or c.get("intent") or "").strip().lower()
         intent_score = 1.0
         if intent:
             if intent in {"active", "积极", "强烈", "非常想"}:
@@ -683,7 +683,7 @@ class _DictView:
 def _skill_in(skill: str, cset: set[str]) -> bool:
     if skill in cset:
         return True
-    # 别名 / 子串容错
+    # 别名容错 (可控的、显式枚举, 避免误命中)
     aliases = {
         "javascript": {"js", "ecmascript"},
         "typescript": {"ts"},
@@ -697,16 +697,12 @@ def _skill_in(skill: str, cset: set[str]) -> bool:
         "machine learning": {"ml"},
         "docker": {"containerization"},
     }
-    canon = skill
     for k, al in aliases.items():
         if skill in al or skill == k:
-            canon = k
             if cset & ({k} | al):
                 return True
-    # 子串兜底
-    for s in cset:
-        if skill and (skill in s or s in skill):
-            return True
+    # 注: 不再做裸子串兜底 —— 它会把 "c" 误命中 "react"、"go" 误命中 "django"
+    # 等短技能名, 造成硬条件误判 satisfied=True.
     return False
 
 

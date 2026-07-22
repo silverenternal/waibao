@@ -17,6 +17,39 @@ logger = logging.getLogger("recruittech.auth")
 SUPABASE_JWT_SECRET = settings.supabase_jwt_secret
 ALGORITHM = "HS256"
 
+# Reuse the SSO/session block-list of known weak JWT secrets so the web auth
+# path refuses to verify tokens signed with the well-known Supabase dev secret.
+# The startup gate (compliance.security_startup) already aborts on a weak
+# secret in strict mode; this is the defence-in-depth request-time check so a
+# misconfigured (non-strict) deploy can still never accept a forged token.
+try:
+    from services.auth.session import WEAK_JWT_SECRETS as _WEAK_JWT_SECRETS
+except Exception:  # pragma: no cover - import guard
+    _WEAK_JWT_SECRETS = frozenset()
+
+
+def _resolve_web_jwt_secret() -> str:
+    """Return the JWT secret, refusing the well-known weak placeholders.
+
+    If the configured secret is on the weak block-list (the literal Supabase
+    dev default) we log loudly and raise 503 — accepting it would let any
+    attacker forge an admin token. The local/CI default is intentionally kept
+    importable so unit tests that override ``get_current_user`` still run.
+    """
+    secret = SUPABASE_JWT_SECRET or settings.mobile_jwt_secret
+    if not secret or secret in _WEAK_JWT_SECRETS:
+        logger.error(
+            "JWT secret is missing or on the weak-secret block-list — refusing "
+            "to verify tokens. Set SUPABASE_JWT_SECRET to a random 32+ char "
+            "string (T5014 fail-fast)."
+        )
+        raise HTTPException(
+            status_code=503,
+            detail="Authentication is not properly configured (weak JWT secret).",
+        )
+    return secret
+
+
 security = HTTPBearer()
 
 
@@ -39,7 +72,7 @@ def decode_supabase_jwt(token: str) -> dict:
     try:
         payload = jwt.decode(
             token,
-            SUPABASE_JWT_SECRET,
+            _resolve_web_jwt_secret(),
             algorithms=[ALGORITHM],
             options={"verify_aud": False},
         )
@@ -59,7 +92,7 @@ def decode_mobile_jwt(token: str) -> dict:
     back to `supabase_jwt_secret` for dev. Issued by
     `api.miniprogram_auth._mint_mobile_jwt`.
     """
-    secret = settings.mobile_jwt_secret or SUPABASE_JWT_SECRET
+    secret = settings.mobile_jwt_secret or _resolve_web_jwt_secret()
     try:
         return jwt.decode(
             token,
@@ -84,7 +117,14 @@ def _payload_to_user(payload: dict) -> "CurrentUser":
         role = UserRole(role_str)
     except ValueError:
         raise HTTPException(status_code=401, detail=f"Invalid role: {role_str}")
-    return CurrentUser(id=UUID(user_id), email=email, role=role)
+    try:
+        user_uuid = UUID(str(user_id))
+    except (ValueError, AttributeError, TypeError):
+        # Malformed sub claim — never surface a 500; reject the token.
+        raise HTTPException(
+            status_code=401, detail="Invalid token: malformed user ID"
+        )
+    return CurrentUser(id=user_uuid, email=email, role=role)
 
 
 async def get_current_user(
@@ -146,10 +186,15 @@ def require_role(*allowed_roles: UserRole):
     return role_checker
 
 
-# Convenience dependencies for common role combinations
+# Convenience dependencies for common role combinations.
+# v11.3: boss / department_head 是企业方 (client 侧) 细分角色 (甲方合同 4 角色),
+# 享有 client 同等权限 — 加入企业方依赖, 否则老板/部门负责人无法发起沟通等.
 require_admin = require_role(UserRole.admin)
 require_talent_partner = require_role(UserRole.talent_partner, UserRole.admin)
-require_client = require_role(UserRole.client, UserRole.admin)
+require_client = require_role(
+    UserRole.client, UserRole.boss, UserRole.department_head, UserRole.admin
+)
 require_any_authenticated = require_role(
-    UserRole.talent_partner, UserRole.client, UserRole.admin
+    UserRole.talent_partner, UserRole.client, UserRole.boss,
+    UserRole.department_head, UserRole.admin,
 )

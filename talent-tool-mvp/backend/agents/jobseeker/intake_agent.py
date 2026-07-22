@@ -50,11 +50,18 @@ class IntakeAgent(BaseAgent):
             extracted = await extract_profile_from_text(text_to_parse)
 
         completion = ctx.get("completion", 0.0)
+        # email lives under extracted["basic"]["email"] per the resume schema,
+        # not at the top level — the old `extracted.get("email")` was always
+        # None, so email presence never contributed to completion.
+        basic = extracted.get("basic") if isinstance(extracted.get("basic"), dict) else {}
+        email_val = basic.get("email")
+        if isinstance(email_val, dict):
+            email_val = email_val.get("value")
         if extracted.get("skills"):
             completion += 0.2
         if extracted.get("experience"):
             completion += 0.2
-        if extracted.get("email"):
+        if email_val:
             completion += 0.1
         completion = min(1.0, completion)
 

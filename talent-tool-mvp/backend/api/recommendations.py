@@ -48,7 +48,7 @@ async def recommend_candidates(
     role_id: str,
     limit: int = Query(default=20, ge=1, le=100),
     user: CurrentUser = Depends(
-        require_role(UserRole.talent_partner, UserRole.admin, UserRole.client)
+        require_role(UserRole.admin, UserRole.client)
     ),
 ):
     rec = _get_recommender()

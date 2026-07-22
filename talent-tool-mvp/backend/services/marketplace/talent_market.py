@@ -173,17 +173,21 @@ class MatchRecommendation:
 VIEWER_EMPLOYER = "employer"
 VIEWER_TALENT = "talent"
 VIEWER_ANONYMOUS = "anonymous"
+VIEWER_ADMIN = "admin"
 
 
 @dataclass
 class ViewerContext:
     """Who is browsing the market.
 
-    ``kind`` is one of employer / talent / anonymous. ``employer_roles`` is the
-    list of role-dicts the employer's org has open (used to score talents).
-    ``talent_profile`` is the browsing talent's candidate dict (used to score
-    jobs). ``org_id`` / ``candidate_id`` / ``user_id`` identify the viewer for
-    channel ownership checks.
+    ``kind`` is one of employer / talent / anonymous / admin. ``employer_roles``
+    is the list of role-dicts the employer's org has open (used to score
+    talents). ``talent_profile`` is the browsing talent's candidate dict (used
+    to score jobs). ``org_id`` / ``candidate_id`` / ``user_id`` identify the
+    viewer for channel ownership checks.
+
+    甲方合同: 平台管理员可查看全部资料/下载/导出 (资料查看权限: 仅平台管理员).
+    因此 admin 视图不走阀值门 — 直接看到全部人才/岗位 + 完整简历.
     """
 
     kind: str = VIEWER_ANONYMOUS
@@ -204,6 +208,10 @@ class ViewerContext:
     @property
     def is_anonymous(self) -> bool:
         return self.kind == VIEWER_ANONYMOUS
+
+    @property
+    def is_admin(self) -> bool:
+        return self.kind == VIEWER_ADMIN
 
 
 @dataclass
@@ -532,7 +540,11 @@ class TalentMarketService:
 
         # --- viewer-aware scoring / masking -------------------------------
         viewer = viewer or ViewerContext()
-        if viewer.is_employer:
+        if viewer.is_admin:
+            # 甲方合同: 管理员可查看全部资料 (无阀值门, 可联系标记关闭——管理员
+            # 不是雇佣方, 不在市场上发起沟通; 资料查看/下载走独立 admin 链路).
+            talents = [self._mask_card_for_admin(t) for t in talents]
+        elif viewer.is_employer:
             roles = viewer.employer_roles or []
             if not roles:
                 # 甲方合同: 企业没有在招岗位 → 无法匹配任何人 → 空列表 + 提示.
@@ -573,6 +585,10 @@ class TalentMarketService:
                 break
         if card is None:
             return None
+
+        if viewer.is_admin:
+            # 甲方合同: 管理员可查看全部资料/下载/导出 — 无阀值门, 返回完整简历.
+            return self._enrich_talent(card) if full else self._mask_card_for_admin(card)
 
         if viewer.is_employer:
             roles = viewer.employer_roles or []
@@ -638,6 +654,17 @@ class TalentMarketService:
         setattr(card, "comm_channel_open", False)
         return card
 
+    def _mask_card_for_admin(self, card: TalentCard) -> TalentCard:
+        """Admin browse — full visibility, no threshold gate (甲方合同:
+        资料查看/下载/导出权限: 仅平台管理员). Admin is not a hiring party,
+        so it does not initiate market contact, but sees the real synthetic
+        score / identity state for oversight.
+        """
+        setattr(card, "can_contact", False)
+        setattr(card, "best_role_id", None)
+        setattr(card, "comm_channel_open", False)
+        return card
+
     def _channel_exists_for(
         self, candidate_id: Optional[str], role_id: Optional[str]
     ) -> bool:
@@ -661,6 +688,17 @@ class TalentMarketService:
         detail.email = f"talent{abs(hash(card.id)) % 10000:04d}@example.com"
         detail.phone = f"1{rng.choice([3,5,7,8,9])}{rng.randint(100000000,999999999)}"
         detail.linkedin_url = "https://linkedin.com/in/" + card.id
+        # v11.3 甲方合同: 联系方式仅在沟通渠道开启后对雇主可见 ("联系前企业可见
+        # 信息由阀值控制; 沟通发起后由双方决定"). 雇主达阀值可见完整简历, 但
+        # email/phone/linkedin 要等发起沟通 (communication channel) 后才解锁.
+        # admin ( oversight, 非标注卡) 与 talent 本人不受限. 判据: 仅 _annotate_card
+        # 给雇主卡打上 can_contact=True; 未开渠道时 comm_channel_open=False.
+        if getattr(card, "can_contact", False) and not getattr(
+            card, "comm_channel_open", False
+        ):
+            detail.email = None
+            detail.phone = None
+            detail.linkedin_url = None
         detail.summary = (
             f"{detail.full_name}，{card.experience_years or 3} 年"
             f"{card.title}经验，专注 {', '.join(card.skills[:3])}。"
@@ -904,22 +942,38 @@ class TalentMarketService:
         direct ``compute_pair_score`` if neither context is supplied.
         """
         # --- (a) verify match >= threshold -------------------------------
+        # 甲方合同 + 安全: 只允许对 *真实存在且调用方拥有/具备* 的 (候选人, 岗位)
+        # 对开沟通. 绝不能对一个只有 {"id": ...} 的空岗位/空候选人评分——
+        # HardConditionFilter 把空约束视为达标 (ratio=1.0), 会得到 100 分从而
+        # 绕过阀值门 (雇主可对任意 talent_id 开渠道). 因此找不到真实上下文 →
+        # 拒绝 (ValueError → API 403).
         score = 0
         try:
             if initiated_by == "employer":
                 roles = employer_roles or []
                 role = next((r for r in roles if str(_role_key(r)) == str(role_id)), None)
-                if role is not None:
-                    score, _, _ = best_score_against_roles(
-                        self._talent_dict(candidate_id), roles
-                    )
-                else:
-                    score = compute_pair_score(
-                        self._talent_dict(candidate_id), {"id": role_id}
-                    ).match_score
+                if role is None:
+                    # 雇主不拥有该岗位 → 拒绝 (防止越权开渠道).
+                    raise ValueError("role not owned by employer")
+                score, _, _ = best_score_against_roles(
+                    self._talent_dict(candidate_id), roles
+                )
             else:
                 talent = talent_profile or self._talent_dict(candidate_id)
-                score = compute_pair_score(talent, {"id": role_id}).match_score
+                # 候选人必须提供真实画像 (含技能), 否则空约束 → 100 分绕过阀值.
+                if not talent or not (
+                    talent.get("skills") or talent.get("skill_list")
+                ):
+                    raise ValueError("talent profile missing for scoring")
+                role_obj = self._role_dict(role_id)
+                if role_obj is None or not (
+                    role_obj.get("required_skills")
+                    or role_obj.get("skills_required")
+                ):
+                    raise ValueError("role not found / has no requirements")
+                score = compute_pair_score(talent, role_obj).match_score
+        except ValueError:
+            raise
         except Exception:  # noqa: BLE001 — never crash on scoring
             score = 0
 
@@ -1039,6 +1093,33 @@ class TalentMarketService:
                     "travel_tolerance": getattr(t, "travel_tolerance", None),
                 }
         return {"id": candidate_id}
+
+    def _role_dict(self, role_id: str) -> Optional[dict[str, Any]]:
+        """Best-effort dict view of a job card for scoring (candidate side).
+
+        Returns None when no job with ``role_id`` exists in the pool. Callers
+        must treat None as "role unknown" and refuse to score (an empty role
+        dict would satisfy all hard conditions → score 100 → threshold bypass).
+        """
+        for j in self._all_jobs():
+            if j.id == role_id:
+                return {
+                    "id": j.id,
+                    "required_skills": j.skills_required,
+                    "preferred_skills": j.skills_preferred,
+                    "education": j.education,
+                    "seniority": j.seniority,
+                    "salary_min_k": j.salary_min_k,
+                    "salary_max_k": j.salary_max_k,
+                    "city": j.city,
+                    "remote_policy": j.remote_policy,
+                    "offers_social_insurance": getattr(
+                        j, "offers_social_insurance", True
+                    ),
+                    "offers_housing_fund": getattr(j, "offers_housing_fund", False),
+                    "travel_required": getattr(j, "travel_required", "occasional"),
+                }
+        return None
 
     def list_channels(
         self, *, org_id: Optional[str] = None, candidate_id: Optional[str] = None

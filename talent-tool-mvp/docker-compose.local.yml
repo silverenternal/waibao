@@ -142,6 +142,9 @@ services:
       # ---- 本地部署不依赖云 Supabase,留空 ----
       - SUPABASE_URL=
       - SUPABASE_KEY=
+      # ---- JWT 密钥: 后端自签自校验登录 token (≥32 字符, 勿用弱默认值, 否则登录 503) ----
+      - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET:-waibao-local-jwt-secret-please-rotate-32chars}
+      - MOBILE_JWT_SECRET=${MOBILE_JWT_SECRET:-}
     volumes:
       - ./backend:/app
       - paddleocr_models:/models/paddle:ro

@@ -71,6 +71,13 @@ class UserRole(str, Enum):
     talent_partner = "talent_partner"
     client = "client"
     admin = "admin"
+    # 甲方合同要求 4 个登录角色: 求职者(talent_partner) / HR(client) /
+    # 老板管理层(boss) / 部门负责人(department_head). admin 是平台运维
+    # 超级管理员(资料下载/导出/删除仅限 admin), 不在合同 4 角色之列但保留
+    # 向后兼容. boss / department_head 属于企业方(client 侧)的细分角色,
+    # 默认享有 client 同等的数据可见性, 由各 endpoint 自行细化权限.
+    boss = "boss"
+    department_head = "department_head"
 
 
 class SignalType(str, Enum):

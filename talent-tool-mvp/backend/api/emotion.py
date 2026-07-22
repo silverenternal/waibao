@@ -39,7 +39,9 @@ async def detect_emotion(
         try:
             from services.webhook import fire_webhook, WebhookEvent
             import asyncio as _asyncio
-            org_id = str(user.organisation_id or user.id)
+            # CurrentUser only carries id/email/role — organisation_id is not on
+            # the JWT-derived model, so fall back to user.id to scope the event.
+            org_id = str(getattr(user, "organisation_id", None) or user.id)
             _asyncio.create_task(
                 fire_webhook(
                     WebhookEvent.EMOTION_RISK,
@@ -79,15 +81,25 @@ async def get_emotion_timeline(
 
 @router.get("/alerts")
 async def get_emotion_alerts(user: CurrentUser = Depends(get_current_user)):
-    """HR/管理员视角: 情绪告警列表."""
-    if user.role.value not in ("hr", "admin", "talent_partner"):
-        from fastapi import HTTPException
+    """HR/管理员视角: 情绪告警列表.
+
+    甲方合同: 管理员/HR 只看风险提醒, 不可查看原始私人对话/情绪文本
+    (私人对话需用户单独授权). 因此本端点只返回风险元数据, 不返回
+    trigger_text (原始触发文本).
+    """
+    from contracts.shared import UserRole
+    from fastapi import HTTPException
+    # 只有 HR (client) / 平台管理员 可看风险告警; 求职者 (talent_partner)
+    # 不可看他人告警.
+    if user.role not in (UserRole.admin, UserRole.client):
         raise HTTPException(status_code=403, detail="Forbidden")
 
     supabase = get_supabase_admin()
     result = (
         supabase.table("emotion_timeline")
-        .select("user_id, primary_emotion, sentiment, recorded_at, trigger_text, needs_attention")
+        .select(
+            "user_id, primary_emotion, sentiment, recorded_at, needs_attention"
+        )
         .eq("needs_attention", True)
         .order("recorded_at", desc=True)
         .limit(100)

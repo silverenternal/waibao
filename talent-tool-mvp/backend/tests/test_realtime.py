@@ -518,6 +518,7 @@ async def test_latency_first_audio_under_threshold(monkeypatch):
 # ---------------------------------------------------------------------------
 @pytest.mark.skipif(
     not os.environ.get("OPENAI_API_KEY")
+    or os.environ.get("OPENAI_API_KEY", "").lower() in {"dummy", "test", ""}
     or os.environ.get("OPENAI_API_KEY", "").startswith("sk-test"),
     reason="OPENAI_API_KEY not set or is a test dummy; skipping real GPT-4o Realtime integration test",
 )

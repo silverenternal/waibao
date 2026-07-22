@@ -159,14 +159,19 @@ async def _post_process(structured: dict) -> dict:
             m = phone_re.search(json.dumps(structured, ensure_ascii=False))
             if m:
                 basic["phone"] = m.group(1).strip()
-        # T1202: 加密 PII 字段(name/email/phone)
+        # T1202: 加密 PII 字段(name/email/phone).
+        # NOTE: must pass the *actual dict keys* produced by the LLM schema
+        # (name/email/phone). The canonical PII registry resolves "name" as an
+        # alias of "full_name", so encrypting the "name" key is correct — the
+        # earlier "full_name" key never existed in `basic`, so the candidate
+        # name was stored in plaintext. (PII leak fix.)
         try:
             from services.pii_field_encryption import get_pii_field_service
 
             pii_svc = get_pii_field_service()
             basic = pii_svc.encrypt_pii_fields(
                 basic,
-                fields=["full_name", "email", "phone"],
+                fields=["name", "email", "phone"],
             )
         except Exception as e:  # noqa: BLE001
             logger.warning(f"pii_encrypt_in_resume_failed: {e}")

@@ -318,7 +318,7 @@ class ProfileAgent(BaseAgent):
                 emit("profile.enriched", {
                     "user_id": agent_input.user_id,
                     "candidate_id": ctx.get("candidate_id"),
-                    "new_skills": (resume_parsed.get("skills") or [])[:10],
+                    "new_skills": ((resume_parsed.get("extracted") or {}).get("skills") or [])[:10],
                     "source": "resume_parser",
                 }, source="agent.profile")
         except Exception as _e:

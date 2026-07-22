@@ -134,7 +134,10 @@ def _viewer_from_user(
     """Build a :class:`ViewerContext` from the authenticated user (or None)."""
     if user is None:
         return ViewerContext(kind="anonymous")
-    if user.role == UserRole.client:
+    # v11.3: 甲方合同 4 角色 — 老板管理层 (boss) / 部门负责人 (department_head)
+    # 属于企业方 (client 侧), 享有同等雇主可见性 (受阀值门约束), 不是平台 admin.
+    # 此前只匹配 client → 这两个角色落到 else 被当成 admin, 绕过阀值门. 修复.
+    if user.role in (UserRole.client, UserRole.boss, UserRole.department_head):
         return ViewerContext(
             kind="employer",
             employer_roles=_fetch_employer_roles(user),
@@ -146,8 +149,11 @@ def _viewer_from_user(
             talent_profile=_fetch_talent_profile(user),
             user_id=str(user.id),
         )
-    # admin: treat as employer-style browse (full access) with no scoring gate.
-    return ViewerContext(kind="employer", employer_roles=[], user_id=str(user.id))
+    # admin (平台管理员): 甲方合同 "资料查看/下载/导出权限: 仅平台管理员".
+    # Admin sees the full market without the threshold gate — it is NOT an
+    # employer and has no hiring roles, so a kind=employer with empty roles
+    # would wrongly hide everyone. Use a dedicated admin viewer kind instead.
+    return ViewerContext(kind="admin", user_id=str(user.id))
 
 
 # ---------------------------------------------------------------------------
@@ -514,7 +520,10 @@ async def initiate_contact(
 )
 async def list_channels(
     user: CurrentUser = Depends(
-        require_role(UserRole.client, UserRole.talent_partner, UserRole.admin)
+        require_role(
+            UserRole.client, UserRole.boss, UserRole.department_head,
+            UserRole.talent_partner, UserRole.admin,
+        )
     ),
     svc: TalentMarketService = Depends(get_service),
 ) -> list[CommunicationChannelOut]:

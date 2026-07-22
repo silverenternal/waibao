@@ -44,7 +44,9 @@ router = APIRouter()
 def _resolve_org_id(request: Request, user: CurrentUser) -> Optional[str]:
     """Pull the employer's org_id from the bearer token claims.
 
-    Falls back to a query param ``org_id`` for admin tooling.
+    Falls back to a query param ``org_id`` for **admin tooling only** — a
+    non-admin employer MUST NOT be able to spoof another org's id via the
+    query string (cross-tenant isolation, 甲方合同).
     """
     auth = request.headers.get("authorization") or request.headers.get("Authorization")
     if auth:
@@ -63,7 +65,11 @@ def _resolve_org_id(request: Request, user: CurrentUser) -> Optional[str]:
                     return str(org)
             except Exception:  # noqa: BLE001 — admin path still works via query
                 pass
-    return request.query_params.get("org_id")
+    # Query-param fallback is admin-only so employers can't read/write other
+    # orgs by passing ?org_id=<other>.
+    if _is_admin(user):
+        return request.query_params.get("org_id")
+    return None
 
 
 def _is_admin(user: CurrentUser) -> bool:
@@ -299,6 +305,14 @@ async def update_interview_status(
     """更新面试状态 (scheduled → completed/cancelled/no_show/rescheduled)."""
     _validate_choice(req.status, INTERVIEW_STATUSES, "status")
     org_id = _resolve_org_id(request, user)
+    # Non-admin employers must own an org before touching any interview —
+    # otherwise the org-match guard below short-circuits on org_id=None and
+    # would let them update interviews in any org.
+    if not org_id and not _is_admin(user):
+        raise HTTPException(
+            status_code=403,
+            detail="当前用户未关联组织 (org_id),无法更新面试状态",
+        )
     slot = await service.get_interview(interview_id)
     if slot is None:
         raise HTTPException(status_code=404, detail="面试不存在")
