@@ -125,6 +125,14 @@ def build_resume_snapshot(candidate: dict[str, Any]) -> dict[str, Any]:
         "salary_max_k": candidate.get("salary_max_k"),
         "summary": candidate.get("summary") or "",
         "industries": list(candidate.get("industries") or []),
+        # v11.2 T6302 soft dimensions — captured so the immutable snapshot
+        # preserves the identity-verification state + 五险一金/出差 signals
+        # the employer actually saw at push time (R4 snapshot-completeness).
+        "identity_status": candidate.get("identity_status"),
+        "social_insurance_expectation": candidate.get(
+            "social_insurance_expectation"
+        ),
+        "travel_tolerance": candidate.get("travel_tolerance"),
         "captured_at": _now_iso(),
     }
 
@@ -460,6 +468,17 @@ class RecommendationService:
             meta.append(f"经验: {s['experience_years']}年")
         if s.get("availability"):
             meta.append(f"状态: {s['availability']}")
+        # v11.2 identity-verification label in the snapshot (R4 completeness).
+        ident = s.get("identity_status")
+        if ident:
+            _ident_labels = {
+                "pending": "待上传",
+                "submitted": "待审核",
+                "verified": "已认证",
+            }
+            meta.append(
+                f"身份: {_ident_labels.get(ident, ident)}"
+            )
         if meta:
             lines.append(" · ".join(meta))
         if s.get("skills"):

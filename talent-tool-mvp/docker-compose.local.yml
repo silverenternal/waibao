@@ -23,7 +23,11 @@ services:
   # 数据库
   # --------------------------------------------------------------------------
   postgres:
-    image: postgres:15-alpine
+    # pgvector 镜像: 001_cloud_schema.sql 用 vector(1536) 类型 + HNSW 索引,
+    # 标准 postgres:15-alpine 无 pgvector 共享库 → CREATE EXTENSION vector 失败 →
+    # ON_ERROR_STOP 中断 initdb → DB 起不来 → 种子无法装载. pgvector/pgvector:pg15
+    # 是官方 pgvector 镜像, drop-in 替换, 同时含 uuid-ossp/pgcrypto/pg_trgm.
+    image: pgvector/pgvector:pg15
     container_name: waibao-postgres
     restart: unless-stopped
     ports:

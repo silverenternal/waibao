@@ -35,6 +35,72 @@ logger = logging.getLogger("recruittech.platform.service_registry")
 
 
 # ---------------------------------------------------------------------------
+# v11.4 R3 — Deployment profile gating (service-catalog hygiene)
+# ---------------------------------------------------------------------------
+# The full catalog intentionally advertises the SaaS product surface (BI,
+# data warehouse, multi-agent crews, LiveKit realtime voice, RAG, LoRA
+# fine-tuning, AI sourcing, developer portal, ...). None of those are part
+# of the on-prem / local deliverable, and the local stack ships NO backing
+# services for them (no ClickHouse / Cube / LiveKit / Qdrant / LLaMA-Factory).
+#
+# Leaving them registered as ``enabled`` pollutes the admin service catalog
+# and the public ``/api/public/services`` listing the customer sees during
+# acceptance, and makes it look like the platform depends on infra that is
+# not actually present. We therefore default them to ``disabled`` whenever
+# the process is running under a *local* deployment profile, while keeping
+# every service record in place (so counts / categories / the 16 agents all
+# stay intact and the existing catalog tests are unaffected).
+#
+# A profile is considered "local" when ANY of:
+#   * ``LOCAL_PROFILE`` env var is set to a truthy value (explicit opt-in)
+#   * ``SUPABASE_URL`` is empty / unset (the local stack ships with it empty)
+#   * ``SUPABASE_URL`` points at localhost / ``.localhost``
+# Operators that want the full SaaS surface back can set ``LOCAL_PROFILE=0``.
+
+_OVERENGINEERED_LOCAL_DISABLED = frozenset(
+    {
+        # Analytics / BI / warehouse — depend on ClickHouse + Cube + Airbyte
+        "analytics.warehouse",
+        "analytics.bi",
+        "analytics.predictive",
+        "analytics.sla",
+        # RAG / memory / multi-agent — depend on Qdrant + Mem0 + CrewAI
+        "rag.pipeline",
+        "memory.unified",
+        "multiagent.crew",
+        # Training / sourcing — depend on LLaMA-Factory + external sourcing
+        "training.lora",
+        "sourcing.outbound",
+        # AI interview / realtime voice — depend on LiveKit + external RT
+        "api.ai_interview",
+        "api.realtime",
+        # ATS / SSO / external integrations — out of local scope
+        "integration.ats",
+        "integration.sso",
+        # Developer portal / plugin SDK visualization / workflow orchestration
+        "platform.developer_portal",
+        "platform.plugins",
+        "platform.workflows",
+    }
+)
+
+
+def _is_local_profile() -> bool:
+    """Return True when the process runs under a local / on-prem profile.
+
+    Honors an explicit ``LOCAL_PROFILE`` override first, then falls back to
+    inferring from ``SUPABASE_URL`` (empty or localhost => local stack).
+    """
+    explicit = (os.environ.get("LOCAL_PROFILE") or "").strip().lower()
+    if explicit:
+        return explicit not in {"0", "false", "no", "off", ""}
+    url = (os.environ.get("SUPABASE_URL") or "").strip().rstrip("/")
+    if not url:
+        return True
+    return url == "http://localhost" or url == "https://localhost" or url.endswith(".localhost")
+
+
+# ---------------------------------------------------------------------------
 # Declarative catalog (>=50 entries)
 # Categories:
 #   * agent         16  (jobseeker + employer + evaluator)
@@ -542,19 +608,35 @@ def register_all(*, persist: bool = False) -> List[str]:
 
     Returns the list of names that were registered (or already present).
     Set ``persist=True`` in production to write to Supabase.
+
+    v11.4 R3: when running under a local deployment profile (see
+    :func:`_is_local_profile`) the over-engineered SaaS-only services in
+    :data:`_OVERENGINEERED_LOCAL_DISABLED` are registered as ``disabled``
+    instead of ``enabled`` so the admin / public catalog the customer sees
+    is not polluted with capabilities whose backing infra is absent.
     """
     discovered = _scan_for_services([_workspace_root()])
     discovered_set = set(discovered)
 
+    local_profile = _is_local_profile()
+
     registered: List[str] = []
     for entry in _CATALOG:
         try:
+            # v11.4 R3: default-disable SaaS-only services on the local stack.
+            status_value = entry.get("status", "enabled")
+            if (
+                local_profile
+                and status_value == "enabled"
+                and entry["name"] in _OVERENGINEERED_LOCAL_DISABLED
+            ):
+                status_value = "disabled"
             svc = Service(
                 name=entry["name"],
                 display_name=entry["display_name"],
                 description=entry.get("description", ""),
                 category=ServiceCategory(entry.get("category", "misc")),
-                status=ServiceStatus(entry.get("status", "enabled")),
+                status=ServiceStatus(status_value),
                 plan_required=PlanTier(entry.get("plan_required", "free")),
                 roles_allowed=list(entry.get("roles_allowed", [])),
                 dependencies=list(entry.get("dependencies", [])),
@@ -603,7 +685,14 @@ def register_all(*, persist: bool = False) -> List[str]:
 
 
 def catalog_snapshot() -> List[Dict[str, Any]]:
-    """Return the in-memory snapshot of declared catalog entries."""
+    """Return the in-memory snapshot of declared catalog entries.
+
+    v11.4 R3: under a local deployment profile the over-engineered SaaS-only
+    services report ``status="disabled"`` here so the admin / public catalog
+    reflects what is actually reachable on the local stack. The underlying
+    ``_CATALOG`` rows are untouched (counts / categories unchanged).
+    """
+    local_profile = _is_local_profile()
     out: List[Dict[str, Any]] = []
     for e in _CATALOG:
         d = dict(e)
@@ -611,6 +700,14 @@ def catalog_snapshot() -> List[Dict[str, Any]]:
         d["plan_required"] = e.get("plan_required", "free")
         d["roles_allowed"] = list(e.get("roles_allowed", []))
         d["dependencies"] = list(e.get("dependencies", []))
+        status_value = e.get("status", "enabled")
+        if (
+            local_profile
+            and status_value == "enabled"
+            and e["name"] in _OVERENGINEERED_LOCAL_DISABLED
+        ):
+            status_value = "disabled"
+        d["status"] = status_value
         out.append(d)
     return out
 

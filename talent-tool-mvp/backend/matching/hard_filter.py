@@ -707,12 +707,19 @@ def _skill_in(skill: str, cset: set[str]) -> bool:
 
 
 def _amount_k(salary_obj: Any, key: str) -> Optional[float]:
-    """从 salary_band / salary_expectation dict 里取金额."""
+    """从 salary_band / salary_expectation dict 里取金额.
+
+    兼容三种键形: ``{key}_amount`` (规范) / ``{key}_k`` (K 单位) /
+    裸 ``{key}`` (seed_test_data.py 用 ``{"min","max"}`` 形). 否则 seed
+    薪资恒判"无约束"→ 薪资维度形同虚设 (薪资是合同高优先级匹配因素).
+    """
     if not isinstance(salary_obj, dict):
         return None
     val = salary_obj.get(f"{key}_amount")
     if val is None:
         val = salary_obj.get(f"{key}_k")
+    if val is None:
+        val = salary_obj.get(key)  # v11.4: 裸 {min}/{max} 形 (seed)
     return _coerce_amount(val)
 
 

@@ -47,6 +47,7 @@ import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional
 
 log = logging.getLogger("seed_test_data")
 
@@ -188,17 +189,77 @@ def _salary_range(low: int, high: int) -> dict:
     return {"min": lo, "max": hi, "currency": "CNY"}
 
 
+def _salary_range_biased(low: int, high: int) -> dict:
+    """构造 SalaryRange, 期望值大概率落在给定区间内 (帮助薪资维度达标).
+
+    约 70% 期望下限落在 [low, high], 另 30% 略高于上限 (真实求职者也会略高期望),
+    但不会高得离谱. 用于让候选人薪资期望与岗位区间自然重叠.
+    """
+    if random.random() < 0.7:
+        lo = random.randint(low, max(low + 1, high - 1000))
+        hi = random.randint(lo + 1000, high + 2000)
+    else:
+        # 期望偏高 (真实存在), 但受控
+        lo = random.randint(high, high + 3000)
+        hi = random.randint(lo + 1000, lo + 5000)
+    return {"min": lo, "max": hi, "currency": "CNY"}
+
+
+def _required_skill_names(role_def: dict) -> list[str]:
+    """从 ROLE_DEFS 形状里取出 required skill 名称 (用于候选人技能引导)."""
+    return [s["name"] for s in role_def.get("required_skills", []) if isinstance(s, dict) and s.get("name")]
+
+
+# 候选人技能城市对齐: 选一组"热门城市"作为岗位主要所在地, 让一部分候选人自然同城.
+# 这只是把分布往现实靠拢 (一线城市机会多), 不是强制对齐.
+HOT_CITIES = ["上海", "深圳", "杭州", "广州", "北京"]
+# 每个候选人有多大比例"技能被岗位需求引导" (让其成为真实可匹配的求职者).
+# 其余仍纯随机, 保留背景噪声 / 跨行业人才, 避免数据失真 (不会全员 100 分).
+_SKILL_GUIDED_RATIO = 0.55
+
+
 def gen_candidate(idx: int, created_by: str) -> dict:
     last, first = _zh_name()
-    skills = random.sample(SKILL_POOL, k=random.randint(3, 8))
-    skill_objs = [
-        {"name": s, "years": round(random.uniform(0.5, 8.0), 1), "confidence": round(random.uniform(0.7, 1.0), 2)}
-        for s in skills
-    ]
+
+    # v11.4 R2 — 让一部分候选人的技能围绕某个岗位的 required_skills 构造,
+    # 使"技能硬条件"成为真实可达的信号, 而不是纯靠基础分蹭过阀值.
+    # 不改 MATCH_THRESHOLD / 不动 hard_filter — 只调数据让真实匹配自然达标.
+    guided_role = random.choice(ROLE_DEFS) if random.random() < _SKILL_GUIDED_RATIO else None
+    if guided_role is not None:
+        required_names = _required_skill_names(guided_role)
+        # 必含该岗位全部 required_skills (且年限满足 min_years), 再补几个随机背景技能
+        guided = list(required_names)
+        extra_k = random.randint(1, 4)
+        pool = [s for s in SKILL_POOL if s not in guided]
+        guided += random.sample(pool, k=min(extra_k, len(pool)))
+        skills = guided
+    else:
+        skills = random.sample(SKILL_POOL, k=random.randint(3, 8))
+
+    skill_objs: list[dict] = []
+    if guided_role is not None:
+        req_map = {s["name"]: (s.get("min_years") or 0) for s in guided_role["required_skills"] if isinstance(s, dict)}
+    else:
+        req_map = {}
+    for s in skills:
+        min_y = req_map.get(s)
+        if min_y is not None:
+            # 引导技能: 年限满足该岗位 min_years (可能略高), 保证"全部满足"达标
+            years = round(random.uniform(max(0.5, float(min_y)), float(min_y) + 4.0), 1)
+        else:
+            years = round(random.uniform(0.5, 8.0), 1)
+        skill_objs.append({"name": s, "years": years, "confidence": round(random.uniform(0.7, 1.0), 2)})
+
     edu = random.choices(EDU_POOL, weights=[2, 6, 2], k=1)[0]
     exp_years = {"大专": random.randint(0, 4), "本科": random.randint(0, 8), "硕士": random.randint(0, 10)}[edu]
-    city = random.choice(CITY_POOL)
-    expectation = _salary_range(6000, 30000)
+    # 城市偏向热门城市 (一线城市岗位多, 自然提升同城命中率, 但不全对齐)
+    city = random.choice(HOT_CITIES) if random.random() < 0.6 else random.choice(CITY_POOL)
+    if guided_role is not None:
+        # 被引导的候选人薪资期望落在该岗位区间附近 (70% 命中), 其余略高
+        lo, hi = guided_role["salary"]
+        expectation = _salary_range_biased(lo, hi)
+    else:
+        expectation = _salary_range(6000, 30000)
     cv_lines = [
         f"{last}{first} | {edu} | {city}",
         f"工作年限:{exp_years} 年",
@@ -325,18 +386,47 @@ def _skill_overlap(candidate: dict, role: dict) -> tuple[float, list[dict]]:
     return overlap, matches
 
 
+# v11.4 R2 — 用生产匹配引擎 (与阀值门 threshold.py 同一 HardConditionFilter) 评分,
+# 让 seed 生成的 matches.jsonl 与"可见性"判定一致 (避免演示时:可见但详情显示低分).
+# 该 import 是可选的: 后端 backend/ 不在 sys.path 时回退到老的轻量公式, 保证离线可跑.
+try:  # pragma: no cover - 依赖后端包, 离线 fallback
+    from matching.hard_filter import HardConditionFilter as _HCF  # type: ignore
+
+    _hcf = _HCF()
+except Exception:  # noqa: BLE001
+    _hcf = None
+
+
+def _engine_score(candidate: dict, role: dict) -> Optional[int]:
+    """调用生产引擎评分 (0-100). 引擎不可用时返回 None (调用方回退)."""
+    if _hcf is None:
+        return None
+    try:
+        return _hcf.filter(candidate, role).match_score
+    except Exception:  # noqa: BLE001 — 单条脏数据不影响整体
+        return None
+
+
 def gen_matches(candidates: list[dict], roles: list[dict], top_n: int = 15) -> list[dict]:
-    """为每个岗位生成 Top-N 候选人匹配."""
+    """为每个岗位生成 Top-N 候选人匹配.
+
+    v11.4 R2: overall_score 优先取生产引擎 (HardConditionFilter) 分数, 与阀值门一致;
+    引擎不可用时回退到轻量公式 (技能重叠 70% + 经验 20% + 城市/薪资 10%).
+    """
     out: list[dict] = []
     now = datetime.now(timezone.utc).isoformat()
     for role in roles:
         scored = []
         for c in candidates:
             overlap, skill_matches = _skill_overlap(c, role)
-            # 综合分 = 技能重叠 70% + 经验匹配 20% + 城市/薪资软匹配 10%
-            exp_factor = min(1.0, (c.get("experience_years", 0) / 6.0))
-            soft = 1.0 if c.get("location") == role.get("location") else 0.5
-            overall = round(overlap * 0.7 + exp_factor * 0.2 + soft * 0.1, 3)
+            eng = _engine_score(c, role)
+            if eng is not None:
+                overall = round(eng / 100.0, 3)  # 与阀值门同一口径
+            else:
+                # 回退轻量公式 (离线 / 后端不可导入时)
+                exp_factor = min(1.0, (c.get("experience_years", 0) / 6.0))
+                soft = 1.0 if c.get("location") == role.get("location") else 0.5
+                overall = round(overlap * 0.7 + exp_factor * 0.2 + soft * 0.1, 3)
             scored.append((overall, overlap, skill_matches, c))
         scored.sort(key=lambda x: x[0], reverse=True)
         for overall, overlap, skill_matches, c in scored[:top_n]:

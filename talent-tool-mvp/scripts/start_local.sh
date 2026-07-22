@@ -81,6 +81,33 @@ wait_healthy waibao-postgres "PostgreSQL"
 wait_healthy waibao-redis    "Redis"
 wait_healthy waibao-ollama   "Ollama"
 
+# ---------------------------------------- [3.5/6] 装载种子数据到本地库
+# 甲方验收硬指标: 演示库必须有真实种子数据 (1000 求职者 / 10 企业 / 5 岗位),
+# 否则前端只能 fallback 到 ~24 个合成行, 直接违背 "1000 求职者" 要求.
+# seed_test_data.py 默认只写 JSONL; 本地栈 SUPABASE_URL= 空, 数据不会自动入库,
+# 所以这里显式 load_seed_local.py 把 JSONL upsert 进本地 postgres.
+log "[3.5/6] 装载种子数据 → 本地 postgres ..."
+SEED_DIR="$ROOT/seed_output"
+PG_USER="${POSTGRES_USER:-postgres}"
+PG_PASS="${POSTGRES_PASSWORD:-postgres}"
+PG_DB="${POSTGRES_DB:-waibao}"
+LOCAL_DB_URL="postgresql://${PG_USER}:${PG_PASS}@localhost:5432/${PG_DB}"
+
+# 若 seed_output 缺失, 先生成 (默认 1000 求职者 / 10 企业, 符合甲方硬指标).
+if [ ! -f "$SEED_DIR/candidates.jsonl" ]; then
+  warn "seed_output/ 不存在 — 先运行 seed_test_data.py 生成 (默认 1000/10/5) ..."
+  python3 scripts/seed_test_data.py --out-dir "$SEED_DIR" \
+    || warn "种子生成失败 — 演示将使用前端合成 fallback 数据"
+fi
+
+# 幂等装载: 重复运行不报错 (ON CONFLICT DO NOTHING); PII 字段加密后再落库.
+if [ -f "$SEED_DIR/candidates.jsonl" ]; then
+  python3 scripts/load_seed_local.py --database-url "$LOCAL_DB_URL" --seed-dir "$SEED_DIR" \
+    || warn "种子装载失败 — 检查本地 postgres 是否暴露在 localhost:5432 (可稍后手动: python3 scripts/load_seed_local.py --dry-run)"
+else
+  warn "seed_output/candidates.jsonl 仍不存在 — 跳过装载, 演示数据可能不足"
+fi
+
 # --------------------------------------------------------- [4/6] 拉 LLM 模型
 log "[4/6] 拉取默认 LLM 模型: $DEFAULT_MODEL ..."
 bash scripts/setup_ollama.sh "$DEFAULT_MODEL"
@@ -111,5 +138,6 @@ cat <<EOF
     切换模型: OLLAMA_MODEL=glm4:9b bash scripts/start_local.sh
     查看日志: docker compose -f $COMPOSE_FILE logs -f
     停止环境: bash scripts/stop_local.sh
-    导入测试数据: python scripts/seed_test_data.py
+    重新导入测试数据: python scripts/seed_test_data.py && python scripts/load_seed_local.py --database-url postgresql://postgres:postgres@localhost:5432/waibao
+    预览将装载的数据 (不连库): python scripts/load_seed_local.py --dry-run
 EOF
