@@ -11,6 +11,7 @@ import { Lightbulb } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Markdown } from "@/components/shared";
 import { cn } from "@/lib/utils";
 
 export interface AdjustmentSuggestion {
@@ -68,7 +69,9 @@ export function AdjustmentSuggestionList({
                   {s.item}
                 </span>
               </div>
-              <p className="mt-1 text-xs text-slate-700">{s.suggestion}</p>
+              <div className="mt-1 text-xs text-slate-700">
+                <Markdown size="sm">{s.suggestion}</Markdown>
+              </div>
             </div>
           </div>
         </Card>

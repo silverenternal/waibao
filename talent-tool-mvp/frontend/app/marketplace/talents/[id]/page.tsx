@@ -15,6 +15,7 @@ import {
 import {
   CompensationBadges,
 } from "@/components/marketplace/CompensationBadges";
+import { Markdown } from "@/components/shared";
 import {
   fetchTalent,
   formatSalary,
@@ -127,9 +128,9 @@ export default async function TalentDetailPage({
                   <CardTitle className="text-base">个人简介</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm leading-relaxed text-slate-700">
-                    {talent.summary}
-                  </p>
+                  <div className="text-sm leading-relaxed text-slate-700">
+                    <Markdown size="sm">{talent.summary}</Markdown>
+                  </div>
                 </CardContent>
               </Card>
             )}

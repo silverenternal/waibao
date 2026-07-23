@@ -18,6 +18,7 @@ import {
   remotePolicyLabel,
   type JobCardDetail,
 } from "@/lib/api-jobcard";
+import { Markdown } from "@/components/shared";
 import { generatePageMetadata } from "@/lib/metadata";
 import type { Metadata } from "next";
 
@@ -80,9 +81,9 @@ export default async function JobDetailPage({
         </header>
 
         {job.description && (
-          <p className="mt-6 rounded-xl bg-slate-50 p-4 text-sm leading-relaxed text-slate-700">
-            {job.description}
-          </p>
+          <div className="mt-6 rounded-xl bg-slate-50 p-4 text-sm leading-relaxed text-slate-700">
+            <Markdown size="base">{job.description}</Markdown>
+          </div>
         )}
 
         <div className="mt-6 grid gap-6 md:grid-cols-3">

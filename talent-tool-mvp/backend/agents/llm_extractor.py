@@ -17,6 +17,16 @@ import re
 
 from agents.runtime import LLMClient
 from agents.toolkit import llm_call
+# v11.6 R2 — canonical extraction schemas (single source of truth).
+# Each extractor below references these constants instead of inlining its
+# own ``schema = """..."""`` block; see agents/schemas.py.
+from agents.schemas import (
+    BIAS_SCHEMA,
+    EMOTION_SCHEMA,
+    INTENT_SCHEMA_TEMPLATE,
+    PROFILE_SYNTHESIS_SCHEMA,
+    RESUME_SCHEMA,
+)
 
 logger = logging.getLogger("recruittech.agents.llm_extractor")
 
@@ -183,36 +193,10 @@ async def extract_json_with_reasoning(
 
 async def extract_resume(llm: LLMClient, cv_text: str) -> dict:
     """从简历文本中抽取结构化信息."""
-    schema = """
-{
-  "basic": {
-    "name": {"value": "姓名", "reasoning": "从哪里识别"},
-    "email": {"value": "邮箱", "reasoning": "..."},
-    "phone": {"value": "电话", "reasoning": "..."},
-    "location": {"value": "所在地", "reasoning": "..."}
-  },
-  "education": [
-    {"school": "学校", "degree": "学历", "major": "专业", "year": "年份", "reasoning": "..."}
-  ],
-  "experience": [
-    {
-      "company": "公司", "title": "职位", "duration_months": 月数,
-      "responsibilities": ["职责"], "achievements": ["成果"], "reasoning": "..."
-    }
-  ],
-  "skills": [
-    {"name": "技能", "category": "技术/管理/语言/...", "years": 年限, "level": "初/中/高", "evidence": "简历中如何体现", "reasoning": "..."}
-  ],
-  "highlights": [
-    {"fact": "亮点(如:开源贡献、专利)", "significance": "为什么重要"}
-  ],
-  "red_flags": [
-    {"issue": "潜在问题(如:频繁跳槽)", "severity": "低/中/高", "evidence": "依据"}
-  ],
-  "overall_impression": "一句话总结"
-}
-"""
-    return await extract_json_with_reasoning(llm, cv_text, schema, max_cost=30)
+    # RESUME_SCHEMA (agents/schemas.py) declares basic.{name,email,phone,
+    # location} as FLAT STRINGS — matching resume_parser._post_process,
+    # identity/verification and test_resume_parser. (v11.5 drift fix.)
+    return await extract_json_with_reasoning(llm, cv_text, RESUME_SCHEMA, max_cost=30)
 
 
 # ============================================================
@@ -233,19 +217,7 @@ async def detect_emotion(llm: LLMClient, text: str, conversation_context: Option
             f"[{c.get('role', 'user')}]: {c.get('content', '')[:200]}" for c in conversation_context[-5:]
         )
 
-    schema = """
-{
-  "emotions": [
-    {"name": "情绪名(joy/sadness/anger/anxiety/confusion/hope/neutral等)", "intensity": 0.0~1.0, "evidence": "原文依据"}
-  ],
-  "primary_emotion": "主导情绪",
-  "complexity": "simple/mixed/contradictory",   // 简单/混合/矛盾
-  "underlying_need": "用户真正想表达但没说出的需求",
-  "risk_level": "none/mild/moderate/severe",     // 是否有心理风险
-  "recommended_response_tone": "warm/encouraging/listening/firm",  // 建议回应语气
-  "response": "对用户的回应(2-3 句,先共情再引导)"
-}
-"""
+    schema = EMOTION_SCHEMA
     # system prompt 明确告诉 LLM 这是情绪分析任务
     system = """你是情感分析专家(情感智能助手)。
 
@@ -279,25 +251,7 @@ async def detect_emotion(llm: LLMClient, text: str, conversation_context: Option
 
 async def detect_biases(llm: LLMClient, text: str) -> dict:
     """让 LLM 自己发现描述中的偏见,而不是靠关键词."""
-    schema = """
-{
-  "demographic_bias": [
-    {"type": "年龄/性别/学历/地域/婚育/...", "evidence": "原文依据", "severity": "low/medium/high", "concern": "为什么这是问题", "suggestion": "改进措辞"}
-  ],
-  "cognitive_bias": [
-    {"type": "光环效应/锚定/确认偏误/...", "evidence": "...", "concern": "..."}
-  ],
-  "logical_gaps": [
-    {"gap": "逻辑空白", "question_to_clarify": "应该问老板什么问题"}
-  ],
-  "implicit_requirements": [
-    {"req": "老板没说但可能想要的需求", "inferred_from": "推断依据"}
-  ],
-  "fairness_score": 0.0~1.0,
-  "overall_assessment": "总结"
-}
-"""
-    return await extract_json_with_reasoning(llm, text, schema, max_cost=15)
+    return await extract_json_with_reasoning(llm, text, BIAS_SCHEMA, max_cost=15)
 
 
 # ============================================================
@@ -308,22 +262,7 @@ async def understand_intent(llm: LLMClient, text: str, available_agents: dict[st
     """LLM 深度理解用户意图,不依赖关键词."""
     agents_desc = "\n".join(f"- {name}: {desc}" for name, desc in available_agents.items())
 
-    schema = f"""
-{{
-  "primary_intent": "用户主要想做什么",
-  "secondary_intents": ["次要意图"],
-  "emotional_state": "用户当前情绪",
-  "urgency": "low/medium/high",
-  "best_agent": "最合适的 agent",
-  "confidence": 0.0~1.0,
-  "reasoning": "为什么选这个 agent",
-  "needs_disambiguation": true/false,
-  "clarification_question": "如果 needs_disambiguation=true,该问什么"
-}}
-
-可选 agents:
-{agents_desc}
-"""
+    schema = INTENT_SCHEMA_TEMPLATE.format(agents_desc=agents_desc)
     return await extract_json_with_reasoning(llm, text, schema, max_cost=5)
 
 
@@ -336,29 +275,5 @@ async def synthesize_profile(
     sources: dict[str, Any],  # {cv: "...", journals: [...], conversations: [...], emotions: [...]}
 ) -> dict:
     """多源画像综合,LLM 自己识别冲突和gap."""
-    schema = """
-{
-  "summary": "一句话画像总结",
-  "explicit_profile": {
-    "skills": [...], "experience": [...], "education": [...]
-  },
-  "implicit_profile": {
-    "personality_traits": ["从语言风格推断的性格特征"],
-    "values": ["价值观"],
-    "motivations": ["驱动因素"]
-  },
-  "needs": {
-    "explicit": ["用户明确说过的"],
-    "implicit": ["从行为/语气推断的"],
-    "conflicting": ["自相矛盾的"]
-  },
-  "contradictions": [
-    {"source_a": "来源1说的", "source_b": "来源2说的", "possible_resolution": "可能的解释"}
-  ],
-  "completeness": {"field": "completeness 0~1"},
-  "confidence": 0.0~1.0,
-  "follow_up_questions": ["按重要性排序的追问"]
-}
-"""
     content = json.dumps(sources, ensure_ascii=False)[:8000]
-    return await extract_json_with_reasoning(llm, content, schema, max_cost=40)
+    return await extract_json_with_reasoning(llm, content, PROFILE_SYNTHESIS_SCHEMA, max_cost=40)

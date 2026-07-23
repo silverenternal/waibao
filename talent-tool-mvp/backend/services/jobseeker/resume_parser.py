@@ -120,18 +120,8 @@ async def extract_text_from_url(url: str, *, language: str = "auto") -> str:
 
 # ---------- 3. LLM 抽取 ----------
 
-_RESUME_SCHEMA_HINT = """
-{
-  "basic": {"name": "...", "email": "...", "phone": "...", "location": "..."},
-  "education": [{"school": "...", "degree": "...", "major": "...", "year": "..."}],
-  "experience": [{"company": "...", "title": "...", "duration_months": 0,
-                  "responsibilities": ["..."], "achievements": ["..."]}],
-  "skills": [{"name": "...", "category": "...", "years": 0, "level": "..."}],
-  "highlights": [{"fact": "...", "significance": "..."}],
-  "red_flags": [{"issue": "...", "severity": "low|medium|high"}],
-  "overall_impression": "一句话总结"
-}
-""".strip()
+# v11.6: resume 提取 schema 已统一到 agents/schemas.py (RESUME_SCHEMA),
+# 此处不再保留 inline 副本以避免字段漂移复发.
 
 
 async def _post_process(structured: dict) -> dict:

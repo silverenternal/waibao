@@ -23,6 +23,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Markdown } from "@/components/shared";
 
 export interface HardConditionDetail {
   name: string;
@@ -149,7 +150,9 @@ export function MatchResultCard({
           {r.match_reasons.length > 0 ? (
             <ul className="list-disc space-y-0.5 pl-4 text-sm text-slate-600">
               {r.match_reasons.map((reason, i) => (
-                <li key={i}>{reason}</li>
+                <li key={i}>
+                  <Markdown size="sm">{reason}</Markdown>
+                </li>
               ))}
             </ul>
           ) : requiredN > 0 ? (

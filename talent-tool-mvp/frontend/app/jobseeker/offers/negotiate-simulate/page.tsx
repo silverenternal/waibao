@@ -1,5 +1,6 @@
 "use client";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { Markdown } from "@/components/shared";
 
 /**
  * v9.1 — /jobseeker/offers/negotiate-simulate — Open WebUI 风谈判模拟
@@ -827,7 +828,7 @@ function MessageBubble({
               : "rounded-tl-sm border border-slate-200 bg-white text-slate-800"
           )}
         >
-          {msg.content}
+          {isYou ? msg.content : <Markdown size="sm">{msg.content}</Markdown>}
         </div>
         {!isYou && (
           <div

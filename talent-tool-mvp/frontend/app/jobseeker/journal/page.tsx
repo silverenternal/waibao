@@ -43,6 +43,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { journalApi } from "@/lib/api-journal";
+import { Markdown } from "@/components/shared";
 
 // ---------------------------------------------------------------------------
 // 类型 & 常量
@@ -978,8 +979,8 @@ function AIArtifactCard({
       <CardContent className="space-y-3 text-sm">
         {advice ? (
           <div className="flex items-start gap-2 rounded-lg bg-amber-50/60 px-3 py-2 text-slate-800">
-            <Lightbulb className="mt-0.5 size-4 text-amber-500" />
-            <p className="whitespace-pre-wrap leading-relaxed">{advice}</p>
+            <Lightbulb className="mt-0.5 size-4 shrink-0 text-amber-500" />
+            <Markdown size="sm" className="min-w-0">{advice}</Markdown>
           </div>
         ) : (
           <p className="text-xs text-slate-400">智能体没有给出具体建议。</p>
@@ -991,7 +992,7 @@ function AIArtifactCard({
               {warnings.map((w, i) => (
                 <li key={i} className="flex items-start gap-1.5">
                   <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                  <span className="whitespace-pre-wrap">{w}</span>
+                  <Markdown size="sm" className="min-w-0">{w}</Markdown>
                 </li>
               ))}
             </ul>
@@ -1006,7 +1007,7 @@ function AIArtifactCard({
               {actionItems.map((a, i) => (
                 <li key={i} className="flex items-start gap-1.5">
                   <Target className="mt-0.5 size-3.5 shrink-0" />
-                  <span className="whitespace-pre-wrap">{a}</span>
+                  <Markdown size="sm" className="min-w-0">{a}</Markdown>
                 </li>
               ))}
             </ul>
@@ -1051,13 +1052,15 @@ function TimelineRow({ entry }: { entry: JournalEntry }) {
               </span>
             )}
           </div>
-          <p className="whitespace-pre-wrap text-sm text-slate-800">
-            {entry.content}
-          </p>
+          <div className="text-sm text-slate-800">
+            <Markdown size="sm">{entry.content}</Markdown>
+          </div>
           {entry.ai_advice && (
             <div className="rounded-md border-t border-slate-100 bg-slate-50/60 px-2 py-1.5 text-xs text-slate-600">
-              <span className="font-medium text-slate-700">智能体: </span>
-              {entry.ai_advice}
+              <span className="font-medium text-slate-700">智能体：</span>
+              <Markdown size="sm" className="mt-0.5 min-w-0">
+                {entry.ai_advice}
+              </Markdown>
             </div>
           )}
         </CardContent>

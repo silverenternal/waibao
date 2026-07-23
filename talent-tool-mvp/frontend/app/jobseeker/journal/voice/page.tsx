@@ -1,5 +1,6 @@
 "use client";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { Markdown } from "@/components/shared";
 
 /**
  * 语音日记主页面 (T3607 / v9.1).
@@ -311,9 +312,7 @@ function AIResult({ data }: { data: VoiceSubmitResponse }) {
         {data.journal?.advice && (
           <div className="flex items-start gap-2 rounded-lg bg-amber-50/60 px-3 py-2 text-sm text-slate-800">
             <Lightbulb className="mt-0.5 size-4 text-amber-500" />
-            <p className="whitespace-pre-wrap leading-relaxed">
-              {data.journal.advice}
-            </p>
+            <Markdown size="sm">{data.journal.advice}</Markdown>
           </div>
         )}
 

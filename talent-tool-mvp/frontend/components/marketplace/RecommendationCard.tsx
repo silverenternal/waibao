@@ -30,6 +30,7 @@ import {
   type RecommendationStatus,
   type RecommendationSummary,
 } from "@/lib/api-recommendations";
+import { Markdown } from "@/components/shared";
 
 const STATUS_BADGE: Record<
   RecommendationStatus,
@@ -111,7 +112,9 @@ export function RecommendationCard({
           {rec.match_reasons.length > 0 ? (
             <ul className="list-disc space-y-0.5 pl-4 text-sm text-slate-600">
               {rec.match_reasons.map((r, i) => (
-                <li key={i}>{r}</li>
+                <li key={i}>
+                  <Markdown size="sm">{r}</Markdown>
+                </li>
               ))}
             </ul>
           ) : (

@@ -183,10 +183,16 @@ def _email(last_name: str) -> str:
 
 
 def _salary_range(low: int, high: int) -> dict:
-    """构造 SalaryRange 形状."""
+    """构造 SalaryRange 形状 (canonical: min_amount/max_amount).
+
+    v11.6 R3 — 与 contracts.shared.SalaryRange 对齐. 旧版用 ``{min,max}``
+    裸键, 但所有消费方 (api/roles.py, api/candidates.py, matching/structured.py,
+    talent_market.py 卡片, frontend extraction-viewer.tsx) 都读 ``min_amount``/
+    ``max_amount``; 裸键导致薪资维度恒显示为空 / 硬过滤失效. 统一到 canonical.
+    """
     lo = random.randint(low, high - 1000)
     hi = random.randint(lo + 1000, high)
-    return {"min": lo, "max": hi, "currency": "CNY"}
+    return {"min_amount": lo, "max_amount": hi, "currency": "CNY"}
 
 
 def _salary_range_biased(low: int, high: int) -> dict:
@@ -194,6 +200,9 @@ def _salary_range_biased(low: int, high: int) -> dict:
 
     约 70% 期望下限落在 [low, high], 另 30% 略高于上限 (真实求职者也会略高期望),
     但不会高得离谱. 用于让候选人薪资期望与岗位区间自然重叠.
+
+    v11.6 R3 — 键名对齐到 canonical ``min_amount``/``max_amount`` (见
+    ``_salary_range`` 注释). 随机区间逻辑不变, 仅改键名.
     """
     if random.random() < 0.7:
         lo = random.randint(low, max(low + 1, high - 1000))
@@ -202,7 +211,7 @@ def _salary_range_biased(low: int, high: int) -> dict:
         # 期望偏高 (真实存在), 但受控
         lo = random.randint(high, high + 3000)
         hi = random.randint(lo + 1000, lo + 5000)
-    return {"min": lo, "max": hi, "currency": "CNY"}
+    return {"min_amount": lo, "max_amount": hi, "currency": "CNY"}
 
 
 def _required_skill_names(role_def: dict) -> list[str]:
@@ -264,7 +273,7 @@ def gen_candidate(idx: int, created_by: str) -> dict:
         f"{last}{first} | {edu} | {city}",
         f"工作年限:{exp_years} 年",
         "核心技能:" + "、".join(skills[:5]),
-        f"期望薪资:{expectation['min']}-{expectation['max']} 元/月",
+        f"期望薪资:{expectation['min_amount']}-{expectation['max_amount']} 元/月",
         "求职意向:体育用品行业相关岗位,期望稳定发展与专业成长。",
     ]
     # v11.2 T6302 — identity verification lifecycle. The rolled-up

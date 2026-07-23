@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import type { MarketStats, MatchRecommendation } from "@/lib/api-talent-market";
+import { Markdown } from "@/components/shared";
 
 type Props = {
   stats: MarketStats | null;
@@ -291,7 +292,7 @@ function MatchCard({ rec }: { rec: MatchRecommendation }) {
               className="flex items-start gap-1.5 text-xs text-slate-600"
             >
               <span className="mt-1 inline-block h-1 w-1 shrink-0 rounded-full bg-blue-500" />
-              {reason}
+              <Markdown size="sm" className="min-w-0">{reason}</Markdown>
             </li>
           ))}
         </ul>

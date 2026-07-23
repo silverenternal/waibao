@@ -22,6 +22,7 @@ import type {
   InterviewQuestion,
   InterviewQuestionTemplate as Template,
 } from "@/lib/api-hr-assistant";
+import { Markdown } from "@/components/shared";
 
 const DIFFICULTY_VARIANT: Record<string, "default" | "secondary" | "destructive"> = {
   junior: "secondary",
@@ -92,7 +93,9 @@ function QuestionRow({ index, q }: { index: number; q: InterviewQuestion }) {
         </div>
       </div>
 
-      <p className="mt-2 text-sm text-muted-foreground">{q.prompt}</p>
+      <div className="mt-2 text-sm text-muted-foreground">
+        <Markdown size="sm">{q.prompt}</Markdown>
+      </div>
 
       {q.expected_points?.length ? (
         <div className="mt-2">
@@ -101,7 +104,9 @@ function QuestionRow({ index, q }: { index: number; q: InterviewQuestion }) {
           </div>
           <ul className="mt-1 list-inside list-disc space-y-0.5 text-sm">
             {q.expected_points.map((p, i) => (
-              <li key={i}>{p}</li>
+              <li key={i}>
+                <Markdown size="sm">{p}</Markdown>
+              </li>
             ))}
           </ul>
         </div>

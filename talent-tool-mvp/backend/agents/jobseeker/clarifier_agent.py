@@ -12,6 +12,8 @@ from uuid import uuid4
 
 from agents.runtime import AgentInput, AgentOutput, BaseAgent, LLMClient
 from agents.toolkit import llm_call
+# v11.6 R2 — canonical extraction schema (single source of truth).
+from agents.schemas import CLARIFIER_SYNTHESIS_SCHEMA
 from eventbus import emit
 
 logger = logging.getLogger("recruittech.agents.jobseeker.clarifier")
@@ -67,36 +69,10 @@ REFLECTIVE_SYSTEM_DEFAULT = """你是求职者画像综合专家。
 
 async def _llm_synthesize(llm: LLMClient, all_data: dict) -> dict:
     """第一步: 初步综合."""
-    schema_hint = """
-{
-  "profile_synthesis": {
-    "summary": {"value": "一句话", "reasoning": "..."},
-    "explicit_skills": [{"value": "技能", "reasoning": "..."}],
-    "implicit_traits": [{"value": "特质", "reasoning": "..."}],
-    "value_orientation": [{"value": "价值观", "reasoning": "..."}],
-    "career_interests": [{"value": "方向", "reasoning": "..."}]
-  },
-  "real_needs": {
-    "explicit": [...],
-    "implicit": [...],
-    "must_haves": [...],
-    "nice_to_haves": [...],
-    "deal_breakers": [...]
-  },
-  "contradictions": [
-    {"source_a": "...", "source_b": "...", "explanation": "..."}
-  ],
-  "follow_up_questions": [
-    {"question": "...", "priority": "high/medium/low", "purpose": "为什么问"}
-  ],
-  "info_completeness": {"value": 0.0~1.0, "reasoning": "..."},
-  "overall_confidence": 0.0~1.0
-}
-"""
     return await llm_call(
         llm,
         json.dumps(all_data, ensure_ascii=False)[:8000],
-        system=_load_reflective_system() + "\n\nSchema:\n" + schema_hint,
+        system=_load_reflective_system() + "\n\nSchema:\n" + CLARIFIER_SYNTHESIS_SCHEMA,
         json_mode=True,
     )
 

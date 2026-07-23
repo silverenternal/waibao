@@ -72,6 +72,7 @@ import {
   TremorPanel,
   TremorShell,
 } from "@/components/charts/tremor-shell";
+import { Markdown } from "@/components/shared";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:8000";
@@ -501,9 +502,9 @@ export default function CareerPlanPage() {
                                   {r.title}
                                 </p>
                                 {r.reason && (
-                                  <p className="line-clamp-1 text-xs text-muted-foreground">
-                                    {r.reason}
-                                  </p>
+                                  <div className="line-clamp-1 text-xs text-muted-foreground">
+                                    <Markdown size="sm">{r.reason}</Markdown>
+                                  </div>
                                 )}
                               </div>
                               <div className="flex w-24 flex-col items-end gap-1">
@@ -731,7 +732,9 @@ function BucketColumn({
               >
                 <p className="text-sm font-medium text-slate-900">{it.title}</p>
                 {it.detail && (
-                  <p className="mt-1 text-xs text-slate-600">{it.detail}</p>
+                  <div className="mt-1 text-xs text-slate-600">
+                    <Markdown size="sm">{it.detail}</Markdown>
+                  </div>
                 )}
                 {it.duration && (
                   <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-slate-500">

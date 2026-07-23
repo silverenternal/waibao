@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Markdown } from "@/components/shared";
 
 interface Suggestion {
   category: string;
@@ -99,7 +100,9 @@ export function DailySuggestions() {
                         </Badge>
                         <span className="text-sm font-medium">{s.title}</span>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">{s.reason}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        <Markdown size="sm">{s.reason}</Markdown>
+                      </p>
                     </div>
                     <Button size="sm" variant={done ? "outline" : "default"} disabled={done} onClick={() => execute(s)}>
                       {done ? "已执行" : "一键执行"}

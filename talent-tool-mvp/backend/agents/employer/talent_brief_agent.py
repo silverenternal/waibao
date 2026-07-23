@@ -55,36 +55,20 @@ class TalentBriefAgent(BaseAgent):
         bias_result = await detect_biases(self.llm or LLMClient(), text)
 
         # 2. 提炼人才画像(同时进行)
-        schema = """
-{
-  "hard_constraints": [
-    {"category": "行业/职级/技能/...", "value": "...", "importance": "must/should", "rationale": "老板为什么提这个"}
-  ],
-  "soft_preferences": [
-    {"preference": "软偏好", "rationale": "为什么老板隐含希望"}
-  ],
-  "implicit_requirements": [
-    {"req": "隐性需求", "inferred_from": "推断依据", "confidence": 0~1}
-  ],
-  "talent_image_draft": {
-    "summary": "一句话人才画像",
-    "background": "背景倾向",
-    "potential_direction": "潜力方向",
-    "values": ["价值观关键词"],
-    "red_flags_to_avoid": ["老板没说但可能不喜欢的"]
-  },
-  "smart_questions_for_boss": [
-    {"question": "应该问老板的问题", "purpose": "为什么问"}
-  ]
-}
-"""
+        # v11.6 R2 — schema lives in agents/schemas (single source of truth).
+        # The canonical TALENT_BRIEF_SCHEMA is injected into the system prompt
+        # so the LLM follows the same field shape the code below reads.
+        from agents.schemas import TALENT_BRIEF_SCHEMA
         from agents.toolkit import llm_call
         from eventbus import emit
         try:
+            system_prompt = _get_prompt(
+                "talent_brief_agent", "system", default=SYSTEM
+            ) + "\n\n输出 JSON schema:\n" + TALENT_BRIEF_SCHEMA
             raw = await llm_call(
                 self.llm or LLMClient(),
                 text + "\n\n参考偏见分析:\n" + json.dumps(bias_result, ensure_ascii=False)[:1500],
-                system=_get_prompt("talent_brief_agent", "system", default=SYSTEM),
+                system=system_prompt,
                 json_mode=True,
             )
             result = _as_dict(raw)

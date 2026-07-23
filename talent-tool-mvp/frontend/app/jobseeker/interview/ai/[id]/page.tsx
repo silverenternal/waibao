@@ -1,5 +1,6 @@
 "use client";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { Markdown } from "@/components/shared";
 
 /**
  * /jobseeker/interview/ai/[id] — v9.1 AI 模拟面试官会话页
@@ -871,7 +872,11 @@ export default function AIInterviewSessionPage(props: { params: Promise<{ id: st
                             : "bg-slate-900 text-white"
                         }`}
                       >
-                        {m.text}
+                        {m.from === "ai" ? (
+                          <Markdown size="sm">{m.text}</Markdown>
+                        ) : (
+                          m.text
+                        )}
                       </div>
                     </div>
                   ))}
